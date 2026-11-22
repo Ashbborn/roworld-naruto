@@ -87,6 +87,8 @@ MatchServer.MP_MAP_ID = nil :: string?
 MatchServer.MP_MAX_HUMANS = 50
 MatchServer.MP_SPAWN_TICKS = 200
 MatchServer.MP_TIME_LIMIT_S = 40 * 60
+--- The Tailed Beasts (Core/SimBeasts) in every public match.
+MatchServer.MP_BEASTS = true
 MatchServer.NOTICE_INFO = 0
 MatchServer.NOTICE_WARNING = 1
 MatchServer.NOTICE_ERROR = 2
@@ -725,6 +727,7 @@ function MatchServer._start_match(self: any)
 		time_limit_s = MatchServer.MP_TIME_LIMIT_S,
 		spawn_ticks = MatchServer.MP_SPAWN_TICKS,
 		map_id = self._map_id,
+		beasts = MatchServer.MP_BEASTS,
 	}
 	local lobby = self.deps.lobby
 	if lobby ~= nil then

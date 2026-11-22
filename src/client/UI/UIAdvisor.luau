@@ -867,6 +867,52 @@ function UIAdvisor.on_game_over(self: any, winner: number, reason: number)
 	ui:_request_apply()
 end
 
+--- Tailed Beasts (Core/SimBeasts; the toasts come as Sim messages): a centred banner in the beast's
+--- colour when one awakens, and one for its captor.
+function UIAdvisor._beast_banner(self: any, tails: number, title: string, sub: string)
+	local ctx = self.ctx
+	local ui = self.ui
+	if not ctx:in_match() then
+		return
+	end
+	local Beasts = UICtx.data("Beasts")
+	local b = Beasts.get(tails)
+	local col = if b ~= nil then Color3.fromHex(b.color) else T().AMBER
+	local banner = UICtx.mod("Banner").make(ctx, title, sub, col, 2.6)
+	ui.float_layer:add_child(banner)
+	if banner.text_area ~= nil and ui.add_hud_control ~= nil then
+		ui:add_hud_control(banner.text_area)
+	end
+end
+
+function UIAdvisor.on_beast_awakened(self: any, tails: number, _id: number)
+	local Beasts = UICtx.data("Beasts")
+	local title = Beasts.title(tails)
+	self:_beast_banner(
+		tails,
+		string.format(Beasts.TEXT.awaken_banner, string.upper(title)),
+		string.format(Beasts.TEXT.awaken_sub, Beasts.name(tails))
+	)
+	self.ctx:sfx("alarm")
+end
+
+function UIAdvisor.on_beast_holder(self: any, tails: number, holder: number, _from: number)
+	local ctx = self.ctx
+	if holder == 0 or holder ~= ctx:me() then
+		return
+	end
+	local Beasts = UICtx.data("Beasts")
+	local B = Rules().BEASTS
+	local cap = math.floor((B.CAP_BONUS_BASE + B.CAP_BONUS_PER_TAIL * tails) * 100 + 0.5)
+	local cut = math.floor((B.LOSS_CUT_BASE + B.LOSS_CUT_PER_TAIL * tails) * 100 + 0.5)
+	self:_beast_banner(
+		tails,
+		string.format(Beasts.TEXT.captured_banner, string.upper(Beasts.title(tails))),
+		string.format(Beasts.TEXT.captured_sub, cap, cut)
+	)
+	ctx:sfx("victory")
+end
+
 --- Spawn phase camera. The globe turned away from an ocean-only view here; flat maps show the whole
 --- map during the spawn phase, so there is nothing to do (UIRoot still calls it).
 function UIAdvisor.spawn_view(_self: any) end

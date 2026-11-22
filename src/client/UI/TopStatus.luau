@@ -110,6 +110,10 @@ function TopStatus.new(c: any)
 	self._lead_box:add_child(self._lead)
 	who:add_child(self._lead_box)
 	sb:add_child(who)
+	-- the Tailed Beasts you hold (Core/SimBeasts); hidden while none
+	self._beasts = T.label("", 11, 700, T.AMBER)
+	self._beasts:set_visible(false)
+	sb:add_child(self._beasts)
 	row:add_child(sb)
 	self:_build_mini()
 	return self
@@ -372,6 +376,7 @@ function TopStatus.refresh(self)
 			self._you:set_text(string.format("#%d · %s", rk, T.fmt_pct(my_share)))
 		end
 	end
+	self:_refresh_beasts(s, me)
 	self._bar.fill_color = mcol
 	self._bar:set_target(if me ~= 0 then ctx:win_share(me) else 0.0)
 	table.clear(self._bar.markers)
@@ -412,6 +417,25 @@ function TopStatus.refresh(self)
 		if gl > 0 then
 			self._m_grace_l:set_text(T.fmt_time(math.ceil(gl)))
 		end
+	end
+end
+
+--- The beasts `me` holds, by name, as one line (full layout only).
+function TopStatus._refresh_beasts(self, s: any, me: number)
+	local held = if me ~= 0 and type(s.beasts_of) == "function" then s:beasts_of(me) else {}
+	local text = ""
+	if #held > 0 then
+		local Beasts = require("./UICtx").data("Beasts")
+		local names = {}
+		for _, t in held do
+			table.insert(names, Beasts.name(t))
+		end
+		text = string.format(Beasts.TEXT.held, table.concat(names, ", "))
+	end
+	if text ~= self._beasts_text then
+		self._beasts_text = text
+		self._beasts:set_text(text)
+		self._beasts:set_visible(text ~= "")
 	end
 end
 

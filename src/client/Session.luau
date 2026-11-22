@@ -419,7 +419,8 @@ end
 --- Starts (asynchronously) a solo campaign on map `map_id` (MapList id; nil = the default map);
 --- state_ready then joined_owner fire when it is live (after downloading the map if needed).
 --- `opts.tribes`: how many tribes the map gets; `opts.countdown_ticks`: ticks from placing the capital
---- to the start (the tutorial's match has fewer tribes and starts at once: Data/Tutorial).
+--- to the start (the tutorial's match has fewer tribes and starts at once: Data/Tutorial);
+--- `opts.beasts = false`: no Tailed Beasts (the tutorial).
 function Session.start_solo(self: any, p_difficulty: number, map_id: string?, opts: any?)
 	self:_leave_multiplayer_if_needed()
 	self.difficulty = math.clamp(math.floor(tonumber(p_difficulty) or 1), 0, 2)
@@ -436,6 +437,7 @@ function Session.start_solo(self: any, p_difficulty: number, map_id: string?, op
 		max_humans = 1,
 		time_limit_s = 0,
 		map_id = self.map_id,
+		beasts = not (type(opts) == "table" and opts.beasts == false),
 	}, self:local_display_name())
 end
 
@@ -653,6 +655,7 @@ function Session.can_take_over(self: any, target: number): boolean
 		and o ~= nil
 		and o.alive
 		and o.kind == 0 -- Defs.KIND_NATION: never a tribe or a (bot) player
+		and (o.beast or 0) == 0 -- never a Tailed Beast
 		and (o.tiles or 0) > 0
 		and st.phase == 1 -- Defs.PHASE_PLAYING
 end

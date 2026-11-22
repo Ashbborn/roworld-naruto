@@ -725,7 +725,7 @@ function UICtx.leader(self: any): any
 	end
 	local best = nil
 	for _, o in s.owners do
-		if o.alive and o.tiles > 0 and (best == nil or ranks_before(o, best)) then
+		if o.alive and o.tiles > 0 and (o.beast or 0) == 0 and (best == nil or ranks_before(o, best)) then
 			best = o
 		end
 	end
@@ -740,7 +740,7 @@ function UICtx.rank_of(self: any, id: number): number
 	end
 	local r = 1
 	for _, o in s.owners do
-		if o ~= me and o.alive and o.tiles > 0 and ranks_before(o, me) then
+		if o ~= me and o.alive and o.tiles > 0 and (o.beast or 0) == 0 and ranks_before(o, me) then
 			r += 1
 		end
 	end
