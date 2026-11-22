@@ -18,7 +18,8 @@
                   Seal, Paper Bomb Storm, Barrier interceptor, Kunai Volley, Paper Bomb, Supply Cart,
                   Cart, Cart (loaded), Bijudama) x 2 rows: row 0 the pixels drawn in the territory
                   colour, row 1 those in the border colour.
-  units_one.png   both rows in one image: territory pixels white, border pixels grey 0.8.
+  units_one.png   both rows in one image: territory pixels white, border pixels grey 0.8 (the
+                  Bijudama's 0.22: a dark orb in any territory colour).
   status.png      the status icons over the players' names, full colour, STATUS px cells (pad
                   STATUS_PAD), 3 columns in STATUS_KEYS order (crown = a Kage's hat, traitor = a slashed
                   forehead protector, nukes = explosion tags...).
@@ -79,6 +80,8 @@ UI_UNITS = ["warship", "atom", "hydrogen", "mirv", "boat"]
 
 UNIT = 13
 UNIT_RIM_GREY = 0.8
+#: units_one: per-sprite grey of the border pixels where 0.8 will not do (the Bijudama's core is dark)
+UNIT_RIM_GREY_OF = {"bijudama": 0.22}
 STATUS = 256
 STATUS_PAD = 16
 STATUS_KEYS = ["crown", "traitor", "disconnected", "alliance", "allianceRequest", "target", "embargo",
@@ -415,8 +418,8 @@ def make_units():
     n = len(UNIT_ORDER)
     two = Image.new("RGBA", (UNIT * n, UNIT * 2), (255, 255, 255, 0))
     one = Image.new("RGBA", (UNIT * n, UNIT), (255, 255, 255, 0))
-    rim_level = round(UNIT_RIM_GREY * 255)
     for i, name in enumerate(UNIT_ORDER):
+        rim_level = round(UNIT_RIM_GREY_OF.get(name, UNIT_RIM_GREY) * 255)
         for y, row in enumerate(unit_grid(name)):
             for x, ch in enumerate(row):
                 if ch == "o":

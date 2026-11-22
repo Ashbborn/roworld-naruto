@@ -20,7 +20,7 @@ return {
 	--- 0 territory colour, 1 border colour (columns are zero-based: bijudama = column 12)
 	units = { id = "rbxassetid://77929783084391", cell = 13, cols = 13 },
 	--- `units` with both rows in ONE image (territory pixels white, border pixels grey)
-	units_one = { id = "rbxassetid://89860258581654", cell = 13, cols = 13 },
+	units_one = { id = "rbxassetid://135536636470657", cell = 13, cols = 13 },
 	--- status icons, full colour, 256 px cells (pad 16), 3 columns: crown, traitor, disconnected,
 	--- alliance, allianceRequest, target, embargo, nukeRed, nukeWhite, allianceFaded, doomsdayClock,
 	--- verified

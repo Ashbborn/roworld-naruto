@@ -45,6 +45,8 @@ MASK_PX = 128   # 64-unit SVGs at 2x: crisp up to ~64 px on a 2x display; mipmap
 APP_PX = 512    # 256-unit app icon at 2x
 #: the Naruto drawings span this share of the 64-unit frame (the AIRFRONT glyphs span 4..60)
 BOX = 56 / 64
+#: the HUD top bar's glyphs sit smaller in their frame (AIRFRONT's hud_* span ~24..103 of 128)
+BOX_KEY = {"hud_globe": 80 / 128}
 MAP_KEYS = ["city", "port", "factory", "defense", "sam", "silo", "warship", "atom", "hydrogen", "mirv", "boat"]
 
 
@@ -98,13 +100,13 @@ render_all = render_airfront
 
 # --- 2. the Naruto concepts -----------------------------------------------------------------------
 
-def naruto_mask(body):
-    """A 64-unit drawing as a MASK_PX mask, fitted to BOX of the frame and centred."""
+def naruto_mask(body, box=BOX):
+    """A 64-unit drawing as a MASK_PX mask, fitted to `box` of the frame and centred."""
     big = svgkit.mask(svgkit.fit_doc(body, 64, 0.0), MASK_PX * 4)
     a = np.asarray(big.getchannel("A"))
     ys, xs = np.nonzero(a > 4)
     crop = big.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
-    side = BOX * MASK_PX * 4
+    side = box * MASK_PX * 4
     s = side / max(crop.width, crop.height)
     crop = crop.resize((max(1, round(crop.width * s)), max(1, round(crop.height * s))), Image.LANCZOS)
     out = Image.new("RGBA", (MASK_PX * 4, MASK_PX * 4), (255, 255, 255, 0))
@@ -119,7 +121,7 @@ def render_naruto():
     files = {}
     for key, fn in G.CONCEPTS.items():
         dst = os.path.join(OUT, key + ".png")
-        naruto_mask(fn()).save(dst, optimize=True)
+        naruto_mask(fn(), BOX_KEY.get(key, BOX)).save(dst, optimize=True)
         files[key] = dst
     return files
 

@@ -29,7 +29,7 @@ return {
 	gold = "rbxassetid://137316308387265",
 	help = "rbxassetid://112222144930714",
 	hud_exit = "rbxassetid://94371539714997",
-	hud_globe = "rbxassetid://135758588851522",
+	hud_globe = "rbxassetid://113841026123891",
 	hud_help = "rbxassetid://112261680314861",
 	hud_leaderboard = "rbxassetid://138078412624735",
 	hud_music_off = "rbxassetid://77057878223258",

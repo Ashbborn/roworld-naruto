@@ -5,13 +5,13 @@ return {
 	beasts = {
 		"rbxassetid://111352241194921", -- 1 shukaku
 		"rbxassetid://70540465405833", -- 2 matatabi
-		"rbxassetid://123539140382166", -- 3 isobu
+		"rbxassetid://85305122444679", -- 3 isobu
 		"rbxassetid://138368812537141", -- 4 son_goku
 		"rbxassetid://98494424768671", -- 5 kokuo
-		"rbxassetid://113761518613459", -- 6 saiken
+		"rbxassetid://127867861538614", -- 6 saiken
 		"rbxassetid://92568385310940", -- 7 chomei
-		"rbxassetid://97483428250897", -- 8 gyuki
-		"rbxassetid://73029863711138", -- 9 kurama
+		"rbxassetid://91749047472969", -- 8 gyuki
+		"rbxassetid://110892630287072", -- 9 kurama
 	},
 	--- the Akatsuki cloud emblem, 256 px (the game tints it red)
 	akatsuki = "rbxassetid://100711581637231",

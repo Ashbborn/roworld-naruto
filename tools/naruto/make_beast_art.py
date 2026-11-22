@@ -123,7 +123,7 @@ def matatabi():
 
 
 def isobu():
-    s = fan_tails(3, (62, 160), 145, 235, 76, 18, 24, bend=0.15, spread=8)
+    s = fan_tails(3, (54, 162), 150, 228, 92, 18, 26, bend=0.15, spread=10)
     shell = bez((44, 176), (44, 52), (204, 52), (204, 176))
     spikes = []
     for t in (0.14, 0.3, 0.5, 0.7, 0.86):
@@ -196,7 +196,7 @@ def kokuo():
 
 
 def saiken():
-    s = fan_tails(6, (66, 178), 128, 268, 76, 15, 18, bend=0.12, spread=5, peak=0.45, wt=6)
+    s = fan_tails(6, (58, 180), 122, 268, 92, 13, 18, bend=0.12, spread=6, peak=0.5, wt=6)
     body = [
         P(ell, 126, 166, 72, 56),
         P(rect, 52, 196, 164, 30, 15),
@@ -240,15 +240,15 @@ def gyuki():
     s = ""
     for i in range(8):
         ang = math.radians(6 + i * 168 / 7)
-        bx, by = 100 + i * 8, 172
-        L = 124 if i in (0, 7) else 112
-        ex, ey = bx + math.cos(ang) * L * 1.1, by + math.sin(ang) * L * 0.8
+        bx, by = 86 + i * 12, 172
+        L = 128 if i in (0, 7) else 120
+        ex, ey = bx + math.cos(ang) * L * 1.25, by + math.sin(ang) * L * 0.85
         side = 1 if math.cos(ang) > 0.05 else (-1 if math.cos(ang) < -0.05 else 0)
         # the tips curl outward and up
         p1 = (bx + math.cos(ang) * L * 0.4, by + math.sin(ang) * L * 0.4)
         p2 = (ex - side * 6, ey + 18)
         tip = (ex + side * 14, ey - 14 if side else ey + 4)
-        outline = brush_pts(bez((bx, by), p1, p2, tip), 20, 18, 6, 0.25)
+        outline = brush_pts(bez((bx, by), p1, p2, tip), 18, 16, 6, 0.25)
         s += front(lambda fill, stroke, sw, o=outline: poly(o, fill, stroke, sw), gap=5)
     body = [
         P(poly, [(70, 112), (186, 112), (162, 180), (94, 180)], extra=""),
@@ -268,8 +268,8 @@ def gyuki():
 
 
 def kurama():
-    s = fan_tails(9, (112, 186), 140, 300, 120, 10, 19, bend=0.16, gap=4, spread=3, peak=0.66,
-                  lens=[98, 108, 116, 120, 122, 120, 116, 108, 100])
+    s = fan_tails(9, (110, 186), 128, 306, 130, 10, 18, bend=0.14, gap=4, spread=4, peak=0.66,
+                  lens=[112, 122, 130, 134, 136, 134, 130, 122, 114])
     body = [
         P(ell, 156, 182, 52, 44),
         P(ell, 180, 146, 26, 36),
