@@ -107,11 +107,13 @@ local NUKE_COL = {
 	[Defs.N_SHELL] = COL_SHELL,
 	[Defs.N_AIRSTRIKE] = COL_SAM,
 	[Defs.N_SLUG] = COL_SHELL,
+	-- a Tailed Beast Bomb: the units sheet's "bijudama" column (Assets art map)
+	[Defs.N_BIJUDAMA] = 12,
 }
 --- Munitions drawn without a trail and a target ring (a battery's shells: there are many).
 local NUKE_PLAIN = { [Defs.N_SHELL] = true }
 --- Munitions drawn bigger than the others.
-local NUKE_SCALE = { [Defs.N_MEGA] = 1.5, [Defs.N_SHELL] = 0.75, [Defs.N_SLUG] = 1.2 }
+local NUKE_SCALE = { [Defs.N_MEGA] = 1.5, [Defs.N_SHELL] = 0.75, [Defs.N_SLUG] = 1.2, [Defs.N_BIJUDAMA] = 1.6 }
 
 type Sprite = {
 	frame: ImageLabel,
@@ -622,7 +624,10 @@ function UnitLayer.tick(self: any, _dt: number)
 		-- target: the blast ring, pulsing (red when it hits the local player)
 		local ViewRules = self.view.view_rules
 		local _, outer = 0, 12
-		if ViewRules then
+		if n.kind == Defs.N_BIJUDAMA and type(Rules.bijudama_radii) == "function" then
+			-- (a Tailed Beast Bomb's blast: its beast's)
+			_, outer = Rules.bijudama_radii(n.tails or 9, n.wild == true)
+		elseif ViewRules then
 			_, outer = ViewRules.nuke_radii(n.kind)
 		end
 		local ring = self._rings[uid]

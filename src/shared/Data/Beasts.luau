@@ -25,14 +25,16 @@ Beasts.COUNT = #Beasts.LIST
 Beasts.TEXT = {
 	stir = "The %s is stirring...",
 	awaken_banner = "THE %s AWAKENS",
-	awaken_sub = "%s breaks loose. Take its last tile to capture it",
+	-- (identity line: Beasts.ident)
+	awaken_sub = "%s breaks loose. Take its last tile to become its jinchuriki",
 	-- (title, captor)
 	captured = "%s captured the %s!",
 	captured_banner = "YOU CAPTURED THE %s",
 	-- (beast name, power name) the captor's banner line: what it can do now
 	captured_sub = "You are its jinchuriki: Tailed Beast Bomb and %s",
-	-- the beast's identity in toasts and the feed: "the Nine-Tails (Kurama)"
+	-- the beast's identity in toasts and the feed: "Nine-Tails (Kurama, 9 tails)"
 	tails_line = "%d tails",
+	ident = "%s (%s, %d tails)",
 	-- (taker, title, former holder)
 	stolen = "%s took the %s from %s!",
 	gone = "The %s is gone",
@@ -91,6 +93,11 @@ end
 function Beasts.title(tails: number): string
 	local b = Beasts.LIST[tails]
 	return if b ~= nil then b.title else "Tailed Beast"
+end
+
+--- "Nine-Tails (Kurama, 9 tails)": the beast's identity in toasts and the feed.
+function Beasts.ident(tails: number): string
+	return string.format(Beasts.TEXT.ident, Beasts.title(tails), Beasts.name(tails), tails)
 end
 
 function Beasts.name(tails: number): string

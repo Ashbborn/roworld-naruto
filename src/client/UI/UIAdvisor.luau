@@ -869,8 +869,9 @@ function UIAdvisor.on_game_over(self: any, winner: number, reason: number)
 end
 
 --- Tailed Beasts (Core/SimBeasts; the toasts come as Sim messages): a centred banner in the beast's
---- colour when one awakens, and one for its captor.
-function UIAdvisor._beast_banner(self: any, tails: number, title: string, sub: string)
+--- colour when one awakens, and one for its captor, under its animated silhouette (BeastSplash:
+--- "awaken" slams in with a flash, a shake and shock rings; "capture" is calmer).
+function UIAdvisor._beast_banner(self: any, tails: number, title: string, sub: string, kind: string?)
 	local ctx = self.ctx
 	local ui = self.ui
 	if not ctx:in_match() then
@@ -884,6 +885,12 @@ function UIAdvisor._beast_banner(self: any, tails: number, title: string, sub: s
 	if banner.text_area ~= nil and ui.add_hud_control ~= nil then
 		ui:add_hud_control(banner.text_area)
 	end
+	local ok, splash = pcall(function()
+		return UICtx.mod("BeastSplash").make(ctx, tails, col, kind or "awaken")
+	end)
+	if ok and splash ~= nil then
+		ui.float_layer:add_child(splash)
+	end
 end
 
 function UIAdvisor.on_beast_awakened(self: any, tails: number, _id: number)
@@ -892,7 +899,8 @@ function UIAdvisor.on_beast_awakened(self: any, tails: number, _id: number)
 	self:_beast_banner(
 		tails,
 		string.format(Beasts.TEXT.awaken_banner, string.upper(title)),
-		string.format(Beasts.TEXT.awaken_sub, Beasts.name(tails))
+		string.format(Beasts.TEXT.awaken_sub, Beasts.ident(tails)),
+		"awaken"
 	)
 	self.ctx:sfx("alarm")
 end
@@ -903,13 +911,11 @@ function UIAdvisor.on_beast_holder(self: any, tails: number, holder: number, _fr
 		return
 	end
 	local Beasts = UICtx.data("Beasts")
-	local B = Rules().BEASTS
-	local cap = math.floor((B.CAP_BONUS_BASE + B.CAP_BONUS_PER_TAIL * tails) * 100 + 0.5)
-	local cut = math.floor((B.LOSS_CUT_BASE + B.LOSS_CUT_PER_TAIL * tails) * 100 + 0.5)
 	self:_beast_banner(
 		tails,
 		string.format(Beasts.TEXT.captured_banner, string.upper(Beasts.title(tails))),
-		string.format(Beasts.TEXT.captured_sub, cap, cut)
+		string.format(Beasts.TEXT.captured_sub, Beasts.power_name(tails)),
+		"capture"
 	)
 	ctx:sfx("victory")
 end

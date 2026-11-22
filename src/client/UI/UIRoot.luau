@@ -41,6 +41,7 @@ local RotateCard = require("./RotateCard")
 local Tooltip = require("./Tooltip")
 local RadialMenu = require("./RadialMenu")
 local HoldRing = require("./HoldRing")
+local BeastPanel = require("./BeastPanel")
 local Tutorial = require("./Tutorial")
 local TutorialData = UICtx.data("Tutorial")
 local StarterData = UICtx.data("Starter")
@@ -950,6 +951,10 @@ function UIRoot._build(self)
 	local hold = HoldRing.new(ctx)
 	self.hold_ring = hold
 	root:add_child(self:_host(hold.gui, "HoldRing"))
+	-- the jinchuriki's Tailed Beast Bomb and power buttons, above the command bar (UI/BeastPanel)
+	local beast_panel = BeastPanel.new(ctx, self)
+	self.beast_panel = beast_panel
+	hud:add_child(self:_host(beast_panel.gui, "BeastPanel"))
 	local radial = RadialMenu.new(ctx)
 	self.radial = radial
 	radial.bottom_limit = function(): number?
@@ -1211,6 +1216,7 @@ function UIRoot._build(self)
 	interact.radial = radial
 	interact.float_layer = self.float_layer
 	interact.ui = self
+	interact.beast_aim = self.beast_panel
 	self.interact = interact
 	radial.picked:Connect(function(id, t)
 		interact:on_radial(id, t)
@@ -2501,7 +2507,7 @@ function UIRoot._process(self, delta: number)
 	local comps = self._frame_comps
 	if comps == nil then
 		comps = {}
-		for _, key in ipairs({ "bar", "top", "board", "feed", "notices", "attacks", "alert" }) do
+		for _, key in ipairs({ "bar", "top", "board", "feed", "notices", "attacks", "alert", "beast_panel" }) do
 			local comp = self[key]
 			if comp ~= nil and comp.update then
 				table.insert(comps, { comp, key .. ".update" })

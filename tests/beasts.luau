@@ -445,7 +445,7 @@ do
 	expect(#hold == 1 and hold[1][2] == 9 and hold[1][3] == p and hold[1][4] == 0, "one BEAST_HOLDER (9, captor, 0)")
 	local told = false
 	for _, e in events_of(sim.d_ev, Ev.MSG) do
-		if e[2] == -1 and string.find(e[4], "Captor captured the Nine-Tails!", 1, true) then
+		if e[2] == -1 and string.find(e[4], "Captor captured the Nine-Tails (Kurama, 9 tails)!", 1, true) then
 			told = true
 		end
 		if string.find(e[4], "was eliminated", 1, true) or string.find(e[4], "You eliminated", 1, true) then

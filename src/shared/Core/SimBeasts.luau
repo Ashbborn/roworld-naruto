@@ -826,7 +826,7 @@ function SimBeasts.install(C: any)
 		b.tile = tile
 		b.emerge_tick = emerge_tick
 		self:ev({ Ev.BEAST_STIR, b.tails, tile, emerge_tick })
-		self:msg(-1, Defs.MSG_ALERT, string.format(Beasts.TEXT.stir, Beasts.title(b.tails)))
+		self:msg(-1, Defs.MSG_ALERT, string.format(Beasts.TEXT.stir, Beasts.ident(b.tails)))
 	end
 
 	--- The beast's land: the claimable tiles of its disk, whoever owns them (but never a spawn-shielded
@@ -1155,7 +1155,7 @@ function SimBeasts.install(C: any)
 				self:_beast_rebuff(taker)
 				self:ev({ Ev.BEAST_HOLDER, tails, taker, 0 })
 				self:_beast_cool_ev(b)
-				self:msg(-1, Defs.MSG_ALERT, string.format(T.captured, self.o_name[taker], title))
+				self:msg(-1, Defs.MSG_ALERT, string.format(T.captured, self.o_name[taker], Beasts.ident(tails)))
 			else
 				b.state = GONE
 				b.holder = 0
