@@ -464,7 +464,7 @@ def aura(a, cx, cy, rx, ry, color, opacity=0.55, gid="aura"):
 def flame(a, cx, by, w, h, seed=1, outer=None, mid=None, core=None, ow=None):
     """A flame: three nested tongues, its base at (cx, by)."""
     # (fire stays flat: a metal gradient in a flame reads as brass)
-    outer, mid, core = outer or VERM, _SOLID.get(mid or GOLD, mid or GOLD), core or GOLD_L
+    outer, mid, core = (_SOLID.get(c, c) for c in (outer or VERM, mid or GOLD, core or GOLD_L))
     rnd = random.Random(seed)
 
     def tongue(ww, hh, lean):
