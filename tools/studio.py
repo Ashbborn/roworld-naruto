@@ -22,6 +22,11 @@ import threading
 import queue
 
 MCP = "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP"
+if sys.platform == "win32":  # newest Studio install's StudioMCP.exe
+    import glob as _glob
+    _c = sorted(_glob.glob(os.path.join(os.environ.get("LOCALAPPDATA", ""), "Roblox", "Versions", "*", "StudioMCP.exe")),
+                key=os.path.getmtime)
+    MCP = _c[-1] if _c else MCP
 
 
 class Client:
@@ -100,7 +105,7 @@ def pick_studio(c):
     except json.JSONDecodeError:
         data = res.get("structuredContent") or {}
     studios = data.get("studios", data) if isinstance(data, dict) else data
-    match = os.environ.get("STUDIO_MATCH", "airfront.rbxl")
+    match = os.environ.get("STUDIO_MATCH", "naruto.rbxl")
     for s in studios:
         name = s.get("name") or ""
         if match and match in name:
