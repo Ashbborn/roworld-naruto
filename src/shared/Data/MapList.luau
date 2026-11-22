@@ -6,9 +6,9 @@
 local MapList = {}
 
 MapList.DEFAULT = "world"
-MapList.LICENSE = "Public domain"
-MapList.ATTRIBUTION = "Natural Earth, NOAA"
-MapList.CREDITS = "Maps made with Natural Earth and NOAA ETOPO1 data (public domain)."
+MapList.LICENSE = "Public domain; World map CC BY-SA 3.0"
+MapList.ATTRIBUTION = "Natural Earth, NOAA; World map: Narutopedia"
+MapList.CREDITS = "World map based on Narutopedia's Naruto World Map (CC BY-SA 3.0). Other maps made with Natural Earth and NOAA ETOPO1 data (public domain)."
 
 --- {id, name, module, width, height, k_lin, categories, multiplayer_frequency, forced_modifiers,
 --- land_tiles, nations (count), replicated} sorted by name.

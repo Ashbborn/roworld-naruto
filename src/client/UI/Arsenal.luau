@@ -55,11 +55,11 @@ local Arsenal = W.class(W.Control)
 
 --- The list's groups, in order: a heading and the kinds in it.
 Arsenal.GROUPS = {
-	{ "NUKES", { nuke = true } },
+	{ "SEALS", { nuke = true } },
 	{ "ARMY", { call = true, structure = true } },
 	{ "BOOSTS", { boost = true } },
 }
-Arsenal.KIND_TAGS = { structure = "BUILDING", nuke = "NUKE", call = "ORDER", boost = "BOOST" }
+Arsenal.KIND_TAGS = { structure = "BUILDING", nuke = "SEAL", call = "ORDER", boost = "BOOST" }
 --- Under the title.
 Arsenal.SUBTITLE = "Unlock once, keep it forever. Earn Stars by playing matches."
 --- Logical px: the list's width, a row's height, the item's width and its preview's height (desktop);

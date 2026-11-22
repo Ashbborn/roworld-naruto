@@ -46,63 +46,63 @@ UIRules.ARSENAL_NUKES = { "mega", "scatter", "airstrike", "slug" }
 UIRules.ARSENAL = { "artillery", "airfield", "railgun", "mega", "scatter", "airstrike", "slug", "reinforce" }
 
 UIRules.TITLES = {
-	city = "City",
-	port = "Port",
-	factory = "Factory",
-	defense = "Defense Post",
-	sam = "SAM Launcher",
-	silo = "Missile Silo",
+	city = "Town",
+	port = "Harbor",
+	factory = "Workshop",
+	defense = "Watchtower",
+	sam = "Barrier Tower",
+	silo = "Seal Shrine",
 	warship = "Warship",
-	atom = "Atom Bomb",
-	hydrogen = "Hydrogen Bomb",
-	mirv = "MIRV",
-	artillery = "Artillery",
-	airfield = "Airfield",
-	railgun = "Railgun",
-	mega = "Mega Nuke",
-	scatter = "Scattershot",
-	airstrike = "Air Strike",
-	slug = "Railgun Shot",
-	reinforce = "Reinforcements",
+	atom = "Explosion Seal",
+	hydrogen = "Great Explosion Seal",
+	mirv = "Paper Bomb Storm",
+	artillery = "Kunai Battery",
+	airfield = "Hawk Roost",
+	railgun = "Chakra Cannon",
+	mega = "Grand Explosion Seal",
+	scatter = "Scatter Seal",
+	airstrike = "Hawk Strike",
+	slug = "Chakra Shot",
+	reinforce = "Shadow Clones",
 }
 UIRules.SHORT = {
-	city = "City",
-	port = "Port",
-	factory = "Factory",
-	defense = "Defense",
-	sam = "SAM",
-	silo = "Silo",
+	city = "Town",
+	port = "Harbor",
+	factory = "Workshop",
+	defense = "Watch",
+	sam = "Barrier",
+	silo = "Shrine",
 	warship = "Warship",
-	atom = "Atom",
-	hydrogen = "H-Bomb",
-	mirv = "MIRV",
-	artillery = "Artillery",
-	airfield = "Airfield",
-	railgun = "Railgun",
-	mega = "Mega",
+	atom = "Seal",
+	hydrogen = "Great",
+	mirv = "Storm",
+	artillery = "Kunai",
+	airfield = "Roost",
+	railgun = "Cannon",
+	mega = "Grand",
 	scatter = "Scatter",
 	airstrike = "Strike",
-	slug = "Slug",
-	reinforce = "Troops",
+	slug = "Shot",
+	reinforce = "Clones",
 }
 UIRules.BLURBS = {
 	city = "Raises your troop cap by {city}. Joins the road network.",
-	port = "Coastal. Sends trade ships for gold and builds warships.",
-	factory = "Road hub. Trucks pay gold at every stop they pass.",
+	port = "Coastal. Sends merchant ships for Ryo and builds warships.",
+	factory = "Road hub. Supply Carts pay Ryo at every stop they pass.",
 	defense = "Land within {def_r} tiles costs attackers {def_mag}x the troops and {def_cost}x the time.",
-	sam = "Shoots down bombs aimed within {sam_r} tiles. MIRV warheads can't be stopped.",
-	silo = "Required to launch nuclear weapons.",
-	warship = "Patrols where you send it: sinks transports, then warships, and captures trade ships. Heals at your ports.",
+	sam = "Stops explosion seals aimed within {sam_r} tiles. A Paper Bomb Storm can't be stopped.",
+	silo = "Required to launch explosion seals.",
+	warship = "Patrols where you send it: sinks transports, then warships, and captures merchant ships. Heals at your harbors.",
 	atom = "Small blast that wipes troops and structures, leaving fallout.",
 	hydrogen = "Massive blast. Anything inside is erased.",
-	mirv = "Splits into up to {mirv_n} warheads that rain over one nation.",
+	mirv = "Splits into up to {mirv_n} paper bombs that rain over one nation.",
 	artillery = "Shells every enemy within {art_r} tiles on its own: their troops, and the structures it reaches.",
-	airfield = "Flies Air Strikes on any spot within {air_r} tiles. Rearms in {air_s} s.",
+	airfield = "Sends Hawk Strikes to any spot within {air_r} tiles. Rearms in {air_s} s.",
 	railgun = "Fires at any spot on the map. Reloads in {rail_s} s.",
-	mega = "Twice an Atom Bomb's radius: four times the ground, gone.",
-	scatter = "An Atom Bomb with {scat_lo} to {scat_hi} warheads that come down around it.",
-	airstrike = "Bombs a {air_blast}-tile circle: kills troops and wrecks structures. No SAM can stop it.",
-	slug = "A slug that takes a level off every structure it hits. Nothing intercepts it.",
+	mega = "Twice an Explosion Seal's radius: four times the ground, gone.",
+	scatter = "An Explosion Seal with {scat_lo} to {scat_hi} paper bombs that come down around it.",
+	airstrike = "Bombs a {air_blast}-tile circle: kills troops and wrecks structures. No Barrier Tower can stop it.",
+	slug = "A shot that takes a level off every structure it hits. Nothing intercepts it.",
 	reinforce = "Brings a fifth of your troop cap at once. Ready again every {rein_s} s.",
 }
 
@@ -244,7 +244,7 @@ function UIRules.blast_text(kind: string): string
 	local inner, outer = UIRules.nuke_radii(kind)
 	if kind == "mirv" then
 		-- MIRV_WARHEADS is the cap: the real count follows the target's land (55-tile spacing)
-		return string.format("Up to %d warheads across the target nation", Rules().MIRV_WARHEADS)
+		return string.format("Up to %d paper bombs across the target nation", Rules().MIRV_WARHEADS)
 	end
 	if inner > 0.0 then
 		return string.format("%d tiles (%d wiped out)", Defs.round(outer), Defs.round(inner))
@@ -581,13 +581,13 @@ function UIRules.availability(self: any, kind: string): { [string]: any }
 		local lk = UIRules.launcher(kind)
 		local title = Defs.STRUCT_TITLES[lk]
 		if self:struct_count(lk) == 0 then
-			out.reason = "Requires " .. (if lk == Defs.S_AIRFIELD then "an " else "a ") .. title
+			out.reason = "Requires " .. (if string.find(title, "^[AEIOU]") then "an " else "a ") .. title
 			out.locked = true
 			return out
 		end
 		local act, _, soon = self:active_structs(lk)
 		if act == 0 then
-			local what = if lk == Defs.S_SILO then "Silo" else title
+			local what = if lk == Defs.S_SILO then "Shrine" else title
 			out.reason = what .. " under construction · ready in " .. T().fmt_time(math.ceil(soon))
 			out.locked = true
 			return out
@@ -597,7 +597,7 @@ function UIRules.availability(self: any, kind: string): { [string]: any }
 			if ready == 0 then
 				out.reason = string.format(
 					"%s · ready in %s",
-					if lk == Defs.S_AIRFIELD then "Airfield rearming" else "Railgun reloading",
+					if lk == Defs.S_AIRFIELD then "Hawk Roost rearming" else "Chakra Cannon reloading",
 					T().fmt_time(math.ceil(wait))
 				)
 				return out
@@ -621,14 +621,14 @@ function UIRules.availability(self: any, kind: string): { [string]: any }
 		return out
 	end
 	if kind == "warship" and self:struct_count(Defs.S_PORT) == 0 then
-		out.reason = "Requires a Port"
+		out.reason = "Requires a Harbor"
 		out.locked = true
 		return out
 	end
 	if kind == "warship" then
 		local act, _, soon = self:active_structs(Defs.S_PORT)
 		if act == 0 then
-			out.reason = "Port under construction · ready in " .. T().fmt_time(math.ceil(soon))
+			out.reason = "Harbor under construction · ready in " .. T().fmt_time(math.ceil(soon))
 			out.locked = true
 			return out
 		end
@@ -639,7 +639,7 @@ function UIRules.availability(self: any, kind: string): { [string]: any }
 		return out
 	end
 	if (o.gold or 0) < c then
-		out.reason = "Need " .. T().fmt_num(c - o.gold) .. " more gold"
+		out.reason = "Need " .. T().fmt_num(c - o.gold) .. " more Ryo"
 		return out
 	end
 	out.ok = true
@@ -732,8 +732,8 @@ function UIRules.bulk_ring(self: any, prefix: string, kind: string): { any }?
 		local reason = ""
 		if not ok then
 			reason = if nuke and n > loaded
-				then string.format("Only %d missile%s loaded", loaded, if loaded == 1 then "" else "s")
-				else "Not enough gold"
+				then string.format("Only %d seal%s ready", loaded, if loaded == 1 then "" else "s")
+				else "Not enough Ryo"
 		end
 		table.insert(ring, {
 			id = string.format("%s:%s:%d", prefix, kind, n),
@@ -768,9 +768,9 @@ end
 UIRules.PLACE_REASONS = {
 	not_own = "Build on your own land",
 	no_room = "No room here: structures need space",
-	no_coast = "Ports must be on your coast",
-	no_port = "Warships need a finished port on this water",
-	gold = "Not enough gold",
+	no_coast = "Harbors must be on your coast",
+	no_port = "Warships need a finished harbor on this water",
+	gold = "Not enough Ryo",
 	invalid = "Can't build here",
 }
 
@@ -900,7 +900,7 @@ function UIRules._placement_exact(self: any, kind: string, tile: number): { [str
 				return out
 			end
 			if kind == "airstrike" and not self:in_reach(Defs.S_AIRFIELD, Defs.N_AIRSTRIKE, tile) then
-				out.reason = "Out of your Airfields' reach"
+				out.reason = "Out of your Hawk Roosts' reach"
 				return out
 			end
 			if own == 0 then
@@ -914,7 +914,7 @@ function UIRules._placement_exact(self: any, kind: string, tile: number): { [str
 		if map:is_water(tile) or own == me then
 			out.ok = true
 		else
-			out.reason = "Target water near your ports"
+			out.reason = "Target water near your harbors"
 		end
 		return out
 	end
@@ -923,7 +923,7 @@ function UIRules._placement_exact(self: any, kind: string, tile: number): { [str
 		return out
 	end
 	if kind == "port" and not map:is_coastal(tile) then
-		out.reason = "Ports must be on the coast"
+		out.reason = "Harbors must be on the coast"
 		return out
 	end
 	-- Same test as the Sim: no structure closer than STRUCT_MIN_DIST (latitude-corrected circle).
@@ -1303,7 +1303,7 @@ function UIRules.radial_items(self: any, tile: number): { { [string]: any } }
 		local only_strikes = self:struct_count(Defs.S_SILO) == 0
 		table.insert(items, {
 			id = "nuke",
-			label = if only_strikes then "Strike" else "Nuke",
+			label = if only_strikes then "Strike" else "Seal",
 			icon = if only_strikes then launch_kinds[1] else "atom",
 			ok = true,
 			reason = "",

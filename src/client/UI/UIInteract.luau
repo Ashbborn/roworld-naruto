@@ -649,7 +649,7 @@ function UIInteract._place(self: any, tile: number, pos: Vector2)
 			if n_sam > 0 and kind ~= "mirv" then
 				self:_float(
 					string.format(
-						"Target inside %d enemy SAM%s: the %s may be shot down. %s again to launch",
+						"Target inside %d enemy Barrier Tower%s: the %s may be stopped. %s again to launch",
 						n_sam,
 						if n_sam == 1 then "" else "s",
 						what,
@@ -690,13 +690,13 @@ function UIInteract._send_build(self: any, kind: string, tile: number, pl: { [st
 	local title = UIRules.TITLES[kind]
 	if pl.upgrade then
 		self:_float(
-			string.format("%s upgraded to Lv %d  ·  %s gold", title, tonumber(pl.level) or 2, T().fmt_cost(av.cost)),
+			string.format("%s upgraded to Lv %d  ·  %s Ryo", title, tonumber(pl.level) or 2, T().fmt_cost(av.cost)),
 			kind,
 			T().GOLD,
 			pos
 		)
 	else
-		self:_float(string.format("%s  ·  %s gold", title, T().fmt_cost(av.cost)), kind, T().GOLD, pos)
+		self:_float(string.format("%s  ·  %s Ryo", title, T().fmt_cost(av.cost)), kind, T().GOLD, pos)
 	end
 end
 
@@ -752,7 +752,7 @@ function UIInteract._ghost_caption(self: any, kind: string, pl: { [string]: any 
 	if UIRules.is_nuke(kind) then
 		local n_sam = tonumber(ctx:world_call("aim_sams")) or 0
 		if n_sam > 0 and kind ~= "mirv" then
-			return string.format("%d SAM%s cover this target", n_sam, if n_sam == 1 then "" else "s")
+			return string.format("%d Barrier Tower%s cover this target", n_sam, if n_sam == 1 then "" else "s")
 		end
 		return string.format("Launch %s · %s", UIRules.SHORT[kind], cost)
 	end
@@ -1034,7 +1034,7 @@ function UIInteract.on_radial(self: any, id: string, tile: number)
 		ctx:send({ type = "build", kind = k, tile = tile, amount = if n > 1 then n else nil })
 		self:_float(
 			string.format(
-				"%s%s  ·  %s gold",
+				"%s%s  ·  %s Ryo",
 				UIRules.TITLES[k],
 				if n > 1 then string.format(" ×%d", n) else "",
 				T().fmt_cost(cost)
@@ -1253,7 +1253,7 @@ function UIInteract.hover_spec(self: any, tile: number, pinned: boolean?): { [st
 			{ "Land", Th.fmt_pct(s:land_share(own)), Th.TEXT },
 		}
 		if own == ctx:me() or pinned then
-			table.insert(rows, { "Gold", Th.fmt_num(o.gold), Th.GOLD })
+			table.insert(rows, { "Ryo", Th.fmt_num(o.gold), Th.GOLD })
 		end
 		local st = ctx:structure_at(tile, 1)
 		if st ~= nil and st.owner == own then
@@ -1381,7 +1381,7 @@ function UIInteract._aim_spec(self: any, tile: number): { [string]: any }
 	if upgrade then
 		spec.title = string.format("Upgrade %s → Lv %d", title, tonumber(pl.level) or 2)
 	end
-	local rows = { { "Cost", Th.fmt_cost(av.cost) .. " gold", Th.GOLD } }
+	local rows = { { "Cost", Th.fmt_cost(av.cost) .. " Ryo", Th.GOLD } }
 	if nuke then
 		table.insert(rows, { "Blast radius", UIRules.blast_text(k), Th.TEXT })
 		if tile >= 0 and ctx.state:tile_owner(tile) ~= 0 then
@@ -1391,8 +1391,8 @@ function UIInteract._aim_spec(self: any, tile: number): { [string]: any }
 		local n_sam = tonumber(ctx:world_call("aim_sams")) or 0
 		if n_sam > 0 and k ~= "mirv" then
 			table.insert(rows, {
-				"SAM cover",
-				string.format("%d SAM%s cover this target", n_sam, if n_sam == 1 then "" else "s"),
+				"Barrier cover",
+				string.format("%d Barrier Tower%s cover this target", n_sam, if n_sam == 1 then "" else "s"),
 				Th.RED,
 			})
 		end

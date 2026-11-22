@@ -681,7 +681,7 @@ function RadialMenu._redraw(self: any)
 			sub = tostring(it2.reason or "")
 			sub_col = rgb(1.0, 0.6, 0.62)
 		elseif it2.cost ~= nil then
-			sub = Th.fmt_cost(it2.cost) .. " gold"
+			sub = Th.fmt_cost(it2.cost) .. " Ryo"
 			sub_col = Th.GOLD
 		elseif it2.id == "donate" and it2.troops ~= nil then
 			-- capped at the ally's troop headroom (UIRules.donate_plan)

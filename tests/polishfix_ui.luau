@@ -56,7 +56,7 @@ end
 
 -- 2. MIRV copy: the cap, not a promise (review R2-7)
 check(
-	UIRules.blast_text("mirv") == string.format("Up to %d warheads across the target nation", Rules.MIRV_WARHEADS),
+	UIRules.blast_text("mirv") == string.format("Up to %d paper bombs across the target nation", Rules.MIRV_WARHEADS),
 	"MIRV aim row: " .. UIRules.blast_text("mirv")
 )
 local desc = UIRules.blurb("mirv")

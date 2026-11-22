@@ -47,7 +47,7 @@ function AlertBanner.new(c: any)
 	row:add_child(self._disc)
 	local v = T.vbox(0)
 	v.size_flags_vertical = W.SHRINK_CENTER
-	self._title = T.label("INCOMING NUKE", 15, 800, RED_TITLE, 3)
+	self._title = T.label("INCOMING SEAL", 15, 800, RED_TITLE, 3)
 	v:add_child(self._title)
 	self._detail = T.label("", 12, 500, Color3.new(1.0, 0.88, 0.88))
 	v:add_child(self._detail)
@@ -108,7 +108,7 @@ function AlertBanner._show_green(self, last: boolean)
 	self:set_modulate_a(1.0)
 	self._title:set_text("INTERCEPTED!")
 	self._title:set_color(Color3.new(0.6, 1.0, 0.72))
-	self._detail:set_text("Shot down by a SAM" .. (if last then "" else " · more incoming"))
+	self._detail:set_text("Stopped by a Barrier Tower" .. (if last then "" else " · more incoming"))
 	self.panel:set_tint(T.rgba(0.03, 0.2, 0.09, 0.9))
 	self.panel:set_border(T.c(T.GREEN, 0.9))
 	self._disc:add_theme_stylebox_override("panel", T.flat(T.c(T.GREEN, 0.25), 17, T.GREEN, 1))
@@ -211,12 +211,12 @@ function AlertBanner._refresh(self)
 		return
 	end
 	local secs = math.max(0, math.ceil(soonest / Defs.TICK_RATE))
-	local what = (if kind >= 0 then Defs.NUKE_TITLES[kind] else nil) or "Nuke"
+	local what = (if kind >= 0 then Defs.NUKE_TITLES[kind] else nil) or "Seal"
 	if count > 1 then
-		self._title:set_text(string.format("INCOMING NUKES ×%d", count))
+		self._title:set_text(string.format("INCOMING SEALS ×%d", count))
 		self._detail:set_text(string.format("First impact in %ds · from %s", secs, s:owner_name(from)))
 	else
-		self._title:set_text("INCOMING NUKE")
+		self._title:set_text("INCOMING SEAL")
 		self._detail:set_text(string.format("%s from %s · impact in %ds", what, s:owner_name(from), secs))
 	end
 	self.panel:reset_size()

@@ -569,7 +569,7 @@ function SimStructures.install(C)
 		end
 		local cost = Rules.build_cost_kind(kind, self:cost_count(id, kind))
 		if self.o_gold[id] < cost then
-			self:msg(id, Defs.MSG_INFO, string.format("Not enough gold for %s", a_an(struct_title(kind))))
+			self:msg(id, Defs.MSG_INFO, string.format("Not enough Ryo for %s", a_an(struct_title(kind))))
 			return false
 		end
 		local p = self:place(id, kind, t)
@@ -587,7 +587,7 @@ function SimStructures.install(C)
 		if site < 0 then
 			local reason = p.reason
 			if reason == "no_coast" then
-				self:msg(id, Defs.MSG_INFO, "Ports must be built on your coast")
+				self:msg(id, Defs.MSG_INFO, "Harbors must be built on your coast")
 			elseif reason == "not_own" then
 				self:msg(id, Defs.MSG_INFO, "You can only build on your own land")
 			else

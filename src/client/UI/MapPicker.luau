@@ -26,7 +26,8 @@ MapPicker.TABS = {
 }
 MapPicker.CARD = Vector2.new(168, 132)
 MapPicker.GRID_SIZE = Vector2.new(740, 420)
-MapPicker.ATTRIBUTION = "Made with Natural Earth and NOAA ETOPO1 data (public domain)"
+--- (2026-11-23: the World map is made from Narutopedia's Naruto World Map, CC BY-SA 3.0)
+MapPicker.ATTRIBUTION = "World map: Narutopedia (CC BY-SA 3.0) · Other maps: Natural Earth, NOAA ETOPO1 (public domain)"
 
 function MapPicker.new(c: any)
 	local self = setmetatable({}, MapPicker.__mt)

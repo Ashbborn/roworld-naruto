@@ -44,11 +44,11 @@ do
 	local t = F.tile(760, 110)
 	F.clear(sim)
 	expect(
-		not sim:launch_nuke(A, "atom", F.tile(690, 101)) and F.has_msg(sim, "You can't nuke your own land", A),
+		not sim:launch_nuke(A, "atom", F.tile(690, 101)) and F.has_msg(sim, "You can't bomb your own land", A),
 		"own land"
 	)
 	expect(
-		not sim:launch_nuke(A, "atom", t) and F.has_msg(sim, "No missile silo is ready", A),
+		not sim:launch_nuke(A, "atom", t) and F.has_msg(sim, "No seal shrine is ready", A),
 		"silo under construction"
 	)
 	expect(
@@ -60,13 +60,13 @@ do
 	expect(silo.active, "silo active after 10 s")
 	sim:form_alliance(A, B)
 	F.clear(sim)
-	expect(not sim:launch_nuke(A, "atom", t) and F.has_msg(sim, "You can't nuke an ally", A), "ally")
+	expect(not sim:launch_nuke(A, "atom", t) and F.has_msg(sim, "You can't bomb an ally", A), "ally")
 	sim:end_alliance(A, B, 0)
 	sim.o_gold[A] = 100
 	F.clear(sim)
 	expect(
-		not sim:launch_nuke(A, "atom", t) and F.has_msg(sim, "Not enough gold for an Atom Bomb", A),
-		"gold message (an Atom Bomb)"
+		not sim:launch_nuke(A, "atom", t) and F.has_msg(sim, "Not enough Ryo for an Explosion Seal", A),
+		"Ryo message (an Explosion Seal)"
 	)
 	sim.o_gold[A] = 100000000
 	F.clear(sim)
@@ -99,11 +99,11 @@ do
 	)
 	expect(sim:grudge_of(B, A) and sim.o_attacked_tick[B] == sim.tick, "grudge and attacked tick")
 	expect(
-		F.has_msg(sim, "Alpha launched an Atom Bomb at you!", B) and F.has_msg(sim, "Atom Bomb launched at Bravo", A),
+		F.has_msg(sim, "Alpha launched an Explosion Seal at you!", B) and F.has_msg(sim, "Explosion Seal launched at Bravo", A),
 		"launch messages"
 	)
 	F.clear(sim)
-	expect(not sim:launch_nuke(A, "atom", t) and F.has_msg(sim, "No missile silo is ready", A), "cooldown 9 s")
+	expect(not sim:launch_nuke(A, "atom", t) and F.has_msg(sim, "No seal shrine is ready", A), "cooldown 9 s")
 	F.advance(sim, 89)
 	expect(sim:ready_missiles(silo, 90) == 0, "still reloading at 89 ticks")
 	F.advance(sim, 1)
@@ -171,7 +171,7 @@ do
 	local f = ((tiles_before - lost) / tiles_before) ^ 5
 	expect(near(sim.o_troops[B], troops_before * f, 1e-6), "bomb troop loss x((T-n)/T)^5")
 	expect(s_in.dead and not s_out.dead, "structures inside the outer radius destroyed")
-	expect(F.has_msg(sim, "An Atom Bomb from Alpha hit your land", B), "hit message (cap_first a_an)")
+	expect(F.has_msg(sim, "An Explosion Seal from Alpha hit your land", B), "hit message (cap_first a_an)")
 	expect(sim:grudge_of(B, A), "grudge")
 	expect(#sim.nukes == 0, "nuke list compacted")
 end
@@ -195,7 +195,7 @@ do
 		"allies with >= 100 weighted full-size tiles in the blast break with the launcher"
 	)
 	expect(
-		F.has_msg(sim, "Alpha launched a Hydrogen Bomb at Bravo", C2),
+		F.has_msg(sim, "Alpha launched a Great Explosion Seal at Bravo", C2),
 		"non-atom launches are announced to other humans"
 	)
 	local n = sim.nukes[1]
@@ -207,9 +207,9 @@ do
 	local _, outer = Rules.nuke_radii(Defs.N_HYDROGEN)
 	expect(boom ~= nil and boom[5] == math.ceil(outer) and boom[5] == 100, "hydrogen BOOM radius 100")
 	expect(
-		F.has_msg(sim, "Hydrogen bomb detonated over Bravo", C2)
-			and F.has_msg(sim, "Hydrogen bomb detonated over Bravo", A)
-			and not F.has_msg(sim, "Hydrogen bomb detonated over Bravo", B),
+		F.has_msg(sim, "Great Explosion Seal detonated over Bravo", C2)
+			and F.has_msg(sim, "Great Explosion Seal detonated over Bravo", A)
+			and not F.has_msg(sim, "Great Explosion Seal detonated over Bravo", B),
 		"hydrogen news to everyone but the victim"
 	)
 	-- warhead troop loss: 500 (1 - e^(-2 excess / max)) per full-size tile, floored at 3 % of max
@@ -348,8 +348,8 @@ do
 	)
 	expect(sim.o_tiles[B] == tiles0 and sim.fallout_count == 0, "no blast")
 	expect(
-		F.has_msg(sim, "Your SAM shot down an Atom Bomb from Alpha", B)
-			and F.has_msg(sim, "Your Atom Bomb was intercepted by Bravo", A),
+		F.has_msg(sim, "Your Barrier Tower stopped an Explosion Seal from Alpha", B)
+			and F.has_msg(sim, "Your Explosion Seal was intercepted by Bravo", A),
 		"interception messages"
 	)
 	expect(#sim:sam_rows() == 0, "sam_rows empty after the hit")

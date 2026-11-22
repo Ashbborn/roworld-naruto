@@ -32,8 +32,8 @@ Coach.TIPS = {
 	},
 	city = {
 		icon = "city",
-		desktop = "You can afford a City (1). Cities raise your troop cap: place one on your land.",
-		touch = "You can afford a City. Open BUILD and place one on your land to raise your troop cap.",
+		desktop = "You can afford a Town (1). Towns raise your troop cap: place one on your land.",
+		touch = "You can afford a Town. Open BUILD and place one on your land to raise your troop cap.",
 	},
 	contact = {
 		icon = "alliance",
@@ -57,8 +57,8 @@ Coach.TIPS = {
 	},
 	attacked = {
 		icon = "defense",
-		desktop = "You are under attack! Track every front in the Attacks panel. Defense Posts (4) make borders much harder to take.",
-		touch = "You are under attack! Track every front in the Attacks panel. Defense Posts make borders much harder to take.",
+		desktop = "You are under attack! Track every front in the Attacks panel. Watchtowers (4) make borders much harder to take.",
+		touch = "You are under attack! Track every front in the Attacks panel. Watchtowers make borders much harder to take.",
 	},
 }
 Coach.PRIORITY = { "attacked", "floor", "select", "expand", "contact", "tray", "ratio", "city", "boat" }

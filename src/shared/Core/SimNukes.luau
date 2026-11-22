@@ -132,7 +132,7 @@ function SimNukes.install(C)
 			self:msg(
 				id,
 				Defs.MSG_INFO,
-				if strike then "You can't strike your own land" else "You can't nuke your own land"
+				if strike then "You can't strike your own land" else "You can't bomb your own land"
 			)
 			return false
 		end
@@ -141,8 +141,8 @@ function SimNukes.install(C)
 				id,
 				Defs.MSG_INFO,
 				if self:same_team(id, tg)
-					then (if strike then "You can't strike a teammate" else "You can't nuke a teammate")
-					else (if strike then "You can't strike an ally" else "You can't nuke an ally")
+					then (if strike then "You can't strike a teammate" else "You can't bomb a teammate")
+					else (if strike then "You can't strike an ally" else "You can't bomb an ally")
 			)
 			return false
 		end
@@ -161,7 +161,7 @@ function SimNukes.install(C)
 		end
 		local cost = Rules.nuke_cost(kind_name, self.mirvs_launched)
 		if self.o_gold[id] < cost then
-			self:msg(id, Defs.MSG_INFO, string.format("Not enough gold for %s", a_an(nuke_title(kind))))
+			self:msg(id, Defs.MSG_INFO, string.format("Not enough Ryo for %s", a_an(nuke_title(kind))))
 			return false
 		end
 		-- Launch site: the nearest (manhattan) finished silo with a loaded missile. (A strike: the
@@ -527,7 +527,7 @@ function SimNukes.install(C)
 			self:msg(
 				s.owner,
 				Defs.MSG_GOOD,
-				string.format("Your SAM shot down %s from %s", a_an(nuke_title(n.kind)), self.o_name[n.owner])
+				string.format("Your Barrier Tower stopped %s from %s", a_an(nuke_title(n.kind)), self.o_name[n.owner])
 			)
 			self:msg(
 				n.owner,
@@ -705,7 +705,7 @@ function SimNukes.install(C)
 			self:msg_others(
 				victim,
 				Defs.MSG_INFO,
-				string.format("Hydrogen bomb detonated over %s", self:name_of(victim))
+				string.format("Great Explosion Seal detonated over %s", self:name_of(victim))
 			)
 		end
 	end

@@ -150,7 +150,7 @@ function SimWarships.install(C)
 			end
 		end
 		if best == nil then
-			self:msg(id, Defs.MSG_INFO, "You need a port on that sea to build warships")
+			self:msg(id, Defs.MSG_INFO, "You need a harbor on that sea to build warships")
 			return false
 		end
 		local cost = Rules.build_cost(
@@ -158,7 +158,7 @@ function SimWarships.install(C)
 			math.min(self.o_warships[id], self.o_built[id * STRUCT_KINDS + Rules.BUILT_WARSHIP])
 		)
 		if self.o_gold[id] < cost then
-			self:msg(id, Defs.MSG_INFO, "Not enough gold for a Warship")
+			self:msg(id, Defs.MSG_INFO, "Not enough Ryo for a Warship")
 			return false
 		end
 		self.o_gold[id] -= cost
@@ -821,13 +821,13 @@ function SimWarships.install(C)
 			self:msg(
 				victim,
 				Defs.MSG_BAD,
-				string.format("%s's warships are capturing your trade ships", self.o_name[u.owner])
+				string.format("%s's warships are capturing your merchant ships", self.o_name[u.owner])
 			)
 		end
 		self:msg(
 			u.owner,
 			Defs.MSG_GOOD,
-			string.format("Your warship captured a trade ship from %s", self.o_name[victim])
+			string.format("Your warship captured a merchant ship from %s", self.o_name[victim])
 		)
 		self:_on_trade_captured(victim, u.owner, vpos)
 		local best = nil

@@ -164,7 +164,7 @@ expect(
 	"MapList default"
 )
 expect(
-	#MapList.maps >= 1 and MapList.LICENSE == "Public domain",
+	#MapList.maps >= 1 and MapList.LICENSE == "Public domain; World map CC BY-SA 3.0",
 	"MapList: our own maps"
 )
 -- every registered map loads, with its listed size and nations, each nation standing on land
