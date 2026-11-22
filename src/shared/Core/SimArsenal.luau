@@ -376,7 +376,7 @@ function SimArsenal.install(C)
 	--- Reinforcements intent: Rules.REINFORCE_COST gold for a fifth of the troop cap, never past it.
 	function C:reinforce(id: number): boolean
 		if not self:has_unlock(id, UNLOCK.reinforce) then
-			self:msg(id, Defs.MSG_INFO, string.format(SimArsenal.LOCKED_TEXT, "Reinforcements"))
+			self:msg(id, Defs.MSG_INFO, string.format(SimArsenal.LOCKED_TEXT, "Shadow Clones"))
 			return false
 		end
 		local wait = self:reinforce_wait(id)
@@ -384,7 +384,7 @@ function SimArsenal.install(C)
 			self:msg(
 				id,
 				Defs.MSG_INFO,
-				string.format("Reinforcements are ready in %d s", math.ceil(wait / Rules.TICK_RATE))
+				string.format("Shadow Clones are ready in %d s", math.ceil(wait / Rules.TICK_RATE))
 			)
 			return false
 		end
@@ -394,7 +394,7 @@ function SimArsenal.install(C)
 			return false
 		end
 		if self.o_gold[id] < Rules.REINFORCE_COST then
-			self:msg(id, Defs.MSG_INFO, "Not enough gold for Reinforcements")
+			self:msg(id, Defs.MSG_INFO, "Not enough Ryo for Shadow Clones")
 			return false
 		end
 		self.o_gold[id] -= Rules.REINFORCE_COST

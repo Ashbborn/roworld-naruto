@@ -170,7 +170,7 @@ function GameOver.new(c: any)
 	self._take_chips = chips
 	self._chip = {}
 	self._chip_panels = {}
-	for _, c in { { "land", "globe", "LAND", UITheme.AMBER }, { "troops", "troops", "TROOPS", UITheme.CYAN }, { "gold", "gold", "GOLD", UITheme.GOLD } } do
+	for _, c in { { "land", "globe", "LAND", UITheme.AMBER }, { "troops", "troops", "TROOPS", UITheme.CYAN }, { "gold", "gold", "RYO", UITheme.GOLD } } do
 		local chip = W.Panel.new()
 		chip:set_mouse_filter(W.MOUSE_IGNORE)
 		chip.size_flags_horizontal = W.EXPAND_FILL
@@ -675,8 +675,8 @@ function GameOver._show_takeover(self)
 	self._take_kicker:set_text(if saved then "YOUR TAKEOVER IS SAVED" else "DON'T GIVE UP")
 	self._take_sub:set_text(
 		if saved
-			then "Use it now: " .. name .. "'s land, army and gold become yours."
-			else name .. "'s land, army, gold and buildings become yours. Keep playing from where they stand."
+			then "Use it now: " .. name .. "'s land, army and Ryo become yours."
+			else name .. "'s land, army, Ryo and buildings become yours. Keep playing from where they stand."
 	)
 	self._take_btn:set_text(if info.busy then "…" elseif saved then "USE IT NOW" else "TAKE OVER")
 	self._take_price.Text = tostring(info.price)
@@ -699,7 +699,7 @@ function GameOver._refresh_take_chips(self)
 	self._chip.land:set_text(land)
 	self._chip.troops:set_text(troops)
 	self._chip.gold:set_text(gold)
-	self._take_line:set_text(string.format("%s LAND  ·  %s TROOPS  ·  %s GOLD", land, troops, gold))
+	self._take_line:set_text(string.format("%s LAND  ·  %s TROOPS  ·  %s RYO", land, troops, gold))
 end
 
 --- The card's sizes (desktop / phones), the title fitted to the card, the price tag in px.

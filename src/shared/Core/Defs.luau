@@ -53,15 +53,15 @@ Defs.S_RAILGUN = 8
 Defs.STRUCT_KIND_COUNT = 9
 Defs.STRUCT_NAMES = { [0] = "city", "port", "factory", "defense", "sam", "silo", "artillery", "airfield", "railgun" }
 Defs.STRUCT_TITLES = {
-	[0] = "City",
-	"Port",
-	"Factory",
-	"Defense Post",
-	"SAM Launcher",
-	"Missile Silo",
-	"Artillery",
-	"Airfield",
-	"Railgun",
+	[0] = "Town",
+	"Harbor",
+	"Workshop",
+	"Watchtower",
+	"Barrier Tower",
+	"Seal Shrine",
+	"Kunai Battery",
+	"Hawk Roost",
+	"Chakra Cannon",
 }
 
 -- Unit kinds
@@ -86,15 +86,15 @@ Defs.N_SLUG = 8
 Defs.NUKE_KIND_COUNT = 9
 Defs.NUKE_NAMES = { [0] = "atom", "hydrogen", "mirv", "warhead", "mega", "scatter", "shell", "airstrike", "slug" }
 Defs.NUKE_TITLES = {
-	[0] = "Atom Bomb",
-	"Hydrogen Bomb",
-	"MIRV",
-	"Warhead",
-	"Mega Nuke",
-	"Scattershot",
-	"Artillery Shell",
-	"Air Strike",
-	"Railgun Slug",
+	[0] = "Explosion Seal",
+	"Great Explosion Seal",
+	"Paper Bomb Storm",
+	"Paper Bomb",
+	"Grand Explosion Seal",
+	"Scatter Seal",
+	"Kunai Volley",
+	"Hawk Strike",
+	"Chakra Shot",
 }
 
 -- Arsenal unlocks an owner holds (Sim.o_unlock bit mask; Data/Arsenal names them). Without its bit

@@ -249,7 +249,7 @@ function BuildButton.hint_spec(self): { [string]: any }
 	local R = UIRules()
 	local c = self._av.cost or 0
 	local nuke = R.is_nuke(self.kind)
-	local rows: { any } = { { "Cost", if c > 0 then UITheme.fmt_cost(c) .. " gold" else "Free", UITheme.GOLD } }
+	local rows: { any } = { { "Cost", if c > 0 then UITheme.fmt_cost(c) .. " Ryo" else "Free", UITheme.GOLD } }
 	if self.kind == "reinforce" then
 		local o = self.ctx:my()
 		local troops = if o ~= nil

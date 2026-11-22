@@ -119,11 +119,11 @@ do
 	F.clear(sim)
 	local C2 = F.owner(sim, "Charlie", Defs.KIND_HUMAN, 10000000)
 	expect(
-		not sim:build_warship(C2, sea) and F.has_msg(sim, "You need a port on that sea to build warships", C2),
+		not sim:build_warship(C2, sea) and F.has_msg(sim, "You need a harbor on that sea to build warships", C2),
 		"no port message"
 	)
 	sim.o_gold[B] = 0
-	expect(not sim:build_warship(B, sea) and F.has_msg(sim, "Not enough gold for a Warship", B), "gold message")
+	expect(not sim:build_warship(B, sea) and F.has_msg(sim, "Not enough Ryo for a Warship", B), "gold message")
 	expect(sim:try_build(A, "warship", sea), "try_build('warship') routes to build_warship")
 
 	-- move_warship
@@ -453,8 +453,8 @@ do
 	expect(nu.path[1] == vpos and nu.path[#nu.path] == pa.water, "from the capture point to the captor's port")
 	expect(w.vet_progress == Rules.WARSHIP_VET_TRANSPORTS, "capture: +10 veterancy points")
 	expect(
-		F.has_msg(sim, "Alpha's warships are capturing your trade ships", B)
-			and F.has_msg(sim, "Your warship captured a trade ship from Bravo", A),
+		F.has_msg(sim, "Alpha's warships are capturing your merchant ships", B)
+			and F.has_msg(sim, "Your warship captured a merchant ship from Bravo", A),
 		"capture messages"
 	)
 	local hk = false

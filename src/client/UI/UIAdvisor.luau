@@ -526,20 +526,20 @@ function UIAdvisor._note_intercept(self: any, kind: number, nuke_owner: number, 
 		self._volleys[nuke_owner] = v
 		return
 	end
-	local what = if kind >= 0 and kind < Defs.NUKE_KIND_COUNT then Defs.NUKE_TITLES[kind] else "nuke"
+	local what = if kind >= 0 and kind < Defs.NUKE_KIND_COUNT then Defs.NUKE_TITLES[kind] else "seal"
 	if not self:cooldown(string.format("icpt:%d:%d", sam_owner, nuke_owner), 2500) then
 		return
 	end
 	if sam_owner == me then
 		self.ui.feed:toast(
 			Defs.MSG_GOOD,
-			string.format("Your SAM shot down %s's %s", s:owner_name(nuke_owner), what),
+			string.format("Your Barrier Tower stopped %s's %s", s:owner_name(nuke_owner), what),
 			"sam"
 		)
 	else
 		self.ui.feed:toast(
 			Defs.MSG_BAD,
-			string.format("%s's SAM intercepted your %s", if sam_owner ~= 0 then s:owner_name(sam_owner) else "A", what),
+			string.format("%s's Barrier Tower stopped your %s", if sam_owner ~= 0 then s:owner_name(sam_owner) else "A", what),
 			"sam"
 		)
 	end
@@ -579,7 +579,7 @@ function UIAdvisor.flush_volleys(self: any)
 			self.ui.feed:toast(
 				Defs.MSG_GOOD,
 				string.format(
-					"Your SAMs shot down %d of %d warheads from %s",
+					"Your Barrier Towers stopped %d of %d paper bombs from %s",
 					v.down_by_me,
 					total,
 					s:owner_name(owner_id)
@@ -589,7 +589,7 @@ function UIAdvisor.flush_volleys(self: any)
 		elseif v.down_mine > 0 then
 			self.ui.feed:toast(
 				Defs.MSG_BAD,
-				string.format("SAMs shot down %d of your %d warheads", v.down_mine, total),
+				string.format("Barrier Towers stopped %d of your %d paper bombs", v.down_mine, total),
 				"sam"
 			)
 		end
@@ -698,10 +698,10 @@ function UIAdvisor._naval_sfx(text: string): string
 	if has("you sank") or has("your warship sank") then
 		return "ship_kill"
 	end
-	if has("captured a trade ship") and string.sub(t, 1, 4) == "your" then
+	if has("captured a merchant ship") and string.sub(t, 1, 4) == "your" then
 		return "trade_captured"
 	end
-	if has("trade ship") then
+	if has("merchant ship") then
 		return "trade_lost"
 	end
 	return ""
@@ -746,7 +746,7 @@ function UIAdvisor.on_unit_changed(self: any, uid: number)
 	local prev = self._ship_state[uid] or 0
 	self._ship_state[uid] = stt
 	if stt == 1 and prev ~= 1 and not self:_throttled("retreat", 8000) then
-		ui.feed:toast(Defs.MSG_INFO, "Your warship is returning to port for repairs", "warship")
+		ui.feed:toast(Defs.MSG_INFO, "Your warship is returning to harbor for repairs", "warship")
 	end
 	local vet = tonumber(u.veterancy) or 0
 	local pv = self._ship_vet[uid] or 0

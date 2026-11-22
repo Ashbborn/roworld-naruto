@@ -65,7 +65,7 @@ do
 	-- is closer than STRUCT_MIN_DIST to it) and does not upgrade it.
 	F.clear(sim)
 	expect(
-		not sim:try_build(A, "city", c) and F.has_msg(sim, "No room for a City there", A),
+		not sim:try_build(A, "city", c) and F.has_msg(sim, "No room for a Town there", A),
 		"click on an unfinished city: no room"
 	)
 	-- A click 6 rows away snaps to the nearest free tile.
@@ -173,12 +173,12 @@ do
 	local B = F.owner(sim, "Bravo", Defs.KIND_HUMAN, 0)
 	F.claim(sim, B, 760, 110, 4)
 	expect(
-		not sim:try_build(B, "city", F.tile(760, 110)) and F.has_msg(sim, "Not enough gold for a City", B),
-		"Not enough gold for a City"
+		not sim:try_build(B, "city", F.tile(760, 110)) and F.has_msg(sim, "Not enough Ryo for a Town", B),
+		"Not enough Ryo for a Town"
 	)
 	expect(
-		not sim:try_build(B, "sam", F.tile(760, 110)) and F.has_msg(sim, "Not enough gold for a SAM Launcher", B),
-		"Not enough gold for a SAM Launcher"
+		not sim:try_build(B, "sam", F.tile(760, 110)) and F.has_msg(sim, "Not enough Ryo for a Barrier Tower", B),
+		"Not enough Ryo for a Barrier Tower"
 	)
 	sim.o_gold[B] = 5000000
 	expect(
@@ -186,7 +186,7 @@ do
 		"not_own message"
 	)
 	expect(
-		not sim:try_build(B, "port", F.tile(760, 110)) and F.has_msg(sim, "Ports must be built on your coast", B),
+		not sim:try_build(B, "port", F.tile(760, 110)) and F.has_msg(sim, "Harbors must be built on your coast", B),
 		"no_coast message"
 	)
 	expect(
@@ -197,8 +197,8 @@ do
 	expect(sim:try_build(B, "defense", F.tile(760, 110)), "defense post on B's land")
 	F.clear(sim)
 	expect(
-		not sim:try_build(B, "defense", F.tile(760, 111)) and F.has_msg(sim, "No room for a Defense Post there", B),
-		"No room for a Defense Post there"
+		not sim:try_build(B, "defense", F.tile(760, 111)) and F.has_msg(sim, "No room for a Watchtower there", B),
+		"No room for a Watchtower there"
 	)
 	expect(sim:struct_total() == 4, "struct_total")
 end
@@ -254,13 +254,13 @@ do
 		sim:struct_count(A, Defs.S_CITY) == 0 and sim:struct_count(N2, Defs.S_CITY) == 1 and sim.o_alevel[N2 * STRUCT_KINDS] == 1,
 		"counts moved to the captor"
 	)
-	expect(F.has_msg(sim, "Nation captured your City", A), "capture message to the victim")
+	expect(F.has_msg(sim, "Nation captured your Town", A), "capture message to the victim")
 	F.clear(sim)
 	sim:set_owner(dt, N2)
 	expect(
 		sim.structs[2] == nil
 			and #F.events(sim, Ev.STRUCT_DEL) == 1
-			and F.has_msg(sim, "Nation destroyed your Defense Post", A),
+			and F.has_msg(sim, "Nation destroyed your Watchtower", A),
 		"captured defense post is destroyed"
 	)
 	expect(buffer.readu8(sim.def_cover, F.tile(700, 140)) == 0, "cover removed with the post")

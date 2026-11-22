@@ -21,7 +21,7 @@ end
 
 local UnitCard = W.class(W.Control)
 
-UnitCard.STATE_TEXT = { [0] = "Patrolling", "Returning to port for repairs", "Repairing" }
+UnitCard.STATE_TEXT = { [0] = "Patrolling", "Returning to harbor for repairs", "Repairing" }
 UnitCard.DEST_SECONDS = 2.5
 
 --- Reads a unit field that the Sim may not expose yet.

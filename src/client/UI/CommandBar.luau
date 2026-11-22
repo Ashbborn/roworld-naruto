@@ -151,7 +151,7 @@ function CommandBar._build_sections(self)
 	self._gold_box = T.vbox(3)
 	local gr = T.hbox(6)
 	gr:add_child(T.icon_rect("gold", 12.0, T.TEXT_3))
-	gr:add_child(T.caption("Gold"))
+	gr:add_child(T.caption("Ryo"))
 	gr:add_child(spacer())
 	self._income = T.label("+0/s", 11, 700, T.GREEN)
 	gr:add_child(self._income)
@@ -402,7 +402,7 @@ function CommandBar._apply_fixed_widths(self, compact: boolean)
 	T.fix_width(self._gold, w_gold)
 	T.fix_width(self._income, w_rate, W.ALIGN_RIGHT)
 	local cap_troops = T.text_width("TROOPS", small, 700) + 6.0
-	local cap_gold = T.text_width("GOLD", small, 700) + 4.0
+	local cap_gold = T.text_width("RYO", small, 700) + 4.0
 	local troops_w = math.max(w_val + 5.0 + w_cap, 12.0 + 6.0 + cap_troops + 8.0 + w_rate)
 	troops_w = math.max(troops_w, 40.0 + 6.0 + w_war)
 	self._troops_box:set_min_size(Vector2.new(troops_w, 0))
@@ -522,7 +522,7 @@ function CommandBar.set_placing(self, kind: string)
 			then "Tap a target, then ✓ to launch"
 			else string.format("Tap your land, then ✓ to build the %s", t)
 		if kind == "warship" then
-			txt = "Tap water near your port, then ✓"
+			txt = "Tap water near your harbor, then ✓"
 		end
 		self._place_text:set_text(txt)
 	end
@@ -828,7 +828,7 @@ function CommandBar.stats_spec(self): { [string]: any }
 	if at_war > 0 then
 		table.insert(rows, { "At war", T.fmt_troops(at_war), T.ORANGE })
 	end
-	table.insert(rows, { "Gold", T.fmt_num(o.gold), T.GOLD })
+	table.insert(rows, { "Ryo", T.fmt_num(o.gold), T.GOLD })
 	table.insert(rows, { "Income", T.fmt_rate(o.income), if o.income > 0 then T.GREEN else T.TEXT_3 })
 	table.insert(rows, { "Land", T.fmt_pct(s:land_share(o.id)) })
 	local pct = ctx.ratio * 100
@@ -845,7 +845,7 @@ function CommandBar.stats_spec(self): { [string]: any }
 		title = o.name,
 		swatch = o.color,
 		rows = rows,
-		footer = "Cities raise your troop cap. More land, more gold.",
+		footer = "Towns raise your troop cap. More land, more Ryo.",
 	}
 end
 

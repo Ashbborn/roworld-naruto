@@ -201,7 +201,7 @@ function HelpOverlay._fill_rules(text: string): string
 			Defs.round((tonumber(UIRules.rules_const("WARSHIP_RETREAT_FRAC", 0.75)) or 0.75) * 100.0)
 		),
 		post_shoot = if UIRules.rules_const("DEFENSE_POST_SHOOTS", false) == true
-			then " Defense Posts also fire on enemy boats in range."
+			then " Watchtowers also fire on enemy boats in range."
 			else "",
 		win = tostring(Defs.round(R.WIN_SHARE * 100.0)),
 	})
@@ -224,7 +224,7 @@ HelpOverlay.SECTIONS = {
 		icon = "boat",
 		color = "cyan",
 		title = "Boats",
-		text = "Click a coast you can't reach by land and a transport sails from your nearest shore, landing troops for a beachhead. Warships (built from a Port) patrol where you send them: they hit transports first, then warships, then trade ships, which they capture for gold. Below {ws_retreat}% health a warship returns to port and heals near your ports; kills earn it veterancy. Click one of yours, then the sea, to move it.{post_shoot}",
+		text = "Click a coast you can't reach by land and a transport sails from your nearest shore, landing troops for a beachhead. Warships (built from a Harbor) patrol where you send them: they hit transports first, then warships, then merchant ships, which they capture for Ryo. Below {ws_retreat}% health a warship returns to harbor and heals near your harbors; kills earn it veterancy. Click one of yours, then the sea, to move it.{post_shoot}",
 	},
 	{
 		icon = "alliance",
@@ -238,13 +238,13 @@ HelpOverlay.SECTIONS = {
 		title = "Build your economy",
 		builds = true,
 		wide = true,
-		text = "Gold flows from your land, factories and trade. Structures get pricier the more you own and need room ({spacing} tiles apart); place them on your own land with the command bar (1 – 7) or the action menu. Land near a Defense Post costs attackers {def_mag}× the troops and {def_cost}× the time.",
+		text = "Ryo flows from your land, workshops and trade. Structures get pricier the more you own and need room ({spacing} tiles apart); place them on your own land with the command bar (1 – 7) or the action menu. Land near a Watchtower costs attackers {def_mag}× the troops and {def_cost}× the time.",
 	},
 	{
 		icon = "atom",
 		color = "red",
-		title = "Nukes & SAMs",
-		text = "A Missile Silo lets you launch Atom bombs, Hydrogen bombs and MIRVs. Blasts erase troops and structures and leave fallout: land that stays poisoned until someone re-conquers it, slowly and at a high cost. SAM Launchers shoot down bombs aimed inside their range ({sam_r} tiles); MIRV warheads can't be stopped.",
+		title = "Seals & Barriers",
+		text = "A Seal Shrine lets you launch Explosion Seals, Great Explosion Seals and Paper Bomb Storms. Blasts erase troops and structures and leave fallout: land that stays poisoned until someone re-conquers it, slowly and at a high cost. Barrier Towers stop seals aimed inside their range ({sam_r} tiles); a Paper Bomb Storm can't be stopped.",
 	},
 	{
 		icon = "crown",
@@ -291,7 +291,7 @@ HelpOverlay.KEYS_DESKTOP = {
 	{ "Drag", "Rotate the globe" },
 	{ "WASD / Arrows", "Pan the globe" },
 	{ "Wheel / + −", "Zoom" },
-	{ "1 – 0", "Build & nukes" },
+	{ "1 – 0", "Build & seals" },
 	{ "Q / E", "Attack share −/+" },
 	{ "Space", "Attack at cursor" },
 	{ "Backspace", "Retreat your latest attack" },

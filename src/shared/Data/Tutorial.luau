@@ -137,9 +137,9 @@ Tutorial.STEPS = {
 	},
 	{
 		id = "city",
-		touch = "Open BUILD, pick City, tap your land",
-		desktop = "Pick City (1) and click your land",
-		note = "Here is gold for your first City",
+		touch = "Open BUILD, pick Town, tap your land",
+		desktop = "Pick Town (1) and click your land",
+		note = "Here is Ryo for your first Town",
 	},
 }
 

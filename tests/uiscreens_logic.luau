@@ -445,11 +445,11 @@ click(my_tile)
 local it = session.intents[1]
 expect(it ~= nil and it.type == "build" and it.kind == "city", "click own land builds a city")
 expect(inter.aim_kind == "", "placement ends after one build (no Shift)")
-expect(string.find(last_float(), "City", 1, true) ~= nil, "build float: " .. last_float())
+expect(string.find(last_float(), "Town", 1, true) ~= nil, "build float: " .. last_float())
 -- not enough gold for a SAM (1.5M > gold 2M? gold 2M, SAM 1.5M: ok) -> silo: 1M ok; try hydrogen: needs a silo
 inter:select_action("hydrogen")
 expect(
-	inter.aim_kind == "" and bar.denied[#bar.denied] == "hydrogen" and last_float() == "Requires a Missile Silo",
+	inter.aim_kind == "" and bar.denied[#bar.denied] == "hydrogen" and last_float() == "Requires a Seal Shrine",
 	"nuke without silo is denied: " .. last_float()
 )
 

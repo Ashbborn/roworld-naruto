@@ -707,7 +707,7 @@ function StarterOffer._on_inventory(self)
 		self.bought_at = os.clock()
 		self.ctx:sfx("unlock")
 		if self.ui_notice ~= nil then
-			self.ui_notice("Starter Pack unlocked! Mega Nuke, Scattershot and 2x Stars are yours.")
+			self.ui_notice("Starter Pack unlocked! Grand Explosion Seal, Scatter Seal and 2x Stars are yours.")
 		end
 		self:close()
 		return

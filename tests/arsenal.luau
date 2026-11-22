@@ -52,14 +52,14 @@ do
 	local enemy = F.tile(716, 100)
 	F.clear(sim)
 	local ok = sim:try_build(A, "artillery", own)
-	expect(not ok and F.has_msg(sim, "Unlock Artillery in the Arsenal first", A), "artillery is locked")
+	expect(not ok and F.has_msg(sim, "Unlock Kunai Battery in the Arsenal first", A), "artillery is locked")
 	expect(not sim:try_build(A, "airfield", own) and not sim:try_build(A, "railgun", own), "airfield, railgun locked")
 	expect(sim.n_structs == 0 and sim.o_gold[A] == 100000000, "nothing built, nothing charged")
 	local silo = sim:add_struct(Defs.S_SILO, A, own)
 	finish_building(sim)
 	F.clear(sim)
 	expect(
-		not sim:launch_nuke(A, "mega", enemy) and F.has_msg(sim, "Unlock the Mega Nuke in the Arsenal first", A),
+		not sim:launch_nuke(A, "mega", enemy) and F.has_msg(sim, "Unlock the Grand Explosion Seal in the Arsenal first", A),
 		"mega nuke is locked"
 	)
 	expect(not sim:launch_nuke(A, "scatter", enemy), "scattershot is locked")
@@ -68,7 +68,7 @@ do
 	expect(#silo.shots == 0 and #sim.nukes == 0, "no missile left the silo")
 	F.clear(sim)
 	expect(
-		not sim:reinforce(A) and F.has_msg(sim, "Unlock Reinforcements in the Arsenal first", A),
+		not sim:reinforce(A) and F.has_msg(sim, "Unlock Shadow Clones in the Arsenal first", A),
 		"reinforcements locked"
 	)
 	expect(sim:launch_nuke(A, "atom", enemy), "an atom bomb needs no unlock")
@@ -173,7 +173,7 @@ do
 	local target = F.tile(716, 100)
 	F.clear(sim)
 	expect(
-		not sim:launch_nuke(A, "airstrike", target) and F.has_msg(sim, "No airfield is ready", A),
+		not sim:launch_nuke(A, "airstrike", target) and F.has_msg(sim, "No hawk roost is ready", A),
 		"not while it is being built"
 	)
 	finish_building(sim)
@@ -181,7 +181,7 @@ do
 	sim:set_owner(far, B)
 	F.clear(sim)
 	expect(
-		not sim:launch_nuke(A, "airstrike", far) and F.has_msg(sim, "That is out of your airfield's reach", A),
+		not sim:launch_nuke(A, "airstrike", far) and F.has_msg(sim, "That is out of your hawk roost's reach", A),
 		"out of reach beyond 156 tiles"
 	)
 	F.clear(sim)
@@ -217,7 +217,7 @@ do
 	expect(sim.o_tiles[B] == tiles_before and sim.fallout_count == 0, "takes no land, leaves no fallout")
 	expect(city.level == 2 and city.hp == 400, "600 damage to a city")
 	expect(post.dead, "a defense post (600) is destroyed")
-	expect(F.has_msg(sim, "An Air Strike from Alpha hit your land", B), "the victim is told")
+	expect(F.has_msg(sim, "A Hawk Strike from Alpha hit your land", B), "the victim is told")
 	-- a second strike takes a level off the city
 	F.advance(sim, Rules.RELOAD_TICKS[Defs.S_AIRFIELD])
 	F.clear(sim)
@@ -283,7 +283,7 @@ do
 	run_until(sim, function()
 		return #sim.nukes == 0
 	end, 100)
-	expect(silo.dead and F.has_msg(sim, "Alpha destroyed your Missile Silo", B), "at level 1 it is destroyed")
+	expect(silo.dead and F.has_msg(sim, "Alpha destroyed your Seal Shrine", B), "at level 1 it is destroyed")
 	expect(not gun.dead, "(the gun stands)")
 end
 
@@ -302,7 +302,7 @@ do
 	local gold = sim.o_gold[A]
 	F.clear(sim)
 	expect(sim:launch_nuke(A, "mega", target) and sim.o_gold[A] == gold - 2500000, "launches from a silo")
-	expect(F.has_msg(sim, "Alpha launched a Mega Nuke at you!", B), "the target is warned")
+	expect(F.has_msg(sim, "Alpha launched a Grand Explosion Seal at you!", B), "the target is warned")
 	run_until(sim, function()
 		return #sim.nukes == 0
 	end, 600)
@@ -406,7 +406,7 @@ do
 		"REINFORCE event with the troops and when the next is ready"
 	)
 	F.clear(sim)
-	expect(not sim:reinforce(A) and F.has_msg(sim, "Reinforcements are ready in 30 s", A), "30 s between calls")
+	expect(not sim:reinforce(A) and F.has_msg(sim, "Shadow Clones are ready in 30 s", A), "30 s between calls")
 	expect(sim:reinforce_wait(A) == 300, "reinforce_wait")
 	F.advance(sim, 300)
 	sim.o_troops[A] = 450000
@@ -420,7 +420,7 @@ do
 	sim.o_troops[A] = 1000
 	sim.o_gold[A] = 500
 	F.clear(sim)
-	expect(not sim:reinforce(A) and F.has_msg(sim, "Not enough gold for Reinforcements", A), "needs the gold")
+	expect(not sim:reinforce(A) and F.has_msg(sim, "Not enough Ryo for Shadow Clones", A), "needs the gold")
 	sim.o_gold[A] = 1000000
 	sim:_apply_intent(A, { type = "reinforce" })
 	expect(sim.o_troops[A] == 101000, "the reinforce intent")
