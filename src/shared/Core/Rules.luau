@@ -133,17 +133,21 @@ local AKATSUKI = {
 	--- Every ATTACK_EVERY_TICKS it attacks its best target on its border with ATTACK_SHARE x its home
 	--- troops (x the seal growth, at most ATTACK_SHARE_MAX; at least ATTACK_MIN_TROOPS): wild Tailed
 	--- Beasts first, then beast holders, then the weakest neighbour; with no neighbour to attack, it
-	--- takes free land with EXPAND_SHARE. Spawn-shielded owners are skipped.
+	--- takes free land with EXPAND_SHARE. Spawn-shielded owners are skipped. It is a hunter, not a
+	--- conqueror: past LAND_SHARE_MAX of the map's land it attacks only beasts and holders.
 	ATTACK_EVERY_TICKS = 10,
 	ATTACK_SHARE = 0.05,
 	ATTACK_SHARE_MAX = 0.12,
 	ATTACK_MIN_TROOPS = 1000.0,
 	EXPAND_SHARE = 0.02,
+	LAND_SHARE_MAX = 0.03,
 	--- Cells: every CELL_EVERY_S it drops a disk of CELL_RADIUS full-size tiles of its land next to
-	--- its priority target it does not border yet (a wild beast, else a beast holder). At most
+	--- its priority target it does not border yet (a wild beast awake for CELL_BEAST_AFTER_S at least,
+	--- so players get a first go at it; else a beast holder). At most
 	--- MAX_CELLS cells hold land at once: a new one withdraws the oldest (its land goes unowned).
 	--- CELL_TRIES border tiles of the target are tried for the spot; CELL_MIN_TILES must be seized.
 	CELL_EVERY_S = 25,
+	CELL_BEAST_AFTER_S = 60,
 	CELL_RADIUS = 5.0,
 	MAX_CELLS = 3,
 	CELL_TRIES = 80,

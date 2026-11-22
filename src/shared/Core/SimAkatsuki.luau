@@ -42,8 +42,8 @@ local SimAkatsuki = {}
 
 function SimAkatsuki.install(C: any)
 	--- `cfg`: the match config's `akatsuki` (nil / false: off; true: Rules.AKATSUKI's schedule; a
-	--- table: that with appear_s / warn_s / cell_every_s overridden, for tests and Studio). Needs the
-	--- Tailed Beasts on (`_init_beasts` first). Draws nothing from the rng.
+	--- table: that with appear_s / warn_s / cell_every_s / cell_beast_after_s overridden, for tests and
+	--- Studio). Needs the Tailed Beasts on (`_init_beasts` first). Draws nothing from the rng.
 	function C._init_akatsuki(self: any, cfg: any)
 		local A = Rules.AKATSUKI
 		self.akatsuki_on = cfg ~= nil and cfg ~= false and self.beasts_on == true
@@ -51,6 +51,7 @@ function SimAkatsuki.install(C: any)
 		self.aka_appear_s = tonumber(o.appear_s) or A.APPEAR_S
 		self.aka_warn_s = tonumber(o.warn_s) or A.WARN_S
 		self.aka_cell_every_s = tonumber(o.cell_every_s) or A.CELL_EVERY_S
+		self.aka_cell_beast_after_s = tonumber(o.cell_beast_after_s) or A.CELL_BEAST_AFTER_S
 		self.aka_state = HIDDEN
 		--- where it appears (set at its stir), and whether that is the map's Land of Rain
 		self.aka_tile = -1
@@ -341,6 +342,8 @@ function SimAkatsuki.install(C: any)
 		local o_alive = self.o_alive
 		local o_beast = self.o_beast
 		local o_troops = self.o_troops
+		-- (past LAND_SHARE_MAX of the land it hunts only: beasts and holders)
+		local roam = self.o_tiles[id] < self.map.land_count * A.LAND_SHARE_MAX
 		local best, best_tier, best_troops = 0, 4, math.huge
 		for _, o in self.sc_list do
 			if o_alive[o] == 0 or self:shielded(o) or self.o_special[o] == SPECIAL_AKATSUKI then
@@ -351,6 +354,8 @@ function SimAkatsuki.install(C: any)
 				tier = 1
 			elseif self:_akatsuki_holder(o) then
 				tier = 2
+			elseif not roam then
+				continue
 			end
 			local s = o_troops[o]
 			if tier < best_tier or (tier == best_tier and s < best_troops) then
@@ -362,7 +367,7 @@ function SimAkatsuki.install(C: any)
 			tile = self.sc_tile[best]
 			local growth = 1.0 + A.SEAL_GROWTH * #self.aka_sealed
 			share = math.min(A.ATTACK_SHARE * growth, A.ATTACK_SHARE_MAX)
-		elseif self.sc_neutral_tile >= 0 then
+		elseif roam and self.sc_neutral_tile >= 0 then
 			tile = self.sc_neutral_tile
 			share = A.EXPAND_SHARE
 		else
@@ -379,16 +384,24 @@ function SimAkatsuki.install(C: any)
 		return self:borders(b, a)
 	end
 
-	--- The owner its next cell lands next to: a wild beast it does not border yet (the weakest), else a
-	--- beast holder it does not border yet (the one holding most, then the weakest). 0: none.
+	--- The owner its next cell lands next to: a wild beast it does not border yet, awake for
+	--- CELL_BEAST_AFTER_S at least (the weakest), else a beast holder it does not border yet (the one
+	--- holding most, then the weakest). 0: none.
 	function C._akatsuki_cell_target(self: any): number
 		local id = self.aka_id
 		local o_alive = self.o_alive
 		local o_troops = self.o_troops
+		local after = math.floor(self.aka_cell_beast_after_s * TICK_RATE)
 		local best, bs = 0, math.huge
 		for t = 1, Beasts.COUNT do
 			local b = self.beasts[t]
-			if b.state == Defs.BEAST_AWAKE and b.id > 0 and o_alive[b.id] == 1 and self.o_tiles[b.id] > 0 then
+			if
+				b.state == Defs.BEAST_AWAKE
+				and b.id > 0
+				and o_alive[b.id] == 1
+				and self.o_tiles[b.id] > 0
+				and self.tick - b.awake_tick >= after
+			then
 				if o_troops[b.id] < bs and not self:_akatsuki_touches(id, b.id) then
 					best, bs = b.id, o_troops[b.id]
 				end

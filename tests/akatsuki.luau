@@ -318,6 +318,31 @@ do
 	expect(holder > 0 and tg2 == holder, "then a beast holder (a jinchuriki)")
 	local tg3, _, _, weak = first_target(false, false)
 	expect(tg3 == weak, "then the weakest neighbour")
+	-- a hunter, not a conqueror: past LAND_SHARE_MAX of the land, only beasts and holders
+	local sim = bare(9)
+	local c = inland(sim, 12000)
+	local aid = appear(sim, c)
+	local r = math.floor(A.RADIUS / sim.R.K_LIN)
+	place(sim, "Weak", Defs.KIND_NATION, c + r + 3, 3, 10)
+	local cap_tiles = math.ceil(map.land_count * A.LAND_SHARE_MAX)
+	for k = 0, map.land_count - 1 do
+		if sim.o_tiles[aid] >= cap_tiles then
+			break
+		end
+		local t = map:land_tile(k)
+		if readi32(sim.owner, t * 4) == 0 and sim:claimable(t) then
+			sim:set_owner(t, aid)
+		end
+	end
+	sim.o_troops[aid] = 1000000
+	sim:_akatsuki_wave()
+	local any = false
+	for _, a in sim.attacks do
+		if not a.dead and a.attacker == aid then
+			any = true
+		end
+	end
+	expect(not any, ("holding %.0f%% of the land it leaves its other neighbours and free land alone"):format(A.LAND_SHARE_MAX * 100))
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -332,6 +357,9 @@ do
 	local b_tiles = sim.o_tiles[bid]
 	expect(not sim:borders(aid, bid), "the beast is far away")
 	table.clear(sim.d_ev)
+	sim:_akatsuki_cell()
+	expect(#events_of(sim.d_ev, Ev.AKATSUKI_CELL) == 0, "a beast that just emerged is no cell target yet (players get a first go)")
+	sim.beasts[3].awake_tick = sim.tick - A.CELL_BEAST_AFTER_S * 10
 	sim:_akatsuki_cell()
 	local cells = events_of(sim.d_ev, Ev.AKATSUKI_CELL)
 	expect(#cells == 1 and cells[1][3] == bid, "a cell drops next to the wild beast")
@@ -628,7 +656,7 @@ end
 -- ---------------------------------------------------------------------------------------------
 -- A full match: invariants, the mirror through the protocol, a late joiner, determinism
 -- ---------------------------------------------------------------------------------------------
-local MATCH_AKA = { appear_s = 16, warn_s = 2, cell_every_s = 3 }
+local MATCH_AKA = { appear_s = 16, warn_s = 2, cell_every_s = 3, cell_beast_after_s = 4 }
 local function run_match(seed: number, ticks: number, mirror: boolean): (any, any, any, { [string]: number })
 	local sim = Sim.new(map, { seed = seed, difficulty = 1, tribes = 60, max_humans = 1, beasts = FAST, akatsuki = MATCH_AKA })
 	local me = sim:add_human("tester", "Tester")
