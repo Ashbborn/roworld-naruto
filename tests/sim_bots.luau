@@ -30,8 +30,13 @@ local function expect(c: any, w: string)
 end
 
 local map = WorldMap.get("pangaea")
+--- RW_BEASTS=1: the same checks with the Tailed Beasts on, on a fast schedule (all nine out by tick ~520).
+local BEASTS = if require("@lune/process").env.RW_BEASTS then { first_s = 10, every_s = 4, warn_s = 2, rampage_s = 6 } else nil
 local function run(seed: number, ticks: number)
-	local sim = Sim.new(map, { seed = seed, difficulty = 1, tribes = 40, max_humans = 12, spawn_ticks = 100 })
+	local sim = Sim.new(
+		map,
+		{ seed = seed, difficulty = 1, tribes = 40, max_humans = 12, spawn_ticks = 100, beasts = BEASTS }
+	)
 	local human = sim:add_human("u1", "RealPerson")
 	local r = seed
 	local function rand()
@@ -59,6 +64,15 @@ local function run(seed: number, ticks: number)
 end
 
 local sim, gs, human, bots, spawned_at = run(7, 700)
+if BEASTS ~= nil then
+	local n = 0
+	for id = 1, sim.owner_total do
+		if sim.o_beast[id] > 0 then
+			n += 1
+		end
+	end
+	expect(n == 9, "RW_BEASTS: the nine beasts emerged (" .. n .. ")")
+end
 expect(#bots == 8, "8 bot players added")
 local all_spawned, spread = true, {}
 for _, b in bots do
