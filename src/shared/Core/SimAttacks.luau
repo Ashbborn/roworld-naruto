@@ -772,6 +772,8 @@ function SimAttacks.install(C: any)
 		local trait_l = 1.0
 		local trait_s = 1.0
 		local mag_k = 1.0
+		-- (a captured Tailed Beast's buff: x1.0 for everyone else)
+		local loss_k = self.o_loss_mult[at]
 		if not neutral then
 			local att_of = o_tiles[at] * K_AREA
 			local def_of = math.max(o_tiles[tg] * K_AREA, 1.0)
@@ -847,7 +849,7 @@ function SimAttacks.install(C: any)
 			local tf: number
 			local dloss = 0.0
 			if neutral then
-				loss = mag * nl
+				loss = mag * nl * loss_k
 				local v = Rules.TERRA_NULLIUS_COST_SCALE * tc / a.troops
 				if v < Rules.TERRA_NULLIUS_MIN_COST then
 					v = Rules.TERRA_NULLIUS_MIN_COST
@@ -860,7 +862,7 @@ function SimAttacks.install(C: any)
 				dloss = dtroops / math.max(o_tiles[tg] * K_AREA, 1.0)
 				local ratio = dtroops / a.troops
 				local cl = if ratio < 0.6 then 0.6 elseif ratio > 2.0 then 2.0 else ratio
-				loss = mag * mag_k * trait_l * cl * (bonus_l + Rules.ATTACKER_LOSS_PER_DENSITY * dloss)
+				loss = mag * mag_k * trait_l * cl * (bonus_l + Rules.ATTACKER_LOSS_PER_DENSITY * dloss) * loss_k
 				local c1 = if ratio < 0.82 then 0.82 elseif ratio > 7.5 then 7.5 else ratio
 				local r20 = ratio / 20.0
 				local c2 = if r20 < 1.0 then 1.0 elseif r20 > 50.0 then 50.0 else r20
@@ -895,6 +897,7 @@ function SimAttacks.install(C: any)
 					not neutral
 					and o_tiles[tg] * K_AREA < Rules.ANNEX_BELOW_FULL_TILES
 					and (o_kind[tg] ~= Defs.KIND_HUMAN or a.troops > o_troops[tg])
+					and self.o_beast[tg] == 0 -- (a Tailed Beast falls tile by tile)
 				then
 					-- (a person's small nation only once the attack outnumbers its army at home)
 					self:_annex(tg, at)
@@ -993,7 +996,7 @@ function SimAttacks.install(C: any)
 				n = t + W
 			end
 			local o = readi32(owner, n * 4)
-			if o > 0 and o ~= victim and not self:allied(o, victim) then
+			if o > 0 and o ~= victim and not self:allied(o, victim) and self.o_beast[o] == 0 then
 				return o
 			end
 		end

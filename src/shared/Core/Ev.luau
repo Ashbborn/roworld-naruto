@@ -5,7 +5,7 @@
 -- of the network protocol, so never renumber them.
 local Ev = {}
 
-Ev.OWNER_ADD = 0 -- id, name, color, kind, flags
+Ev.OWNER_ADD = 0 -- id, name, color, kind, flags (team), [beast tails: only on a beast's first OWNER_ADD]
 Ev.OWNER_OUT = 1 -- id, killer_id
 Ev.PHASE = 2 -- phase, ticks_left
 Ev.SPAWNED = 3 -- id, tile
@@ -45,7 +45,11 @@ Ev.REINFORCE = 33 -- id, troops, ready_tick  (Reinforcements arrived; the next c
 Ev.BONUS = 34 -- owner, tile, gold  (gold `owner` earned at `tile`, a train's
 --   stop at a station. Only for a person, and sent to that person alone)
 
+Ev.BEAST_STIR = 35 -- tails, tile, emerge_tick  (a Tailed Beast will emerge at tile; Core/SimBeasts)
+Ev.BEAST_AWAKE = 36 -- tails, owner_id, tile  (it emerged as owner owner_id)
+Ev.BEAST_HOLDER = 37 -- tails, holder, from  (captured by holder (from 0), stolen from `from`, or gone: holder 0)
+
 --- Number of event ids (ids are 0..COUNT-1).
-Ev.COUNT = 35
+Ev.COUNT = 38
 
 return Ev

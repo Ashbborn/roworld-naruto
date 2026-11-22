@@ -34,6 +34,7 @@ local SimNaval = require("./SimNaval")
 local SimWarships = require("./SimWarships")
 local SimNukes = require("./SimNukes")
 local SimArsenal = require("./SimArsenal")
+local SimBeasts = require("./SimBeasts")
 local SimAI = require("./SimAI")
 local Teams = require("./Teams")
 local WorldMap = require("./WorldMap")
@@ -55,6 +56,7 @@ SimNaval.install(Sim)
 SimWarships.install(Sim)
 SimNukes.install(Sim)
 SimArsenal.install(Sim)
+SimBeasts.install(Sim)
 
 Sim.TICK_RATE = TICK_RATE
 --- Owners whose start lies within these many tiles (of the original 1024-wide grid; scaled by the
@@ -79,7 +81,8 @@ end
 --- spawn_ticks, solo_countdown_ticks (a solo match: ticks from placing the capital to the start;
 --- default Rules.SOLO_COUNTDOWN_TICKS), defense_posts_shoot, nations (false: no manifest nations),
 --- nation_limit (that many of the manifest's nations, picked at random), teams (a team game:
---- a number of teams, Teams.DUOS / TRIOS / QUADS / HVN; see assign_teams)}.
+--- a number of teams, Teams.DUOS / TRIOS / QUADS / HVN; see assign_teams), beasts (the Tailed Beasts,
+--- Core/SimBeasts: true, or a table overriding their schedule; off by default)}.
 function Sim.new(p_map: any, config: { [string]: any }?): any
 	local cfg = config or {}
 	if p_map == nil then
@@ -145,6 +148,7 @@ function Sim.new(p_map: any, config: { [string]: any }?): any
 	self:_init_warships()
 	self:_init_nukes()
 	self:_init_arsenal()
+	self:_init_beasts(cfg.beasts)
 	Coop.check()
 	if type(cfg.defense_posts_shoot) == "boolean" then
 		self.defense_posts_shoot = cfg.defense_posts_shoot
@@ -333,6 +337,7 @@ function Sim.can_take_over(self: any, old: number, target: number): boolean
 		and target > 0
 		and target <= self.owner_total
 		and self.o_kind[target] == Defs.KIND_NATION
+		and self.o_beast[target] == 0
 		and self.o_alive[target] == 1
 		and self.o_spawned[target] == 1
 		and self.o_tiles[target] > 0
@@ -419,6 +424,9 @@ function Sim.step(self: any): { [string]: any }
 				self:arsenal_tick()
 				self:nukes_tick()
 				self:_diplomacy_tick()
+				if self.beasts_on then
+					self:beasts_tick()
+				end
 				self:_process_eliminations()
 				if tick % 10 == 0 then
 					self:_check_victory()
@@ -470,6 +478,9 @@ function Sim._step_profiled(self: any)
 	self:nukes_tick()
 	t = self:_lap(8, t)
 	self:_diplomacy_tick()
+	if self.beasts_on then
+		self:beasts_tick()
+	end
 	self:_process_eliminations()
 	if self.tick % 10 == 0 then
 		self:_check_victory()
@@ -503,6 +514,10 @@ function Sim.snapshot(self: any): { [string]: any }
 			self.o_traitor_until[id],
 			if self.o_spawned[id] == 1 then self.o_spawn_tile[id] else -1,
 		})
+		if self.beasts_on then
+			-- (14th: the Tailed Beast it is, 0 = none; only in matches with beasts)
+			table.insert(owners[#owners], self.o_beast[id])
+		end
 	end
 	-- allies: {a, b, expires_at, renewal asked bits}; requests: {from, to, tick made}
 	local allies = {}
@@ -543,6 +558,7 @@ function Sim.snapshot(self: any): { [string]: any }
 		attacks = self:attack_rows(),
 		allies = allies,
 		requests = reqs,
+		beasts = if self.beasts_on then self:beast_rows() else nil,
 	}
 end
 
@@ -1273,7 +1289,7 @@ end
 function Sim._median_nation_troops(self: any): number
 	local vals = {}
 	for id = 1, self.owner_total do
-		if self.o_kind[id] == Defs.KIND_NATION and self.o_alive[id] == 1 then
+		if self.o_kind[id] == Defs.KIND_NATION and self.o_alive[id] == 1 and self.o_beast[id] == 0 then
 			table.insert(vals, self.o_troops[id])
 		end
 	end
@@ -1339,7 +1355,15 @@ end
 --- `loser` surrenders every tile to `winner` (AI endgame capitulation). The loser is eliminated
 --- at the end of the tick with `winner` as the conqueror; its gold goes along.
 function Sim.capitulate(self: any, loser: number, winner: number)
-	if loser <= 0 or winner <= 0 or self.o_alive[loser] == 0 or self.o_alive[winner] == 0 or self:is_human(loser) then
+	if
+		loser <= 0
+		or winner <= 0
+		or self.o_alive[loser] == 0
+		or self.o_alive[winner] == 0
+		or self:is_human(loser)
+		or self.o_beast[loser] ~= 0
+		or self.o_beast[winner] ~= 0
+	then
 		return
 	end
 	local owner = self.owner
@@ -1370,6 +1394,9 @@ end
 --- to `target` was made less than ALLY_REQUEST_COOLDOWN_TICKS ago.
 function Sim.ally_request(self: any, id: number, target: number): boolean
 	if target <= 0 or target > self.owner_total or target == id or self.o_alive[target] == 0 then
+		return false
+	end
+	if self.o_beast[id] ~= 0 or self.o_beast[target] ~= 0 then
 		return false
 	end
 	if self:allied(id, target) or self:has_request(id, target) then
@@ -1532,9 +1559,12 @@ function Sim._economy_tick(self: any)
 	local troop_growth_applied = Rules.troop_growth_applied
 	local o_bot = self.o_bot
 	local o_skill = self.o_skill
+	local o_beast = self.o_beast
+	local o_cap_mult = self.o_cap_mult
 	local NOVICE = Sim.NOVICE_SKILL
 	for id = 1, self.owner_total do
-		if o_alive[id] == 0 or o_spawned[id] == 0 then
+		-- (a Tailed Beast: fixed cap, its own regeneration, no gold; SimBeasts)
+		if o_alive[id] == 0 or o_spawned[id] == 0 or o_beast[id] ~= 0 then
 			continue
 		end
 		local kind = o_kind[id]
@@ -1544,7 +1574,8 @@ function Sim._economy_tick(self: any)
 			tkind, tdiff = Defs.KIND_NATION, NOVICE
 		end
 		-- maxTroops: + cityTroopIncrease per level of each finished city.
-		local cap = max_troops(tkind, o_tiles[id], o_alevel[id * STRUCT_KINDS + Defs.S_CITY], tdiff)
+		-- (x the troop cap buff of the Tailed Beasts it holds: x1.0 for most)
+		local cap = max_troops(tkind, o_tiles[id], o_alevel[id * STRUCT_KINDS + Defs.S_CITY], tdiff) * o_cap_mult[id]
 		o_cap[id] = cap
 		-- Per-tick player update: + troopIncreaseRate troops (whole troops: truncated) and
 		-- + goldAdditionRate gold every tick, never during the spawn phase.
@@ -1590,10 +1621,13 @@ function Sim._process_eliminations(self: any)
 end
 
 function Sim._eliminate(self: any, id: number, killer: number)
+	-- Tailed Beasts: a beast is captured (or gone), a holder's beasts are stolen. A beast's fall has
+	-- its own news (SimBeasts), so none of the usual below.
+	local beast = self.beasts_on and self:_beasts_on_eliminated(id, killer)
 	-- Decide who hears about it before alliances are dissolved: humans involved, allied or
 	-- bordering, or when a top-5 owner did the conquering. Tribes are never world news.
 	local audience = {}
-	if #self.humans > 0 then
+	if #self.humans > 0 and not beast then
 		local top = self:top_owners()
 		for _, h in self.humans do
 			if h == id or h == killer or self.o_alive[h] == 0 or self.o_left[h] == 1 then
@@ -1634,7 +1668,9 @@ function Sim._eliminate(self: any, id: number, killer: number)
 	local o_name = self.o_name
 	if killer > 0 then
 		self:_conquest_gold(id, killer)
-		self:msg(killer, Defs.MSG_GOOD, "You eliminated " .. o_name[id])
+		if not beast then
+			self:msg(killer, Defs.MSG_GOOD, "You eliminated " .. o_name[id])
+		end
 	end
 	if self:is_human(id) then
 		if killer > 0 then
@@ -1670,8 +1706,10 @@ function Sim._check_victory(self: any)
 	local bt = -1
 	local o_alive = self.o_alive
 	local o_tiles = self.o_tiles
+	local o_beast = self.o_beast
 	for id = 1, self.owner_total do
-		if o_alive[id] == 1 and o_tiles[id] > bt then
+		-- (a Tailed Beast never wins)
+		if o_alive[id] == 1 and o_tiles[id] > bt and o_beast[id] == 0 then
 			bt = o_tiles[id]
 			best = id
 		end

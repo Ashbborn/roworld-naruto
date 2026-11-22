@@ -55,10 +55,55 @@ end
 
 local trunc = Defs.trunc
 
+--- Tailed Beasts (Core/SimBeasts, docs/BEASTS.md): every tunable, one table shared by all map scales
+--- (distances are full-size tiles, scaled by the map's K_LIN where used). First guesses: tune in play.
+local BEASTS = {
+	--- Schedule, in seconds of play (after the spawn phase): the One-Tail at FIRST_S, then one beast
+	--- every EVERY_S, weakest first (the Nine-Tails at FIRST_S + 8 x EVERY_S = 21:00); each one stirs
+	--- (a warning and a map marker) WARN_S before it emerges.
+	FIRST_S = 300,
+	EVERY_S = 120,
+	WARN_S = 20,
+	--- Its spot: a random land tile (never one of a spawn-shielded owner). The first FAR_TRIES of
+	--- SPOT_TRIES random tiles must also be MIN_SPACING full-size tiles from earlier beasts' spots,
+	--- with at least LAND_SHARE of its disk claimable land.
+	SPOT_TRIES = 400,
+	FAR_TRIES = 300,
+	MIN_SPACING = 250.0,
+	LAND_SHARE = 0.5,
+	--- It seizes the land within RADIUS_BASE + RADIUS_PER_TAIL x tails full-size tiles, owned or not
+	--- (spawn-shielded owners' tiles excepted).
+	RADIUS_BASE = 8.0,
+	RADIUS_PER_TAIL = 2.0,
+	--- Troops (and its fixed troop cap): the strongest army on the map (beasts excluded) x
+	--- (TROOPS_BASE + TROOPS_PER_TAIL x tails), never under TROOPS_FLOOR. It regenerates REGEN_PER_S of
+	--- the troops it is missing every second; it never grows with land.
+	TROOPS_FLOOR = 100000.0,
+	TROOPS_BASE = 0.5,
+	TROOPS_PER_TAIL = 0.12,
+	REGEN_PER_S = 0.01,
+	--- Rampage: for RAMPAGE_S after emerging, every RAMPAGE_EVERY_TICKS it attacks every neighbour
+	--- (and the free land around it) with RAMPAGE_WAVE x its cap in fresh troops, split between them
+	--- (at least RAMPAGE_MIN_TROOPS each); its own troops stay home. It ends early once it holds
+	--- RAMPAGE_MAX_GROWTH x the land it emerged on. Then its armies disperse and it only defends.
+	RAMPAGE_S = 60,
+	RAMPAGE_EVERY_TICKS = 10,
+	RAMPAGE_WAVE = 0.02,
+	RAMPAGE_MAX_GROWTH = 5.0,
+	RAMPAGE_MIN_TROOPS = 1000.0,
+	--- Capture buff, per beast held (stacking multiplicatively): troop cap x (1 + CAP_BONUS_BASE +
+	--- CAP_BONUS_PER_TAIL x tails), attack losses (any land) x (1 - LOSS_CUT_BASE - LOSS_CUT_PER_TAIL x tails).
+	CAP_BONUS_BASE = 0.04,
+	CAP_BONUS_PER_TAIL = 0.01,
+	LOSS_CUT_BASE = 0.03,
+	LOSS_CUT_PER_TAIL = 0.01,
+}
+
 --- Builds the rules table for maps whose tiles are `K_LIN` full-size tiles across.
 local function build(K_LIN: number): any
 	local Rules: any = {}
 	Rules.TICK_RATE = 10
+	Rules.BEASTS = BEASTS
 	--- Full-size tiles per one of our tiles, linear and by area (the map's k_lin).
 	Rules.K_LIN = K_LIN
 	Rules.K_AREA = K_LIN * K_LIN
