@@ -1183,6 +1183,9 @@ HANDLERS[Ev.BEAST_STIR] = function(self, e)
 	b.state = Defs.BEAST_STIRRING
 	b.tile = e[3]
 	b.emerge_tick = e[4]
+	-- (a sealed beast released by the Akatsuki's fall stirs again: a new beast, no owner yet)
+	b.id = 0
+	b.holder = 0
 	self.beast_stirring:Fire(e[2], e[3], e[4])
 end
 

@@ -536,8 +536,11 @@ do
 	end
 	local stirs, awakes = {}, {}
 	local until_ = sim.beasts[6].release_tick + 2
+	local gs = GameState.new(map)
+	gs:load_snapshot(Protocol.decode_snapshot(Protocol.encode_snapshot(sim:snapshot())))
 	while sim.tick < until_ do
 		local d = sim:step()
+		gs:apply_delta(Protocol.decode_delta(Protocol.compress(Protocol.encode_delta(d, nil, sim.W))))
 		for _, e in d.ev do
 			if e[1] == Ev.BEAST_STIR then
 				stirs[e[2]] = sim.tick
@@ -552,6 +555,14 @@ do
 	expect(n3 ~= nil and n3 ~= b3 and sim.o_beast[n3] == 3 and n6 ~= nil and sim.o_beast[n6] == 6, "and re-emerges as a new wild beast")
 	expect(sim:beast_state(3) == Defs.BEAST_AWAKE and sim:beast_state(6) ~= Defs.BEAST_SEALED, "they are wild again")
 	expect(sim._beast_last_cap == last_cap, "released beasts skip the 1.15x step")
+	local mirror_ok = true
+	for t = 1, 9 do
+		local sb, mb = sim.beasts[t], gs.beasts[t]
+		if mb ~= nil and (mb.state ~= sb.state or mb.id ~= sb.id or mb.holder ~= sb.holder) then
+			mirror_ok = false
+		end
+	end
+	expect(mirror_ok and gs.akatsuki.state == Defs.AKATSUKI_FALLEN, "the mirror follows the releases (state, new owner, holder)")
 	expect(sim:akatsuki_state() == Defs.AKATSUKI_FALLEN and sim.aka_id == aid, "the Akatsuki never returns")
 	-- killed by a beast (no slayer): the releases still come
 	local s2 = bare(16)
