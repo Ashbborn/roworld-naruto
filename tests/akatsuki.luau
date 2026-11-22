@@ -625,7 +625,6 @@ do
 	-- it survives a beast capture (stacks with the beast buff)
 	local b1 = wake(sim, 1, inland(sim, 20000))
 	take_all(sim, b1, p)
-	local last_cap = sim._beast_last_cap
 	local cm = SimBeasts.buff(1)
 	expect(math.abs(sim.o_cap_mult[p] - A.SLAYER_CAP_MULT * cm) < 1e-12, "and stacks with a captured beast's buff")
 	-- the releases: the Three-Tails first, then the Six-Tails, through the usual stir
@@ -655,7 +654,6 @@ do
 	local n3, n6 = awakes[3], awakes[6]
 	expect(n3 ~= nil and n3 ~= b3 and sim.o_beast[n3] == 3 and n6 ~= nil and sim.o_beast[n6] == 6, "and re-emerges as a new wild beast")
 	expect(sim:beast_state(3) == Defs.BEAST_AWAKE and sim:beast_state(6) ~= Defs.BEAST_SEALED, "they are wild again")
-	expect(sim._beast_last_cap == last_cap, "released beasts skip the 1.15x step")
 	local mirror_ok = true
 	for t = 1, 9 do
 		local sb, mb = sim.beasts[t], gs.beasts[t]

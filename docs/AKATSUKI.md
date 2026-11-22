@@ -84,8 +84,7 @@ every beast it sealed breaks free again.
     usual conquest popup.
   - Each beast it had sealed is released. It re-emerges as a new wild beast through the normal
     stir, then emerge flow: the first `RELEASE_FIRST_S` (30 s) after the fall, then one every
-    `RELEASE_EVERY_S` (30 s), at random spots. Released beasts skip the 1.15x step, which would
-    otherwise compound to far past the Nine-Tails.
+    `RELEASE_EVERY_S` (30 s), at random spots.
   - Killed by a beast (or by killer 0), it still falls and its beasts are still released, but
     there is no slayer.
   - It does not return in that match.

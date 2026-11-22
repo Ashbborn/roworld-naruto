@@ -241,11 +241,13 @@ do
 	expect(count_owned(sim, id, disk) == #disk - #mine, "it seized its whole disk of player land (radius " .. sim:beast_radius(1) .. ")")
 	expect(sim.o_tiles[p] == before - (#disk - #mine), "the player lost those tiles")
 	expect(count_owned(sim, q, mine) == #mine, "a spawn-shielded owner's tiles are spared")
-	local want = math.floor(math.max(B.TROOPS_FLOOR, 2000000 * (B.TROOPS_BASE + B.TROOPS_PER_TAIL * 1)))
-	expect(sim.o_troops[id] == want and sim.o_cap[id] == want, "troops = strongest army x (0.5 + 0.12 tails): " .. sim.o_troops[id])
+	-- (two players: 2M and the shielded one's 100)
+	local avg = (2000000 + 100) / 2
+	local want = math.floor(math.max(B.TROOPS_FLOOR, avg * (B.TROOPS_BASE + B.TROOPS_PER_TAIL * 1)))
+	expect(sim.o_troops[id] == want and sim.o_cap[id] == want, "troops = top players' average army x (1 + 0.1 tails): " .. sim.o_troops[id])
 	local nine = wake(sim, 9, inland(sim, 90000))
-	local want9 = math.floor(2000000 * (B.TROOPS_BASE + B.TROOPS_PER_TAIL * 9))
-	expect(sim.o_troops[nine] == want9, "the Nine-Tails gets 1.58x the strongest army (beasts excluded)")
+	local want9 = math.floor(sim:_beast_top_army() * (B.TROOPS_BASE + B.TROOPS_PER_TAIL * 9))
+	expect(sim.o_troops[nine] == want9, "the Nine-Tails gets 1.9x the top players' army (beasts excluded)")
 	-- the floor
 	local s2 = bare(FAST, 6)
 	local id2 = wake(s2, 1, inland(s2, 2000))
@@ -262,16 +264,42 @@ do
 	local regen = s2.o_troops[id2] - B.TROOPS_FLOOR / 2
 	expect(regen > 0 and regen <= B.TROOPS_FLOOR / 2 * B.REGEN_PER_S + 1, "regenerates REGEN_PER_S of the missing troops per second (" .. regen .. ")")
 	expect(s2.o_cap[id2] == B.TROOPS_FLOOR, "at its most land its cap is its base cap")
-	-- strength from the strongest PLAYER, not a bigger nation; never weaker with more tails
+	-- strength from the top 3 PLAYERS (home + troops in attacks), not a bigger nation
 	local s3 = bare(FAST, 15)
 	place(s3, "Nation", Defs.KIND_NATION, inland(s3, 30000), 5, 5000000)
 	local hp = place(s3, "Player", Defs.KIND_HUMAN, inland(s3, 60000), 5, 1000000)
 	local b1 = wake(s3, 1, inland(s3, 2000))
 	local want1 = math.floor(1000000 * (B.TROOPS_BASE + B.TROOPS_PER_TAIL))
-	expect(s3.o_troops[b1] == want1, "strength from the strongest player (not a 5M nation): " .. s3.o_troops[b1])
-	s3.o_troops[hp] = 200000
+	expect(s3.o_troops[b1] == want1, "one player: strength from that player (not a 5M nation): " .. s3.o_troops[b1])
+	local h2 = place(s3, "Player2", Defs.KIND_HUMAN, inland(s3, 70000), 5, 400000)
+	local h3 = place(s3, "Player3", Defs.KIND_HUMAN, inland(s3, 80000), 5, 100000)
+	place(s3, "Player4", Defs.KIND_HUMAN, inland(s3, 85000), 5, 50000)
+	local top3 = (1000000 + 400000 + 100000) / 3
+	expect(math.abs(s3:_beast_top_army() - top3) < 1e-6, "the average of the top 3 players (the 4th left out)")
 	local b2 = wake(s3, 2, inland(s3, 90000))
-	expect(s3.o_troops[b2] == math.floor(want1 * B.TROOPS_STEP), "the next beast gets at least 1.15x the previous one: " .. s3.o_troops[b2])
+	expect(s3.o_troops[b2] == math.floor(top3 * (B.TROOPS_BASE + B.TROOPS_PER_TAIL * 2)), "the Two-Tails: top-3 average x 1.2: " .. s3.o_troops[b2])
+	-- troops out in an attack still count (attacking a beast does not shrink it)
+	s3.o_troops[h3] = 20000
+	table.insert(s3.attacks, { dead = false, attacker = h3, troops = 80000.0, pend = 0.0 })
+	expect(math.abs(s3:_beast_top_army() - top3) < 1e-6, "troops out in attacks count toward a player's army")
+	table.remove(s3.attacks)
+	s3.o_troops[h3] = 100000
+	-- it keeps tracking: the players triple their armies, the wild beast follows at its next check
+	local bb = s3.beasts[1]
+	bb.rampage_until = 0
+	s3:end_attacks_of(b1)
+	local cap0, troops0 = bb.cap, s3.o_troops[b1]
+	s3.o_troops[hp] *= 3
+	s3.o_troops[h2] *= 3
+	s3.o_troops[h3] *= 3
+	local every = B.TRACK_EVERY_S * 10
+	while (s3.tick - bb.awake_tick) % every ~= every - 1 do
+		s3.tick += 1
+	end
+	s3.tick += 1
+	s3:beasts_tick()
+	expect(bb.cap == math.floor(3 * top3 * (B.TROOPS_BASE + B.TROOPS_PER_TAIL)), "its base cap tracks the top players every TRACK_EVERY_S: " .. bb.cap)
+	expect(math.abs(s3.o_troops[b1] - troops0 * bb.cap / cap0) < 2, "and its troops rise in proportion")
 	local s4 = bare(FAST, 16)
 	place(s4, "Nation", Defs.KIND_NATION, inland(s4, 30000), 5, 3000000)
 	local b4 = wake(s4, 1, inland(s4, 2000))

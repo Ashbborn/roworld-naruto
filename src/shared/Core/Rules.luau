@@ -75,13 +75,17 @@ local BEASTS = {
 	--- (spawn-shielded owners' tiles excepted).
 	RADIUS_BASE = 8.0,
 	RADIUS_PER_TAIL = 2.0,
-	--- Troops (its base cap): the strongest player's army (humans and bot players; with none, any
-	--- owner's, beasts excluded) x (TROOPS_BASE + TROOPS_PER_TAIL x tails), never under TROOPS_FLOOR
-	--- and at least TROOPS_STEP x the previous beast's base cap.
-	TROOPS_FLOOR = 100000.0,
-	TROOPS_BASE = 0.5,
-	TROOPS_PER_TAIL = 0.12,
-	TROOPS_STEP = 1.15,
+	--- Troops (its base cap): the average army (home troops plus troops out in attacks) of the
+	--- TROOPS_TOP_N strongest players (humans and bot players; fewer: those there; none: the strongest
+	--- owner, special owners excluded) x (TROOPS_BASE + TROOPS_PER_TAIL x tails), never under
+	--- TROOPS_FLOOR (only so a beast is never ~0 on an empty test map). While it is wild the base is
+	--- recomputed every TRACK_EVERY_S, so it keeps up with players whose armies grow; when it rises,
+	--- its troops rise in proportion (a whittled-down beast stays weak).
+	TROOPS_FLOOR = 10000.0,
+	TROOPS_TOP_N = 3,
+	TROOPS_BASE = 1.0,
+	TROOPS_PER_TAIL = 0.10,
+	TRACK_EVERY_S = 10,
 	--- Its troop cap follows its land: base cap x (tiles / the most tiles it held) ^ CAP_LAND_EXP,
 	--- never under CAP_FLOOR_SHARE x the base. Every second it regenerates REGEN_PER_S of what it is
 	--- missing below the cap, or loses DRAIN_PER_S of what it holds above it.

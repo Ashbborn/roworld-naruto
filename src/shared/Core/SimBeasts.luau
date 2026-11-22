@@ -56,8 +56,6 @@ function SimBeasts.install(C: any)
 		self.beast_every_s = tonumber(o.every_s) or B.EVERY_S
 		self.beast_warn_s = tonumber(o.warn_s) or B.WARN_S
 		self.beast_rampage_s = tonumber(o.rampage_s) or B.RAMPAGE_S
-		--- The last emerged beast's base cap (the next one gets at least TROOPS_STEP x it).
-		self._beast_last_cap = 0
 		--- tails -> { tails, state, tile, emerge_tick, id, holder, cap (its base cap), awake_tick,
 		--- start_tiles, peak_tiles, rampage_until, release_tick (a sealed beast released by the
 		--- Akatsuki's fall: the tick it re-emerges at; 0 = none), released (it re-emerged so) }
@@ -327,14 +325,9 @@ function SimBeasts.install(C: any)
 		self.o_spawned[id] = 1
 		self.o_spawn_tile[id] = b.tile
 		self:ev({ Ev.SPAWNED, id, b.tile })
-		-- Troops (its base cap): a share of the strongest player's army, never under the floor, and at
-		-- least TROOPS_STEP x the previous beast's (more tails is never weaker). A beast released by the
-		-- Akatsuki's fall skips the step (nine releases would compound it far past the Nine-Tails).
-		local troops = math.floor(math.max(B.TROOPS_FLOOR, self:_beast_strongest() * (B.TROOPS_BASE + B.TROOPS_PER_TAIL * b.tails)))
-		if not b.released then
-			troops = math.max(troops, math.floor(self._beast_last_cap * B.TROOPS_STEP))
-			self._beast_last_cap = troops
-		end
+		-- Troops (its base cap): the top players' average army x (1 + 0.1 x tails); it keeps tracking
+		-- that while it is wild (_beast_live).
+		local troops = self:beast_base_cap(b.tails)
 		b.cap = troops
 		self.o_troops[id] = troops
 		self.o_cap[id] = troops
@@ -346,6 +339,53 @@ function SimBeasts.install(C: any)
 		b.rampage_until = self.tick + math.floor(self.beast_rampage_s * TICK_RATE)
 		self._force_stats = true
 		self:ev({ Ev.BEAST_AWAKE, b.tails, id, b.tile })
+	end
+
+	--- The army the beasts' strength is based on: the average army (home troops plus troops out in
+	--- attacks) of the Rules.BEASTS.TROOPS_TOP_N strongest players (humans and bot players), fewer if
+	--- fewer are on the map; with no player, the strongest owner's (special owners excluded). Players
+	--- are ranked by that army, ties by owner id (deterministic).
+	function C._beast_top_army(self: any): number
+		local n_top = Rules.BEASTS.TROOPS_TOP_N
+		local committed = {}
+		for _, a in self.attacks do
+			if not a.dead then
+				committed[a.attacker] = (committed[a.attacker] or 0) + a.troops + a.pend
+			end
+		end
+		local list = {}
+		local anyone = 0.0
+		for o = 1, self.owner_total do
+			if self.o_alive[o] == 1 and self.o_spawned[o] == 1 and self.o_special[o] == 0 then
+				local t = self.o_troops[o] + (committed[o] or 0)
+				anyone = math.max(anyone, t)
+				if self.o_kind[o] == Defs.KIND_HUMAN then
+					table.insert(list, { o, t })
+				end
+			end
+		end
+		if #list == 0 then
+			return anyone
+		end
+		table.sort(list, function(x, y)
+			if x[2] ~= y[2] then
+				return x[2] > y[2]
+			end
+			return x[1] < y[1]
+		end)
+		local n = math.min(n_top, #list)
+		local sum = 0.0
+		for i = 1, n do
+			sum += list[i][2]
+		end
+		return sum / n
+	end
+
+	--- Base troop cap of beast `tails` now: the top players' average army x (TROOPS_BASE +
+	--- TROOPS_PER_TAIL x tails), never under TROOPS_FLOOR.
+	function C.beast_base_cap(self: any, tails: number): number
+		local B = Rules.BEASTS
+		return math.floor(math.max(B.TROOPS_FLOOR, self:_beast_top_army() * (B.TROOPS_BASE + B.TROOPS_PER_TAIL * tails)))
 	end
 
 	--- The strongest army a beast's (and the Akatsuki's) strength is based on: the strongest player's
@@ -391,9 +431,18 @@ function SimBeasts.install(C: any)
 		if self.o_tiles[id] > b.peak_tiles then
 			b.peak_tiles = self.o_tiles[id]
 		end
+		local age = tick - b.awake_tick
+		if age > 0 and age % math.max(math.floor(B.TRACK_EVERY_S * TICK_RATE), 1) == 0 then
+			-- (its strength keeps tracking the top players' armies; a rise lifts its troops in
+			-- proportion, so a whittled-down beast stays weak)
+			local base = self:beast_base_cap(b.tails)
+			if base > b.cap and b.cap > 0 then
+				o_troops[id] = math.floor(o_troops[id] * base / b.cap)
+			end
+			b.cap = base
+		end
 		local cap = self:beast_cap(b.tails)
 		self.o_cap[id] = cap
-		local age = tick - b.awake_tick
 		if age % TICK_RATE == 0 then
 			local t = o_troops[id]
 			if t < cap then
