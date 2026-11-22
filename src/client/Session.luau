@@ -37,6 +37,8 @@ local MapFetch: any = if Shared then require(Shared.Net.MapFetch) else nil
 local Stars: any = if Shared then require(Shared.Data.Stars) else require("../shared/Data/Stars")
 local Arsenal: any = if Shared then require(Shared.Data.Arsenal) else require("../shared/Data/Arsenal")
 
+--- Studio play-test (solo beasts on a fast schedule; never in a live server)
+local IS_STUDIO_TEST = typeof(game) == "Instance" and game:GetService("RunService"):IsStudio()
 local Session = {}
 Session.__index = Session
 
@@ -437,7 +439,9 @@ function Session.start_solo(self: any, p_difficulty: number, map_id: string?, op
 		max_humans = 1,
 		time_limit_s = 0,
 		map_id = self.map_id,
-		beasts = not (type(opts) == "table" and opts.beasts == false),
+		beasts = if type(opts) == "table" and opts.beasts == false then false
+			elseif IS_STUDIO_TEST then { first_s = 60, every_s = 45 } -- Studio play-tests: beasts come fast
+			else true,
 	}, self:local_display_name())
 end
 
