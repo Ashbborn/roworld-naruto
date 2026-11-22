@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Art for the Arsenal (Data/Arsenal; 2026-10-04): original glyphs drawn here, nothing sampled.
+(2026-11-23: the items' glyphs are the Naruto world's, hand-made SVG in tools/assets/arsenal_svg.py MASKS:
+an explosive tag, a fan of tags, ninja, kunai, hawks, a chakra orb, a circular arrow round a tag, crossed
+kunai behind a shuriken; star and lock are still drawn here.)
 
   (the map plates and glyphs of the Arsenal's structures are drawn with every other structure's by
   tools/assets/make_map_sprites.py since 2026-10-25)
@@ -12,7 +15,7 @@
 --upload sends them through tools/upload.py (content-hash cached) and writes
 src/shared/Assets/ArsenalArt.luau. STUDIO_MATCH picks the Studio window that uploads.
 
-Usage: .venv/bin/python tools/assets/make_arsenal_art.py [--upload]
+Usage: python tools/assets/make_arsenal_art.py [--upload]
 """
 import argparse
 import math
@@ -20,6 +23,9 @@ import os
 import sys
 
 from PIL import Image, ImageDraw
+
+sys.path.insert(0, os.path.dirname(__file__))
+import arsenal_svg as A  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.join(ROOT, "assets", "arsenal")
@@ -215,6 +221,8 @@ UI = {
 
 
 def glyph(name, px):
+    if name in A.MASKS:
+        return A.mask_png(name, px)
     c = Canvas(px)
     UI[name](c)
     return c.mask()
@@ -250,8 +258,8 @@ def upload(names):
     for i, n in enumerate(names):
         L.append(f'\t\t{n} = "{ids[paths[i]]}",')
     L += ["\t},",
-          "\t--- the shop cards' item renders (Data/Arsenal item key -> image; models of military hardware",
-          "\t--- generated in Studio, photographed and cut out by tools/assets/make_arsenal_renders.py):",
+          "\t--- the shop's item renders (Data/Arsenal item key -> image; the Naruto world's items, drawn as",
+          "\t--- SVG by tools/assets/make_arsenal_renders.py):",
           "\t--- { id, w, h }",
           "\trenders = {"]
     from PIL import Image as _Image
@@ -259,7 +267,7 @@ def upload(names):
         w, h = _Image.open(rp).size
         L.append(f'\t\t{r} = {{ id = "{ids[rp]}", w = {w}, h = {h} }},')
     L += ["\t},", "}"]
-    with open(MANIFEST, "w") as f:
+    with open(MANIFEST, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(L) + "\n")
     print("manifest ->", os.path.relpath(MANIFEST, ROOT))
 
