@@ -283,8 +283,8 @@ function SimNaval.install(C)
 		local o_alive = self.o_alive
 		local rng = self.rng
 		for _, p in self.port_list do
-			-- (a Tailed Beast's captured ports send no trade)
-			if p.next_tick ~= slot or o_alive[p.owner] == 0 or p.water < 0 or self.o_beast[p.owner] ~= 0 then
+			-- (a special owner's captured ports, a Tailed Beast's or the Akatsuki's, send no trade)
+			if p.next_tick ~= slot or o_alive[p.owner] == 0 or p.water < 0 or self.o_special[p.owner] ~= 0 then
 				continue
 			end
 			-- One spawn roll per port level.

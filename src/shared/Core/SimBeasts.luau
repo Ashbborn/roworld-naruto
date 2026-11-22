@@ -16,6 +16,9 @@
 --   sim:beast_holder(tails)     -- who holds it once captured (0 = nobody)
 --   sim:active_beasts()         -- { {tails, id} } awake beasts on the map
 --   sim:beasts_of(id)           -- { tails } held by owner id
+-- The Akatsuki (Core/SimAkatsuki) hunts them: a beast it takes, or one held by a holder it
+-- eliminates, is SEALED; if the Akatsuki falls, each sealed beast re-emerges through the usual stir
+-- (at its b.release_tick).
 local Defs = require("./Defs")
 local Ev = require("./Ev")
 local Rules = require("./Rules")
@@ -28,6 +31,9 @@ local STIRRING = Defs.BEAST_STIRRING
 local AWAKE = Defs.BEAST_AWAKE
 local CAPTURED = Defs.BEAST_CAPTURED
 local GONE = Defs.BEAST_GONE
+local SEALED = Defs.BEAST_SEALED
+local SPECIAL_BEAST = Defs.SPECIAL_BEAST
+local SPECIAL_AKATSUKI = Defs.SPECIAL_AKATSUKI
 local TICK_RATE = 10
 
 local SimBeasts = {}
@@ -53,7 +59,8 @@ function SimBeasts.install(C: any)
 		--- The last emerged beast's base cap (the next one gets at least TROOPS_STEP x it).
 		self._beast_last_cap = 0
 		--- tails -> { tails, state, tile, emerge_tick, id, holder, cap (its base cap), awake_tick,
-		--- start_tiles, peak_tiles, rampage_until }
+		--- start_tiles, peak_tiles, rampage_until, release_tick (a sealed beast released by the
+		--- Akatsuki's fall: the tick it re-emerges at; 0 = none), released (it re-emerged so) }
 		self.beasts = {} :: { [number]: any }
 		for t = 1, Beasts.COUNT do
 			self.beasts[t] = {
@@ -68,6 +75,8 @@ function SimBeasts.install(C: any)
 				start_tiles = 0,
 				peak_tiles = 0,
 				rampage_until = 0,
+				release_tick = 0,
+				released = false,
 			}
 		end
 	end
@@ -121,8 +130,13 @@ function SimBeasts.install(C: any)
 		return out
 	end
 
-	--- The tick beast `tails` emerges at (its stir is Rules.BEASTS.WARN_S earlier).
+	--- The tick beast `tails` emerges at (its stir is Rules.BEASTS.WARN_S earlier): on the schedule,
+	--- or, released by the Akatsuki's fall, at its release tick.
 	function C.beast_emerge_tick(self: any, tails: number): number
+		local b = self.beasts[tails]
+		if b ~= nil and b.release_tick > 0 then
+			return b.release_tick
+		end
 		return self.playing_since + math.floor((self.beast_first_s + (tails - 1) * self.beast_every_s) * TICK_RATE)
 	end
 
@@ -162,6 +176,15 @@ function SimBeasts.install(C: any)
 				end
 			elseif st == AWAKE then
 				self:_beast_live(b)
+			elseif st == SEALED and b.release_tick > 0 then
+				-- (released by the Akatsuki's fall: a new wild beast, through the usual stir)
+				if tick >= b.release_tick - warn then
+					b.id = 0
+					b.holder = 0
+					b.tile = -1
+					b.released = true
+					self:_beast_stir(b, math.max(b.release_tick, tick + 1))
+				end
 			end
 		end
 	end
@@ -243,7 +266,7 @@ function SimBeasts.install(C: any)
 	end
 
 	--- The beast's land: the claimable tiles of its disk, whoever owns them (but never a spawn-shielded
-	--- owner's). Returns the number of tiles taken.
+	--- owner's, nor the Akatsuki's). Returns the number of tiles taken.
 	function C._beast_seize(self: any, id: number, center: number, radius: number): number
 		local owner = self.owner
 		local n = 0
@@ -256,7 +279,7 @@ function SimBeasts.install(C: any)
 				n += 1
 				continue
 			end
-			if on ~= 0 and self:shielded(on) then
+			if on ~= 0 and (self:shielded(on) or self.o_special[on] == SPECIAL_AKATSUKI) then
 				continue
 			end
 			self:set_owner(c, id)
@@ -280,6 +303,7 @@ function SimBeasts.install(C: any)
 			last[7] = b.tails
 		end
 		self.o_beast[id] = b.tails
+		self.o_special[id] = SPECIAL_BEAST
 		self.o_ai[id] = 0
 		self.o_gold[id] = 0.0
 		b.id = id
@@ -304,10 +328,13 @@ function SimBeasts.install(C: any)
 		self.o_spawn_tile[id] = b.tile
 		self:ev({ Ev.SPAWNED, id, b.tile })
 		-- Troops (its base cap): a share of the strongest player's army, never under the floor, and at
-		-- least TROOPS_STEP x the previous beast's (more tails is never weaker).
+		-- least TROOPS_STEP x the previous beast's (more tails is never weaker). A beast released by the
+		-- Akatsuki's fall skips the step (nine releases would compound it far past the Nine-Tails).
 		local troops = math.floor(math.max(B.TROOPS_FLOOR, self:_beast_strongest() * (B.TROOPS_BASE + B.TROOPS_PER_TAIL * b.tails)))
-		troops = math.max(troops, math.floor(self._beast_last_cap * B.TROOPS_STEP))
-		self._beast_last_cap = troops
+		if not b.released then
+			troops = math.max(troops, math.floor(self._beast_last_cap * B.TROOPS_STEP))
+			self._beast_last_cap = troops
+		end
 		b.cap = troops
 		self.o_troops[id] = troops
 		self.o_cap[id] = troops
@@ -321,12 +348,13 @@ function SimBeasts.install(C: any)
 		self:ev({ Ev.BEAST_AWAKE, b.tails, id, b.tile })
 	end
 
-	--- The strongest army a beast's strength is based on: the strongest player's (humans and bot
-	--- players), or, with no player on the map, the strongest owner's (beasts excluded).
+	--- The strongest army a beast's (and the Akatsuki's) strength is based on: the strongest player's
+	--- (humans and bot players), or, with no player on the map, the strongest owner's (special owners
+	--- excluded).
 	function C._beast_strongest(self: any): number
 		local players, anyone = 0.0, 0.0
 		for o = 1, self.owner_total do
-			if self.o_alive[o] == 1 and self.o_spawned[o] == 1 and self.o_beast[o] == 0 then
+			if self.o_alive[o] == 1 and self.o_spawned[o] == 1 and self.o_special[o] == 0 then
 				local t = self.o_troops[o]
 				anyone = math.max(anyone, t)
 				if self.o_kind[o] == Defs.KIND_HUMAN then
@@ -406,6 +434,16 @@ function SimBeasts.install(C: any)
 		return n
 	end
 
+	--- Land held by special owners (awake beasts and the Akatsuki): left out of the land total victory
+	--- and land shares are measured against.
+	function C.special_land(self: any): number
+		local n = self:beast_land()
+		if self.akatsuki_on then
+			n += self:akatsuki_land()
+		end
+		return n
+	end
+
 	--- One rampage wave: RAMPAGE_WAVE x the cap in fresh troops (on top of the beast's own, which stay
 	--- home to defend), split between every neighbour it touches and the free land around it.
 	function C._beast_wave(self: any, b: any)
@@ -438,12 +476,16 @@ function SimBeasts.install(C: any)
 	-- Capture and stealing (Sim._eliminate calls this before its own messages)
 	-- =========================================================================================
 
-	--- Recomputes `id`'s troop cap / attack loss multipliers from the beasts it holds.
+	--- Recomputes `id`'s troop cap / attack loss multipliers from the beasts it holds (and the
+	--- Akatsuki slayer's cap bonus: SimAkatsuki).
 	function C._beast_rebuff(self: any, id: number)
 		if id <= 0 then
 			return
 		end
 		local cm, lm = 1.0, 1.0
+		if self.akatsuki_on and id == self.aka_slayer then
+			cm = Rules.AKATSUKI.SLAYER_CAP_MULT
+		end
 		for _, t in self:beasts_of(id) do
 			local c, l = SimBeasts.buff(t)
 			cm *= c
@@ -454,11 +496,16 @@ function SimBeasts.install(C: any)
 	end
 
 	--- Owner `id` is being eliminated by `killer` (0: its land went unowned). A beast is captured by
-	--- a killer that is no beast, else it is gone; the beasts a holder had go to such a killer, else
-	--- they are gone too. True when `id` is a beast (Sim._eliminate then skips the usual news).
+	--- a killer that is no special owner, else it is gone; the beasts a holder had go to such a
+	--- killer, else they are gone too. The Akatsuki as the killer seals them all instead
+	--- (SimAkatsuki). True when `id` is a beast (Sim._eliminate then skips the usual news).
 	function C._beasts_on_eliminated(self: any, id: number, killer: number): boolean
 		local T = Beasts.TEXT
-		local taker = if killer > 0 and self.o_beast[killer] == 0 and self.o_alive[killer] == 1 then killer else 0
+		local taker = if killer > 0 and self.o_special[killer] == 0 and self.o_alive[killer] == 1 then killer else 0
+		local sealer = self.akatsuki_on
+			and killer > 0
+			and self.o_special[killer] == SPECIAL_AKATSUKI
+			and self.o_alive[killer] == 1
 		local tails = self.o_beast[id]
 		if tails > 0 then
 			local b = self.beasts[tails]
@@ -467,7 +514,9 @@ function SimBeasts.install(C: any)
 			end
 			b.rampage_until = 0
 			local title = Beasts.title(tails)
-			if taker > 0 then
+			if sealer then
+				self:_akatsuki_seal(tails, 0)
+			elseif taker > 0 then
 				b.state = CAPTURED
 				b.holder = taker
 				self:_beast_rebuff(taker)
@@ -488,7 +537,9 @@ function SimBeasts.install(C: any)
 		for _, t in held do
 			local b = self.beasts[t]
 			local title = Beasts.title(t)
-			if taker > 0 then
+			if sealer then
+				self:_akatsuki_seal(t, id)
+			elseif taker > 0 then
 				b.holder = taker
 				self:ev({ Ev.BEAST_HOLDER, t, taker, id })
 				self:msg(-1, Defs.MSG_ALERT, string.format(T.stolen, self.o_name[taker], title, self.o_name[id]))

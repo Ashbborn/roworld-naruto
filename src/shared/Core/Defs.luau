@@ -40,6 +40,20 @@ Defs.BEAST_STIRRING = 1 -- warned: emerges at its emerge tick
 Defs.BEAST_AWAKE = 2 -- on the map (an owner)
 Defs.BEAST_CAPTURED = 3 -- held by someone (its holder)
 Defs.BEAST_GONE = 4 -- out of the match
+Defs.BEAST_SEALED = 5 -- sealed by the Akatsuki (Core/SimAkatsuki): re-emerges if the Akatsuki falls
+
+-- Special owners (SimState.o_special): never win, rank, ally or get annexed whole
+Defs.SPECIAL_NONE = 0
+Defs.SPECIAL_BEAST = 1 -- a Tailed Beast (Core/SimBeasts)
+Defs.SPECIAL_AKATSUKI = 2 -- the Akatsuki (Core/SimAkatsuki)
+
+-- The Akatsuki (Core/SimAkatsuki): its lifecycle
+Defs.AKATSUKI_HIDDEN = 0 -- not yet stirring
+Defs.AKATSUKI_STIRRING = 1 -- warned: appears at its appear tick
+Defs.AKATSUKI_ACTIVE = 2 -- on the map (an owner)
+Defs.AKATSUKI_FALLEN = 3 -- eliminated: its sealed beasts are released, it never returns
+Defs.AKATSUKI_WON = 4 -- it sealed every beast: the match ended (Defs.OVER_AKATSUKI)
+Defs.AKATSUKI_GONE = 5 -- it found no land to appear on
 
 -- Match phases
 Defs.PHASE_SPAWN = 0
@@ -141,6 +155,7 @@ Defs.OVER_DOMINATION = 0
 Defs.OVER_TIME = 1
 Defs.OVER_DEFEATED = 2
 Defs.OVER_ABANDONED = 3
+Defs.OVER_AKATSUKI = 4 -- the Akatsuki sealed every Tailed Beast: everyone lost (winner 0)
 
 -- Map atlas cells (assets/icons/map_atlas.png, 8 x 2 cells of 128 px) as {x, y} (Vector2i in GDScript).
 Defs.ATLAS_CITY = { x = 0, y = 0 }

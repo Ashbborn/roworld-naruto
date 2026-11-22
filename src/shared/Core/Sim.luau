@@ -35,6 +35,7 @@ local SimWarships = require("./SimWarships")
 local SimNukes = require("./SimNukes")
 local SimArsenal = require("./SimArsenal")
 local SimBeasts = require("./SimBeasts")
+local SimAkatsuki = require("./SimAkatsuki")
 local SimAI = require("./SimAI")
 local Teams = require("./Teams")
 local WorldMap = require("./WorldMap")
@@ -57,6 +58,7 @@ SimWarships.install(Sim)
 SimNukes.install(Sim)
 SimArsenal.install(Sim)
 SimBeasts.install(Sim)
+SimAkatsuki.install(Sim)
 
 Sim.TICK_RATE = TICK_RATE
 --- Owners whose start lies within these many tiles (of the original 1024-wide grid; scaled by the
@@ -82,7 +84,8 @@ end
 --- default Rules.SOLO_COUNTDOWN_TICKS), defense_posts_shoot, nations (false: no manifest nations),
 --- nation_limit (that many of the manifest's nations, picked at random), teams (a team game:
 --- a number of teams, Teams.DUOS / TRIOS / QUADS / HVN; see assign_teams), beasts (the Tailed Beasts,
---- Core/SimBeasts: true, or a table overriding their schedule; off by default)}.
+--- Core/SimBeasts: true, or a table overriding their schedule; off by default), akatsuki (the Akatsuki,
+--- Core/SimAkatsuki: true, or a table overriding its schedule; off by default, and only with beasts)}.
 function Sim.new(p_map: any, config: { [string]: any }?): any
 	local cfg = config or {}
 	if p_map == nil then
@@ -149,6 +152,7 @@ function Sim.new(p_map: any, config: { [string]: any }?): any
 	self:_init_nukes()
 	self:_init_arsenal()
 	self:_init_beasts(cfg.beasts)
+	self:_init_akatsuki(cfg.akatsuki)
 	Coop.check()
 	if type(cfg.defense_posts_shoot) == "boolean" then
 		self.defense_posts_shoot = cfg.defense_posts_shoot
@@ -337,7 +341,7 @@ function Sim.can_take_over(self: any, old: number, target: number): boolean
 		and target > 0
 		and target <= self.owner_total
 		and self.o_kind[target] == Defs.KIND_NATION
-		and self.o_beast[target] == 0
+		and self.o_special[target] == 0
 		and self.o_alive[target] == 1
 		and self.o_spawned[target] == 1
 		and self.o_tiles[target] > 0
@@ -427,8 +431,14 @@ function Sim.step(self: any): { [string]: any }
 				if self.beasts_on then
 					self:beasts_tick()
 				end
+				if self.akatsuki_on then
+					self:akatsuki_tick()
+				end
 				self:_process_eliminations()
-				if tick % 10 == 0 then
+				if self.akatsuki_on then
+					self:_akatsuki_check_win()
+				end
+				if tick % 10 == 0 and self.phase ~= Defs.PHASE_OVER then
 					self:_check_victory()
 				end
 			end
@@ -481,8 +491,14 @@ function Sim._step_profiled(self: any)
 	if self.beasts_on then
 		self:beasts_tick()
 	end
+	if self.akatsuki_on then
+		self:akatsuki_tick()
+	end
 	self:_process_eliminations()
-	if self.tick % 10 == 0 then
+	if self.akatsuki_on then
+		self:_akatsuki_check_win()
+	end
+	if self.tick % 10 == 0 and self.phase ~= Defs.PHASE_OVER then
 		self:_check_victory()
 	end
 	self:_lap(9, t)
@@ -517,6 +533,10 @@ function Sim.snapshot(self: any): { [string]: any }
 		if self.beasts_on then
 			-- (14th: the Tailed Beast it is, 0 = none; only in matches with beasts)
 			table.insert(owners[#owners], self.o_beast[id])
+			if self.akatsuki_on then
+				-- (15th: the special kind, Defs.SPECIAL_*; only in matches with the Akatsuki)
+				table.insert(owners[#owners], self.o_special[id])
+			end
 		end
 	end
 	-- allies: {a, b, expires_at, renewal asked bits}; requests: {from, to, tick made}
@@ -559,6 +579,7 @@ function Sim.snapshot(self: any): { [string]: any }
 		allies = allies,
 		requests = reqs,
 		beasts = if self.beasts_on then self:beast_rows() else nil,
+		akatsuki = if self.akatsuki_on then self:akatsuki_row() else nil,
 	}
 end
 
@@ -1292,7 +1313,7 @@ end
 function Sim._median_nation_troops(self: any): number
 	local vals = {}
 	for id = 1, self.owner_total do
-		if self.o_kind[id] == Defs.KIND_NATION and self.o_alive[id] == 1 and self.o_beast[id] == 0 then
+		if self.o_kind[id] == Defs.KIND_NATION and self.o_alive[id] == 1 and self.o_special[id] == 0 then
 			table.insert(vals, self.o_troops[id])
 		end
 	end
@@ -1364,8 +1385,8 @@ function Sim.capitulate(self: any, loser: number, winner: number)
 		or self.o_alive[loser] == 0
 		or self.o_alive[winner] == 0
 		or self:is_human(loser)
-		or self.o_beast[loser] ~= 0
-		or self.o_beast[winner] ~= 0
+		or self.o_special[loser] ~= 0
+		or self.o_special[winner] ~= 0
 	then
 		return
 	end
@@ -1399,7 +1420,7 @@ function Sim.ally_request(self: any, id: number, target: number): boolean
 	if target <= 0 or target > self.owner_total or target == id or self.o_alive[target] == 0 then
 		return false
 	end
-	if self.o_beast[id] ~= 0 or self.o_beast[target] ~= 0 then
+	if self.o_special[id] ~= 0 or self.o_special[target] ~= 0 then
 		return false
 	end
 	if self:allied(id, target) or self:has_request(id, target) then
@@ -1562,12 +1583,13 @@ function Sim._economy_tick(self: any)
 	local troop_growth_applied = Rules.troop_growth_applied
 	local o_bot = self.o_bot
 	local o_skill = self.o_skill
-	local o_beast = self.o_beast
+	local o_special = self.o_special
 	local o_cap_mult = self.o_cap_mult
 	local NOVICE = Sim.NOVICE_SKILL
 	for id = 1, self.owner_total do
-		-- (a Tailed Beast: fixed cap, its own regeneration, no gold; SimBeasts)
-		if o_alive[id] == 0 or o_spawned[id] == 0 or o_beast[id] ~= 0 then
+		-- (a special owner, a Tailed Beast or the Akatsuki: its own cap and regeneration, no gold;
+		-- SimBeasts, SimAkatsuki)
+		if o_alive[id] == 0 or o_spawned[id] == 0 or o_special[id] ~= 0 then
 			continue
 		end
 		local kind = o_kind[id]
@@ -1624,9 +1646,13 @@ function Sim._process_eliminations(self: any)
 end
 
 function Sim._eliminate(self: any, id: number, killer: number)
-	-- Tailed Beasts: a beast is captured (or gone), a holder's beasts are stolen. A beast's fall has
-	-- its own news (SimBeasts), so none of the usual below.
+	-- Tailed Beasts: a beast is captured (or gone, or sealed by the Akatsuki), a holder's beasts are
+	-- stolen (or sealed). The Akatsuki falls. A beast's or the Akatsuki's fall has its own news
+	-- (SimBeasts, SimAkatsuki), so none of the usual below.
 	local beast = self.beasts_on and self:_beasts_on_eliminated(id, killer)
+	if self.akatsuki_on and self:_akatsuki_on_eliminated(id, killer) then
+		beast = true
+	end
 	-- Decide who hears about it before alliances are dissolved: humans involved, allied or
 	-- bordering, or when a top-5 owner did the conquering. Tribes are never world news.
 	local audience = {}
@@ -1709,10 +1735,10 @@ function Sim._check_victory(self: any)
 	local bt = -1
 	local o_alive = self.o_alive
 	local o_tiles = self.o_tiles
-	local o_beast = self.o_beast
+	local o_special = self.o_special
 	for id = 1, self.owner_total do
-		-- (a Tailed Beast never wins)
-		if o_alive[id] == 1 and o_tiles[id] > bt and o_beast[id] == 0 then
+		-- (a special owner, a Tailed Beast or the Akatsuki, never wins)
+		if o_alive[id] == 1 and o_tiles[id] > bt and o_special[id] == 0 then
 			bt = o_tiles[id]
 			best = id
 		end
@@ -1737,10 +1763,10 @@ function Sim._check_victory(self: any)
 		end
 		bt = tt
 	end
-	-- (the land that counts: contestable, not fallout, not held by a Tailed Beast)
+	-- (the land that counts: contestable, not fallout, not held by a special owner)
 	local land = self.map.contestable_count - self.fallout_count
 	if self.beasts_on then
-		land -= self:beast_land()
+		land -= self:special_land()
 	end
 	if best > 0 and bt >= Rules.WIN_SHARE * land then
 		self:_game_over(best, Defs.OVER_DOMINATION, team)

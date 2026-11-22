@@ -222,7 +222,7 @@ function SimAI:tick(sim)
 			and not a.counter
 			and a.target > 0
 			and (o_kind[a.attacker] == KIND_NATION or sim.o_bot[a.attacker] == 1)
-			and sim.o_beast[a.attacker] == 0
+			and sim.o_special[a.attacker] == 0
 		then
 			pairs_[a.attacker * 1024 + a.target] = true
 		end

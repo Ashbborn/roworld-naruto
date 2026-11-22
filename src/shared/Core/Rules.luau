@@ -106,11 +106,63 @@ local BEASTS = {
 	LOSS_CUT_PER_TAIL = 0.01,
 }
 
+--- The Akatsuki (Core/SimAkatsuki, docs/AKATSUKI.md): every tunable, one table shared by all map
+--- scales (distances are full-size tiles, scaled by the map's K_LIN where used). First guesses.
+local AKATSUKI = {
+	--- It appears APPEAR_S seconds into play (after the spawn phase); it stirs (a warning and a map
+	--- marker) WARN_S before.
+	APPEAR_S = 660,
+	WARN_S = 20,
+	--- Where: the map's nation spawn point of this name (the Land of Rain), else a random land tile
+	--- (SPOT_TRIES tries; never one of a spawn-shielded owner or a Tailed Beast).
+	SPAWN_NATION = "Amegakure",
+	SPOT_TRIES = 400,
+	--- It seizes the land within RADIUS full-size tiles, owned or not (spawn-shielded owners' and
+	--- Tailed Beasts' tiles excepted).
+	RADIUS = 14.0,
+	--- Troops (its base cap): the strongest player's army (humans and bot players; with none, any
+	--- owner's; special owners excluded) x TROOPS_SHARE, never under TROOPS_FLOOR. Every beast it
+	--- has sealed multiplies its cap and its attack waves by (1 + SEAL_GROWTH x sealed).
+	TROOPS_FLOOR = 150000.0,
+	TROOPS_SHARE = 0.9,
+	SEAL_GROWTH = 0.15,
+	--- Its cap does not follow its land. Every second it regenerates REGEN_PER_S of what it is
+	--- missing below the cap, or loses DRAIN_PER_S of what it holds above it. No gold income.
+	REGEN_PER_S = 0.02,
+	DRAIN_PER_S = 0.25,
+	--- Every ATTACK_EVERY_TICKS it attacks its best target on its border with ATTACK_SHARE x its home
+	--- troops (x the seal growth, at most ATTACK_SHARE_MAX; at least ATTACK_MIN_TROOPS): wild Tailed
+	--- Beasts first, then beast holders, then the weakest neighbour; with no neighbour to attack, it
+	--- takes free land with EXPAND_SHARE. Spawn-shielded owners are skipped.
+	ATTACK_EVERY_TICKS = 10,
+	ATTACK_SHARE = 0.05,
+	ATTACK_SHARE_MAX = 0.12,
+	ATTACK_MIN_TROOPS = 1000.0,
+	EXPAND_SHARE = 0.02,
+	--- Cells: every CELL_EVERY_S it drops a disk of CELL_RADIUS full-size tiles of its land next to
+	--- its priority target it does not border yet (a wild beast, else a beast holder). At most
+	--- MAX_CELLS cells hold land at once: a new one withdraws the oldest (its land goes unowned).
+	--- CELL_TRIES border tiles of the target are tried for the spot; CELL_MIN_TILES must be seized.
+	CELL_EVERY_S = 25,
+	CELL_RADIUS = 5.0,
+	MAX_CELLS = 3,
+	CELL_TRIES = 80,
+	CELL_MIN_TILES = 5,
+	--- Its fall: the owner that takes its last tile gets troop cap x SLAYER_CAP_MULT for the rest of
+	--- the match and BOUNTY_GOLD (plus what the Akatsuki took). Each beast it had sealed re-emerges
+	--- as a new wild beast: the first RELEASE_FIRST_S after the fall, then one every RELEASE_EVERY_S.
+	SLAYER_CAP_MULT = 1.10,
+	BOUNTY_GOLD = 1000000.0,
+	RELEASE_FIRST_S = 30,
+	RELEASE_EVERY_S = 30,
+}
+
 --- Builds the rules table for maps whose tiles are `K_LIN` full-size tiles across.
 local function build(K_LIN: number): any
 	local Rules: any = {}
 	Rules.TICK_RATE = 10
 	Rules.BEASTS = BEASTS
+	Rules.AKATSUKI = AKATSUKI
 	--- Full-size tiles per one of our tiles, linear and by area (the map's k_lin).
 	Rules.K_LIN = K_LIN
 	Rules.K_AREA = K_LIN * K_LIN
