@@ -57,6 +57,42 @@ STONE_D = "#5f5c68"
 WHITE = "#ffffff"
 
 
+# ---------------------------------------------------------------------------------------------------
+# Styles (2026-11-23: the owner picks the look; nothing is final until then)
+#   A  the art direction's palette as first drawn: cream paper, vermilion, flat gold
+#   B  after the owner's notes on the other lanes ("red on white", gold that "is not really golden",
+#      grounds "too white"): aged dark parchment, deep crimson, metallic gold (a light-to-dark gradient
+#      with a bright band in every gold shape), greyer smoke
+# ---------------------------------------------------------------------------------------------------
+
+_A = {k: globals()[k] for k in ("PAPER", "PAPER_D", "VERM", "VERM_D", "VERM_L", "GOLD", "GOLD_D", "GOLD_L",
+                               "SMOKE", "SMOKE_D")}
+_B = {
+    "PAPER": "#c29a5e", "PAPER_D": "#94703e",
+    "VERM": "#a8231d", "VERM_D": "#6e1410", "VERM_L": "#e0582c",
+    "GOLD": "url(#gmetal)", "GOLD_D": "url(#gmetal_d)", "GOLD_L": "#ffe9a0",
+    "SMOKE": "#cfc9cf", "SMOKE_D": "#8f8796",
+}
+STYLE = "A"
+# solid stand-ins where a gradient can't go (strokes: a straight line has no box to fill)
+_SOLID = {"url(#gmetal)": "#e2a93a", "url(#gmetal_d)": "#9a6418"}
+METAL_DEFS = (
+    '<linearGradient id="gmetal" x1="0" y1="0" x2="0.35" y2="1">'
+    '<stop offset="0" stop-color="#fff6c4"/><stop offset="0.22" stop-color="#f6cd58"/>'
+    '<stop offset="0.5" stop-color="#c98a1e"/><stop offset="0.62" stop-color="#8a5510"/>'
+    '<stop offset="0.8" stop-color="#e5ad3c"/><stop offset="1" stop-color="#ffe089"/></linearGradient>'
+    '<linearGradient id="gmetal_d" x1="0" y1="0" x2="0.35" y2="1">'
+    '<stop offset="0" stop-color="#d79a2c"/><stop offset="0.5" stop-color="#7a4a0e"/>'
+    '<stop offset="1" stop-color="#b47a22"/></linearGradient>')
+
+
+def use_style(name):
+    """Switch every drawer to style `name` ("A" or "B")."""
+    global STYLE
+    STYLE = name
+    globals().update(_A if name == "A" else _B)
+
+
 def f(v):
     return f"{v:.2f}".rstrip("0").rstrip(".")
 
@@ -143,6 +179,7 @@ class Art:
 
     def line(self, d, color, w, outline=False, cap="round", opacity=1.0, tf=None):
         """A stroked path (brush marks, ropes); `outline`: ink under it too (it joins the silhouette)."""
+        color = _SOLID.get(color, color)
         tt = " ".join(x for x in (self.tf, tf) if x)
         t = f' transform="{tt}"' if tt else ""
         self.stacks[-1].append(("line", d, color, w, outline, cap, opacity, t, self.k))
@@ -155,7 +192,7 @@ class Art:
 
     def svg(self, mask=False):
         out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {f(self.w)} {f(self.h)}" '
-               f'width="{f(self.w)}" height="{f(self.h)}">', "<defs>", *self.defs, "</defs>"]
+               f'width="{f(self.w)}" height="{f(self.h)}">', "<defs>", METAL_DEFS, *self.defs, "</defs>"]
         if not mask:
             out += self.under
         for st in self.stacks:
@@ -309,8 +346,9 @@ def kunai(a, x0, y0, length, ang=0.0, steel=STEEL, wrap=CLOTH):
     return cid
 
 
-def puff_cloud(a, cx, cy, r, seed=3, n=7, fill=SMOKE, shade=SMOKE_D, flat_bottom=False):
+def puff_cloud(a, cx, cy, r, seed=3, n=7, fill=None, shade=None, flat_bottom=False):
     """A smoke puff: overlapping round lobes, shaded on their lower right."""
+    fill, shade = fill or SMOKE, shade or SMOKE_D
     rnd = random.Random(seed)
     lobes = [(cx, cy, r * 0.62)]
     for i in range(n):
@@ -327,9 +365,10 @@ def puff_cloud(a, cx, cy, r, seed=3, n=7, fill=SMOKE, shade=SMOKE_D, flat_bottom
                WHITE, rr * 0.12, opacity=0.8)
 
 
-def ninja(a, cx, by, h, run=0.0, scarf=VERM, tf=None):
+def ninja(a, cx, by, h, run=0.0, scarf=None, tf=None):
     """A ninja, standing (or mid-stride with `run` 0..1), feet at (cx, by), `h` tall: a dark suit, a
     steel headband plate, a scarf blowing back."""
+    scarf = scarf or VERM
     s = h / 100.0
 
     def X(x):
@@ -373,8 +412,9 @@ def ninja(a, cx, by, h, run=0.0, scarf=VERM, tf=None):
     a.solid(R(X(-12), Y(31), 24 * s, 7 * s, 3 * s, tf), scarf)
 
 
-def seal_circle(a, cx, cy, r, color=VERM, n=8, seed=5, width=None):
+def seal_circle(a, cx, cy, r, color=None, n=8, seed=5, width=None):
     """A sealing array: two rings, glyph marks between them, a cross of lines inside."""
+    color = color or VERM
     w = width or r * 0.07
     a.line(f"M{f(cx - r)},{f(cy)} a{f(r)},{f(r)} 0 1,0 {f(2 * r)},0 a{f(r)},{f(r)} 0 1,0 {f(-2 * r)},0", color, w)
     r2 = r * 0.72
@@ -415,13 +455,16 @@ def swirl(a, cx, cy, r, color=BLUE, light=BLUE_L, dark=BLUE_D, arms=3, ow=None):
 # ---------------------------------------------------------------------------------------------------
 
 def aura(a, cx, cy, rx, ry, color, opacity=0.55, gid="aura"):
+    color = _SOLID.get(color, color)
     a.defs.append(f'<radialGradient id="{gid}"><stop offset="0" stop-color="{color}" stop-opacity="{opacity}"/>'
                   f'<stop offset="1" stop-color="{color}" stop-opacity="0"/></radialGradient>')
     a.raw_under(f'<ellipse cx="{f(cx)}" cy="{f(cy)}" rx="{f(rx)}" ry="{f(ry)}" fill="url(#{gid})"/>')
 
 
-def flame(a, cx, by, w, h, seed=1, outer=VERM, mid=GOLD, core=GOLD_L, ow=None):
+def flame(a, cx, by, w, h, seed=1, outer=None, mid=None, core=None, ow=None):
     """A flame: three nested tongues, its base at (cx, by)."""
+    # (fire stays flat: a metal gradient in a flame reads as brass)
+    outer, mid, core = outer or VERM, _SOLID.get(mid or GOLD, mid or GOLD), core or GOLD_L
     rnd = random.Random(seed)
 
     def tongue(ww, hh, lean):

@@ -466,8 +466,10 @@ def upload():
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--style", default="A", choices=["A", "B"], help="arsenal_svg style (the owner picks)")
     ap.add_argument("--upload", action="store_true")
     args = ap.parse_args()
+    A.use_style(args.style)
     make()
     print("wrote", os.path.relpath(OUT, ROOT), "and build/arsenal_fx_sheet.png")
     if args.upload:

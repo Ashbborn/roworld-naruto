@@ -93,8 +93,10 @@ def sheet(images):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--style", default="A", choices=["A", "B"], help="arsenal_svg style (the owner picks)")
     ap.add_argument("--only", default="")
     args = ap.parse_args()
+    A.use_style(args.style)
     keys = [k for k in A.RENDERS if not args.only or k in args.only.split(",")]
     os.makedirs(OUT, exist_ok=True)
     images = {}
