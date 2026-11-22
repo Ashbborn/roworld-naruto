@@ -2,27 +2,28 @@
 -- The Arsenal's gameplay previews: each card's art plays a few seconds of what its item does in a
 -- match, over and over (2026-10-12: the shop shows gameplay, as too few players were using it).
 -- The scene is drawn like the
--- map: the player's land on the left, a nation's on the right with a city, its name and its troops,
--- the structures' plates (Assets/MapSprites, Assets/ArsenalArt). The ground is a piece of a real map
--- drawn the way a match draws it (Assets/ArsenalMaps: terrain, rivers and coasts, the territories
--- blended over them with their borders, a pixel a tile; 2026-10-24: a real map in place of
--- the solid background colours, which looked bad). Flat colours stand in without it.
+-- map: the player's land on the left, a nation's on the right with its village, its name and its troops.
+-- The ground is a piece of a map drawn the way a match draws it (Assets/ArsenalMaps: terrain, rivers and
+-- coasts, the territories blended over them with their borders, a pixel a tile; 2026-10-24: a real map in
+-- place of the solid background colours, which looked bad). Flat colours stand in without it.
 --
--- What flies and what blows up is drawn art (the same day: real graphics in place of the pixel
--- circles, so that nukes and the other items look better): the shop
--- cards' own renders for the missiles and the bomber (Assets/ArsenalArt.renders), and effects drawn by
--- tools/assets/make_arsenal_fx.py (Assets/ArsenalFx): a fireball flipbook, a mushroom cloud, smoke
--- trails, shockwaves, scorch marks, a beam, tracers, bombs, warheads, a reticle, parachutes. Big hits
--- shake the scene.
---   mega       the missile arcs from the silo onto the city under a reticle: a white flash, a
---              shockwave, a mushroom cloud, the city gone, fallout
---   scatter    the missile splits over the city into five warheads, five fireballs
---   reinforce  three paratroopers drop in (+2.0K each), then the border advances into the nation
---   artillery  the battery fires a tracer every second or so into its range ring
---   airfield   a bomber takes off, crosses a marked spot and drops three bombs on it
---   railgun    it charges, then a beam crosses the whole scene: no range limit
+-- What stands, flies and blows up is the Naruto world's (2026-11-23, in place of RoWorld's missiles, jet,
+-- bombs, parachutes and mushroom cloud): hand-made SVG sprites (tools/assets/arsenal_svg.py; Assets/ArsenalFx)
+-- and the shop's own renders (Assets/ArsenalArt.renders): a Seal Shrine, a Hawk Roost, a village, the giant
+-- tag, a scroll, paper bombs, kunai, clones in a puff of smoke, a hawk's wingbeat, hands forming seals, a
+-- chakra orb, sealing arrays, and a column of chakra fire; plus drawn fire, smoke, shockwaves, scorch marks
+-- and a beam. Big hits shake the scene.
+--   mega       the giant tag arcs from the Seal Shrine onto the village under a sealing array: a flash, a
+--              shockwave, chakra fire blooming out of a seal on the ground, the village gone
+--   scatter    a burning scroll bursts over the village into five paper bombs, five fireballs
+--   reinforce  three puffs of smoke, two identical ninja out of each (+2.0K a puff); they run for the
+--              border, which advances into the nation
+--   artillery  the Kunai Battery looses a volley of three kunai into its range ring every second or so
+--   airfield   a hawk leaves its roost, crosses a marked spot and drops three paper bombs on it
+--   railgun    a chakra orb gathers at the cannon's mouth, then a beam crosses the whole scene: no range limit
 --   stars2x    a payout, and a "2X" stamp doubling it
---   reload2x   two silos, the rapid one firing twice for the other's once
+--   reload2x   two Seal Shrines, hands forming the seals beside each; the Quick Seals one fires twice for
+--              the other's once
 -- Everything is a function of the time into the loop (no state carried between frames), so a demo
 -- starts anywhere and always shows a whole loop.
 --
@@ -35,7 +36,6 @@ local function shared(folder: string, name: string): any
 	end
 	return (require :: any)("../../shared/" .. folder .. "/" .. name)
 end
-local Sprites = shared("Assets", "MapSprites")
 local AA = shared("Assets", "ArsenalArt")
 local FX: any = (function()
 	local ok, m = pcall(shared, "Assets", "ArsenalFx")
@@ -50,11 +50,11 @@ end)()
 local ArsenalDemo = {}
 ArsenalDemo.__index = ArsenalDemo
 
---- One loop, seconds (Rapid Reload's: two of the normal reload, four of the rapid one).
+--- One loop, seconds (Quick Seals': two of the normal reload, four of the quick one).
 ArsenalDemo.LOOP_S = 4.2
 ArsenalDemo.LOOPS = { reload2x = 5.6 }
 --- The nation the player's weapon is shown on, and its troops before it.
-ArsenalDemo.ENEMY = "NORTHMARK"
+ArsenalDemo.ENEMY = "IWAGAKURE"
 ArsenalDemo.ENEMY_TROOPS = 48000
 ArsenalDemo.MY_TROOPS = 18000
 
@@ -70,15 +70,15 @@ local SCORCH = Color3.fromRGB(46, 34, 30)
 --- under the map image while it loads
 local NIGHT_GROUND = Color3.fromRGB(30, 38, 58)
 local FIRE_GLOW = Color3.fromRGB(255, 168, 70)
-local RED = Color3.fromRGB(255, 70, 70)
-local PURPLE = Color3.fromRGB(176, 120, 255)
+--- the chakra's blue (the art's #4aa8e0) and its light
+local CHAKRA = Color3.fromRGB(74, 168, 224)
+local CHAKRA_LIGHT = Color3.fromRGB(196, 236, 255)
+--- smoke trails warmed by the burning tags, the big flash's warm white
+local EMBER_SMOKE = Color3.fromRGB(255, 226, 196)
+local FLASH = Color3.fromRGB(255, 244, 222)
 local GOLD = Color3.fromRGB(255, 205, 70)
 local DUST = Color3.fromRGB(226, 204, 168)
 
--- structure columns: the map sprites' (city 0, silo 5), the Arsenal's (artillery 0, airfield 1, railgun 2)
-local CITY_COL, SILO_COL = 0, 5
---- the renders stand a little tilted (the photographs' roll): turn them back this far when they fly
-local RENDER_TILT = 10
 
 local function clamp01(x: number): number
 	return math.clamp(x, 0, 1)
@@ -141,7 +141,7 @@ function ArsenalDemo.preload()
 	if MAPS ~= nil then
 		add(MAPS.id)
 	end
-	for _, k in { "mega", "scatter", "airfield", "reinforce" } do
+	for _, k in { "mega", "artillery", "railgun" } do
 		local r = AA.renders and AA.renders[k]
 		if r ~= nil then
 			add(r.id)
@@ -496,57 +496,36 @@ function ArsenalDemo._advance(self, from: number, to: number, push: number): num
 	return ((bx - p.map_rect.X) / p.map_rw * (W + 2 * pad) - pad) / W
 end
 
---- A structure's plate (as Map/StructureLayer draws it: the whole shape in the rim's colour, the inset
---- shape over it in `fill`, the glyph in white), `d` px wide. `col`: the structure kind, counted from
---- the Arsenal's first (Defs.S_ARTILLERY) when `arsenal`.
-function ArsenalDemo._plate(self, name: string, col: number, arsenal: boolean, fill: Color3, d: number): ImageLabel
-	local shapes, icons = Sprites.shapes, Sprites.icons
-	if arsenal then
-		col += 6
-	end
-	local cell = shapes.cell
-	local plate = new("ImageLabel", {
-		Name = name,
-		BackgroundTransparency = 1,
-		Image = shapes.id,
-		ImageRectOffset = Vector2.new(col * cell, 0),
-		ImageRectSize = Vector2.new(cell, cell),
-		ImageColor3 = dark(fill, 0.55),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Size = UDim2.fromOffset(d, d),
-		ZIndex = 9,
-	}, self.root)
-	new("ImageLabel", {
-		Name = "Fill",
-		BackgroundTransparency = 1,
-		Image = shapes.id,
-		ImageRectOffset = Vector2.new(col * cell, cell),
-		ImageRectSize = Vector2.new(cell, cell),
-		ImageColor3 = fill,
-		Size = UDim2.fromScale(1, 1),
-		ZIndex = 9,
-	}, plate)
-	new("ImageLabel", {
-		Name = "Glyph",
-		BackgroundTransparency = 1,
-		Image = icons.id,
-		ImageRectOffset = Vector2.new(col * icons.cell, 0),
-		ImageRectSize = Vector2.new(icons.cell, icons.cell),
-		ImageColor3 = WHITE,
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromScale(0.62, 0.62),
-		ZIndex = 10,
-	}, plate)
-	return plate
+--- One of the sprites (Assets/ArsenalFx singles), `h` px tall with its own shape, shown.
+function ArsenalDemo._sprite(self, name: string, key: string, h: number, z: number): ImageLabel
+	local g = self:_fx(name, key, z)
+	g.Size = UDim2.fromOffset(self:_fx_w(key, h), h)
+	g.Visible = true
+	return g
 end
 
---- A structure's plate size for this scene.
-function ArsenalDemo._plate_d(self): number
-	return math.clamp(self.H * 0.28, 15 * self.u, 32 * self.u)
+--- A sprite's width for a height `h` (its image's shape; square without it), and its height for a width.
+function ArsenalDemo._fx_w(_self, key: string, h: number): number
+	local f = FX[key]
+	return if f ~= nil and f.w ~= nil then h * f.w / f.h else h
+end
+function ArsenalDemo._fx_h(_self, key: string, w: number): number
+	local f = FX[key]
+	return if f ~= nil and f.w ~= nil then w * f.h / f.w else w
 end
 
---- The nation: its name and troops over its land, its city. `fx`: where its middle is.
+--- A render's width for a height `h`.
+function ArsenalDemo._render_w(_self, key: string, h: number): number
+	local r = AA.renders and AA.renders[key]
+	return if r ~= nil then h * r.w / r.h else h * 0.6
+end
+
+--- A structure's height for this scene (a shrine, a roost, the enemy's village).
+function ArsenalDemo._struct_h(self): number
+	return math.clamp(self.H * 0.34, 18 * self.u, 40 * self.u)
+end
+
+--- The nation: its name and troops over its land, its village. `fx`: where its middle is.
 function ArsenalDemo._nation(self, fx: number, city_fx: number, city_fy: number)
 	local p = self.parts
 	local H, u = self.H, self.u
@@ -557,8 +536,7 @@ function ArsenalDemo._nation(self, fx: number, city_fx: number, city_fy: number)
 	p.troops =
 		self:_text("Troops", fmt_k(ArsenalDemo.ENEMY_TROOPS), fs * 0.9, Color3.fromRGB(255, 236, 200), 22, FONT_B)
 	self:_at(p.troops, fx, 0.2 + fs * 1.05 / H)
-	local d = math.clamp(H * 0.3, 16 * u, 34 * u)
-	p.city = self:_plate("City", CITY_COL, false, dark(p.theirs_col, 0.3), d)
+	p.city = self:_sprite("City", "village", self:_struct_h() * 1.05, 9)
 	self:_at(p.city, city_fx, city_fy)
 	p.city_at = Vector2.new(city_fx, city_fy)
 	p.pop = self:_text("Pop", "", fs * 0.95, Color3.fromRGB(255, 96, 96), 23)
@@ -702,28 +680,30 @@ end
 -- The scripts
 -- ---------------------------------------------------------------------------------------------
 
--- Mega Nuke: from the silo onto the city under a reticle; a flash, a shockwave, a mushroom cloud.
+-- Grand Explosion Seal: the giant tag arcs from the Seal Shrine onto the village under a sealing array;
+-- a flash, a shockwave, a column of chakra fire blooming out of a seal on the ground.
 local MEGA_FLY, MEGA_HIT = 0.35, 1.5
 function ArsenalDemo._build_mega(self, _it: any)
 	local p = self.parts
 	local H = self.H
 	self:_land(0.4, THEIRS)
 	self:_nation(0.72, 0.72, 0.74)
-	p.silo = self:_plate("Silo", SILO_COL, false, dark(MINE, 0.3), self:_plate_d())
-	self:_at(p.silo, 0.15, 0.7)
+	p.shrine = self:_sprite("Shrine", "shrine", self:_struct_h(), 9)
+	self:_at(p.shrine, 0.15, 0.68)
+	p.array = self:_fx("Array", "sealring", 8, GOLD)
 	p.launch = { self:_fx("Launch1", "smoke", 8), self:_fx("Launch2", "smoke", 8) }
-	p.fallout = self:_fx("Fallout", "glow", 7, Color3.fromRGB(150, 236, 90))
-	p.reticle = self:_fx("Reticle", "reticle", 12, RED)
-	p.trail = self:_trail("Trail", 10)
+	p.embers = self:_fx("Embers", "glow", 7, FIRE_GLOW)
+	p.reticle = self:_fx("Reticle", "sealring", 12)
+	p.trail = self:_trail("Trail", 10, EMBER_SMOKE)
 	p.missile = self:_render("Missile", "mega", H * 0.36, 13)
 	p.boom = self:_boom("Blast")
-	p.wave = self:_fx("Wave", "ring", 18)
-	p.cloud = self:_flip("Cloud", "mushroom", 19)
+	p.wave = self:_fx("Wave", "ring", 18, GOLD)
+	p.cloud = self:_flip("Cloud", "bloom", 19)
 	-- (its ground is 86 % of the way down its cell)
 	p.cloud.AnchorPoint = Vector2.new(0.5, 0.86)
 	p.white = new("Frame", {
 		Name = "Flash",
-		BackgroundColor3 = WHITE,
+		BackgroundColor3 = FLASH,
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		Position = UDim2.fromOffset(-self.M, -self.M),
@@ -735,13 +715,21 @@ end
 function ArsenalDemo._step_mega(self, t: number)
 	local p = self.parts
 	local H = self.H
-	local a, b = Vector2.new(0.15, 0.62), p.city_at
+	local a, b = Vector2.new(0.15, 0.6), p.city_at
 	local lift = 0.46
 	local function path(s: number): (number, number)
 		local x, y = self:_arc(a, b, lift, s)
 		return x, y
 	end
-	-- the launch: smoke at the silo
+	-- the launch: a sealing array flares under the shrine, smoke
+	local ak = (t - 0.05) / (MEGA_FLY + 0.35)
+	if ak >= 0 and ak < 1 then
+		local d = H * (0.3 + 0.35 * ak)
+		self:_show(p.array, 0.15, 0.72, d, d * 0.45, 0.1 + 0.9 * ak * ak)
+		p.array.Rotation = 0
+	else
+		p.array.Visible = false
+	end
 	for i, g in p.launch do
 		self:_puff_at(g, 0.15 + (i - 1.5) * 0.05, 0.7, H * 0.26, t - MEGA_FLY + 0.05 * i, 1.0)
 	end
@@ -750,24 +738,23 @@ function ArsenalDemo._step_mega(self, t: number)
 		local x, y, h = self:_arc(a, b, lift, s)
 		-- (nearer the camera at the top of its arc)
 		local k = 1 + 0.3 * math.sin(math.pi * s)
-		local r = AA.renders and AA.renders.mega
-		local mh = H * 0.36 * k
-		self:_show(p.missile, x, y, mh * (if r ~= nil then r.w / r.h else 0.6), mh)
-		p.missile.Rotation = h + 90 - RENDER_TILT
+		self:_show(p.missile, x, y, self:_render_w("mega", H * 0.36 * k), H * 0.36 * k)
+		-- (it stands burning end up: that end leads)
+		p.missile.Rotation = h + 90
 	else
 		p.missile.Visible = false
 	end
 	self:_trail_at(p.trail, path, MEGA_FLY, MEGA_HIT, t, H * 0.2, 1.1)
-	-- the reticle on the city while it comes
+	-- the sealing array on the village while it comes
 	if t > 0.15 and t < MEGA_HIT then
 		local pulse = 1 + 0.1 * math.sin(t * 14)
-		self:_show(p.reticle, b.X, b.Y, H * 0.5 * pulse, H * 0.5 * pulse, 0.1)
+		self:_show(p.reticle, b.X, b.Y, H * 0.55 * pulse, H * 0.55 * pulse, 0.1)
 		p.reticle.Rotation = t * 40
 	else
 		p.reticle.Visible = false
 	end
 	local since = t - MEGA_HIT
-	-- the hit: the whole scene goes white for a moment and shakes
+	-- the hit: the whole scene flashes for a moment and shakes
 	p.white.BackgroundTransparency = if since >= 0 and since < 0.4 then 0.15 + 0.85 * (since / 0.4) else 1
 	self:_kick(t, MEGA_HIT, 6, 0.8)
 	self:_boom_at(p.boom, b.X, b.Y, H * 0.42, since, 1.0, t)
@@ -778,18 +765,18 @@ function ArsenalDemo._step_mega(self, t: number)
 	else
 		p.wave.Visible = false
 	end
-	-- the mushroom cloud rises and stays, and goes as the loop ends
+	-- the chakra fire blooms and burns down, and goes as the loop ends
 	if since >= 0.05 then
-		local ck = math.min(0.999, (since - 0.05) / 1.7)
-		self:_flip_at(p.cloud, "mushroom", b.X, b.Y + 0.04, H * 0.92, ck, ramp(t, self.loop - 0.5, self.loop))
+		local ck = math.min(0.999, (since - 0.05) / 1.9)
+		self:_flip_at(p.cloud, "bloom", b.X, b.Y + 0.04, H * 0.92, ck, ramp(t, self.loop - 0.5, self.loop))
 	else
 		p.cloud.Visible = false
 	end
-	-- the fallout under it
+	-- the embers' glow under it
 	if since > 0.6 then
-		self:_show(p.fallout, b.X, b.Y, H * 1.5, H * 1.2, 0.45 + 0.55 * ramp(t, self.loop - 0.5, self.loop))
+		self:_show(p.embers, b.X, b.Y, H * 1.5, H * 1.2, 0.5 + 0.5 * ramp(t, self.loop - 0.5, self.loop))
 	else
-		p.fallout.Visible = false
+		p.embers.Visible = false
 	end
 	local loss = 26400
 	self:_troops(
@@ -800,11 +787,11 @@ function ArsenalDemo._step_mega(self, t: number)
 		b.X,
 		0.42
 	)
-	-- (the city goes with it)
+	-- (the village goes with it)
 	p.city.Visible = since < 0.08
 end
 
--- Scattershot: the missile splits over the city into five warheads.
+-- Scatter Seal: a burning scroll arcs over the village and bursts into five paper bombs.
 local SCATTER = {
 	Vector2.new(-0.14, -0.2),
 	Vector2.new(0.12, -0.22),
@@ -815,19 +802,19 @@ local SCATTER = {
 local SCAT_FLY, SCAT_SPLIT = 0.3, 1.15
 function ArsenalDemo._build_scatter(self, _it: any)
 	local p = self.parts
-	local H = self.H
 	self:_land(0.38, THEIRS)
 	self:_nation(0.7, 0.7, 0.62)
-	p.silo = self:_plate("Silo", SILO_COL, false, dark(MINE, 0.3), self:_plate_d())
-	self:_at(p.silo, 0.14, 0.7)
+	p.shrine = self:_sprite("Shrine", "shrine", self:_struct_h(), 9)
+	self:_at(p.shrine, 0.14, 0.68)
 	p.launch = self:_fx("Launch", "smoke", 8)
-	p.trail = self:_trail("Trail", 8)
-	p.missile = self:_render("Missile", "scatter", H * 0.34, 13)
+	p.trail = self:_trail("Trail", 8, EMBER_SMOKE)
+	p.missile = self:_fx("Scroll", "scroll", 13)
 	p.pop_flash = self:_fx("Split", "glow", 14, Color3.fromRGB(255, 236, 180))
+	p.burst = self:_fx("Burst", "poof", 15)
 	p.heads, p.booms, p.htrails = {}, {}, {}
 	for i = 1, #SCATTER do
-		p.heads[i] = self:_fx("Warhead" .. i, "warhead", 13)
-		p.htrails[i] = self:_trail("HTrail" .. i, 3)
+		p.heads[i] = self:_fx("Tag" .. i, "tag", 13)
+		p.htrails[i] = self:_trail("HTrail" .. i, 3, EMBER_SMOKE)
 		p.booms[i] = self:_boom("Blast" .. i)
 	end
 end
@@ -835,17 +822,16 @@ end
 function ArsenalDemo._step_scatter(self, t: number)
 	local p = self.parts
 	local H = self.H
-	local a = Vector2.new(0.14, 0.62)
+	local a = Vector2.new(0.14, 0.6)
 	local at = Vector2.new(0.52, 0.24)
 	local lift = 0.24
 	self:_puff_at(p.launch, 0.14, 0.7, H * 0.26, t - SCAT_FLY, 0.9)
 	local s = (t - SCAT_FLY) / (SCAT_SPLIT - SCAT_FLY)
 	if s > 0 and s < 1 then
 		local x, y, h = self:_arc(a, at, lift, s)
-		local r = AA.renders and AA.renders.scatter
-		local mh = H * 0.34 * (1 + 0.2 * math.sin(math.pi * s))
-		self:_show(p.missile, x, y, mh * (if r ~= nil then r.w / r.h else 0.45), mh)
-		p.missile.Rotation = h + 90 - RENDER_TILT
+		local w = H * 0.42 * (1 + 0.2 * math.sin(math.pi * s))
+		self:_show(p.missile, x, y, w, self:_fx_h("scroll", w))
+		p.missile.Rotation = h
 	else
 		p.missile.Visible = false
 	end
@@ -853,13 +839,14 @@ function ArsenalDemo._step_scatter(self, t: number)
 		local x, y = self:_arc(a, at, lift, q)
 		return x, y
 	end, SCAT_FLY, SCAT_SPLIT, t, H * 0.18, 1.0)
-	-- the split: a flash where it opens
+	-- the burst: a flash and a puff where it opens
 	local sk = (t - SCAT_SPLIT) / 0.3
 	if sk >= 0 and sk < 1 then
 		self:_show(p.pop_flash, at.X, at.Y, H * (0.4 + 0.4 * sk), H * (0.4 + 0.4 * sk), sk)
 	else
 		p.pop_flash.Visible = false
 	end
+	self:_puff_at(p.burst, at.X, at.Y + 0.04, H * 0.42, t - SCAT_SPLIT, 0.55)
 	local c = p.city_at
 	local left = ArsenalDemo.ENEMY_TROOPS
 	local last_hit, last_loss = -1, 0
@@ -870,7 +857,8 @@ function ArsenalDemo._step_scatter(self, t: number)
 		local head = p.heads[i]
 		if hs > 0 and hs < 1 then
 			local x, y, h = self:_arc(at, tgt, 0.05, hs)
-			self:_show(head, x, y, H * 0.2, H * 0.2)
+			local w = H * 0.28
+			self:_show(head, x, y, w, self:_fx_h("tag", w))
 			head.Rotation = h
 		else
 			head.Visible = false
@@ -890,11 +878,13 @@ function ArsenalDemo._step_scatter(self, t: number)
 	p.city.Visible = t < SCAT_SPLIT + 0.32 + 5 * 0.07 + 0.08
 end
 
--- Reinforcements: three paratroopers drop in, each +2.0K, then the border advances.
+-- Shadow Clones: three bursts of smoke, two identical ninja out of each (+2.0K a burst); they run
+-- for the border, which advances into the nation.
 local REIN_LAND = { 0.85, 1.05, 1.25 }
 local REIN_FX = { 0.13, 0.25, 0.37 }
--- (one soldier of the squad's render)
-local SOLDIER = { Vector2.new(0, 0), Vector2.new(150, 345) }
+local REIN_GROUND = 0.76
+--- (each burst's pair: across, and a little up)
+local REIN_PAIR = { Vector2.new(-0.028, -0.03), Vector2.new(0.028, 0.02) }
 function ArsenalDemo._build_reinforce(self, _it: any)
 	local p = self.parts
 	local H, u = self.H, self.u
@@ -904,19 +894,20 @@ function ArsenalDemo._build_reinforce(self, _it: any)
 	p.mine_label =
 		self:_text("Mine", fmt_k(ArsenalDemo.MY_TROOPS), fs * 0.95, Color3.fromRGB(255, 236, 200), 22, FONT_B)
 	-- (low in the land: the card's sticker has the top left corner)
-	self:_at(p.mine_label, 0.17, 0.5)
+	self:_at(p.mine_label, 0.17, 0.46)
 	p.gain = self:_text("Gain", "+2.0K", fs * 0.9, Color3.fromRGB(120, 255, 150), 23)
 	p.gain.Visible = false
-	p.men, p.chutes, p.dust = {}, {}, {}
-	for i = 1, 3 do
-		p.dust[i] = self:_fx("Dust" .. i, "smoke", 8, DUST)
-		p.chutes[i] = self:_fx("Chute" .. i, "chute", 12)
-		p.men[i] = self:_render("Soldier" .. i, "reinforce", H * 0.3, 11, SOLDIER)
+	p.men, p.poofs = {}, {}
+	for i = 1, #REIN_LAND do
+		p.poofs[i] = self:_fx("Poof" .. i, "poof", 12)
+		for j = 1, #REIN_PAIR do
+			p.men[(i - 1) * #REIN_PAIR + j] = self:_fx("Clone" .. i .. "_" .. j, "ninja", 11)
+		end
 	end
-	-- arrows riding the border as it advances
+	-- kunai riding the border as it advances
 	p.arrows = {}
 	for i = 1, 3 do
-		p.arrows[i] = self:_img("Arrow" .. i, AA.ui and AA.ui.reinforce or "", 12, WHITE)
+		p.arrows[i] = self:_fx("Arrow" .. i, "kunai", 12)
 	end
 end
 
@@ -925,32 +916,35 @@ function ArsenalDemo._step_reinforce(self, t: number)
 	local H = self.H
 	local landed = 0
 	local last_land = -1
-	for i, m in p.men do
-		local land = REIN_LAND[i]
-		local t0 = land - 0.7
-		local k = (t - t0) / 0.7
+	-- the border advances into the nation, which loses troops as it goes
+	local push = ramp(t, 1.6, 3.4)
+	local split = self:_advance(0.44, 0.6, push)
+	local run = ramp(t, 1.55, 2.4)
+	local mh = H * 0.3
+	for i, land in REIN_LAND do
 		local fx = REIN_FX[i]
-		local ground = 0.8
-		local chute = p.chutes[i]
-		if k > 0 and t < 2.2 then
-			local y = lerp(-0.35, ground, math.min(1, k))
-			local sway = if k < 1 then math.sin(t * 6 + i) * 8 else 0
-			self:_show(m, fx, y, nil, nil, ramp(t, 1.8, 2.2))
-			m.Rotation = sway * 0.6
-			-- the canopy above, until it lands and folds
-			local ck = (t - land) / 0.3
-			if ck < 1 then
-				local cw = H * 0.34 * (1 - 0.6 * clamp01(ck))
-				self:_show(chute, fx, y - 0.3, cw, H * 0.34 * (1 - clamp01(ck)), clamp01(ck))
-				chute.Rotation = sway
+		-- the burst a moment before they appear in it
+		self:_puff_at(p.poofs[i], fx, REIN_GROUND - 0.1, H * 0.5, t - land + 0.12, 0.55)
+		for j, off in REIN_PAIR do
+			local m = p.men[(i - 1) * #REIN_PAIR + j]
+			local k = (t - land) / 0.18
+			if k >= 0 and t < 2.4 then
+				-- they pop in a little big and settle, then run for the border and fade
+				local pop = if k < 1 then 1.25 - 0.25 * k else 1
+				-- (the whole wave moves together: the front pair reaches the border)
+				local x = fx + off.X + (split + 0.02 - REIN_FX[#REIN_FX] - 0.028) * run
+				local y = REIN_GROUND + off.Y - 0.14
+				local hh = mh * pop * (1 + off.Y)
+				self:_show(m, x, y, self:_fx_w(if run > 0 then "ninja_run" else "ninja", hh), hh, ramp(t, 2.1, 2.4))
+				local want = FX[if run > 0 then "ninja_run" else "ninja"]
+				if want ~= nil and m.Image ~= want.id then
+					m.Image = want.id
+				end
+				m.ZIndex = if off.Y > 0 then 12 else 11
 			else
-				chute.Visible = false
+				m.Visible = false
 			end
-		else
-			m.Visible = false
-			chute.Visible = false
 		end
-		self:_puff_at(p.dust[i], fx, ground + 0.08, H * 0.3, t - land, 0.7)
 		if t >= land then
 			landed += 1
 			last_land = land
@@ -967,19 +961,17 @@ function ArsenalDemo._step_reinforce(self, t: number)
 		p.gain.Visible = true
 		fade(p.gain, gk * gk)
 		-- (under the count, rising into it)
-		self:_at(p.gain, 0.17, 0.66 - 0.08 * gk)
+		self:_at(p.gain, 0.17, 0.62 - 0.08 * gk)
 	else
 		p.gain.Visible = false
 	end
-	-- then the border advances into the nation, which loses troops as it goes
-	local push = ramp(t, 1.6, 3.4)
-	local split = self:_advance(0.44, 0.6, push)
 	for i, g in p.arrows do
 		local on = t > 1.5 and t < 3.6
 		if on then
 			local a = 0.15 + 0.6 * (0.5 + 0.5 * math.sin(t * 9 - i))
-			self:_show(g, split + 0.04, 0.3 + i * 0.16, H * 0.2, H * 0.2, a)
-			g.Rotation = 90
+			local w = H * 0.24
+			self:_show(g, split + 0.05, 0.3 + i * 0.16, w, self:_fx_h("kunai", w), a)
+			g.Rotation = 0
 		else
 			g.Visible = false
 		end
@@ -990,17 +982,22 @@ function ArsenalDemo._step_reinforce(self, t: number)
 	p.troops.Position = UDim2.fromOffset((0.78 + 0.05 * push) * self.W, p.troops.Position.Y.Offset)
 end
 
--- Artillery: the battery fires a tracer into its range ring every second or so.
+-- Kunai Battery: the emplacement looses a volley of three kunai into its range ring every second or
+-- so; they stick in the ground where they land.
 local SHELLS = {
 	{ at = 0.4, tgt = Vector2.new(0.6, 0.52) },
 	{ at = 1.3, tgt = Vector2.new(0.7, 0.78) },
 	{ at = 2.2, tgt = Vector2.new(0.56, 0.7) },
 	{ at = 3.1, tgt = Vector2.new(0.68, 0.6) },
 }
+--- a volley's spread round its target (of the height), and how much later each one leaves
+local VOLLEY = { Vector2.new(-0.035, -0.07), Vector2.new(0.0, 0.0), Vector2.new(0.04, 0.07) }
+local VOLLEY_GAP = 0.06
 local ART_AT = Vector2.new(0.3, 0.55)
 function ArsenalDemo._build_artillery(self, _it: any)
 	local p = self.parts
 	local u = self.u
+	local H = self.H
 	self:_land(0.44, THEIRS)
 	self:_nation(0.74, 0.86, 0.66)
 	p.range = new("Frame", {
@@ -1013,92 +1010,109 @@ function ArsenalDemo._build_artillery(self, _it: any)
 	new("UIStroke", { Color = WHITE, Thickness = math.max(1, 1.2 * u), Transparency = 0.5 }, p.range)
 	local rr = 0.36 * self.W
 	self:_at(p.range, ART_AT.X, ART_AT.Y, 2 * rr, 2 * rr)
-	p.battery = self:_plate("Battery", 0, true, dark(MINE, 0.3), self:_plate_d())
+	p.battery = self:_render("Battery", "artillery", H * 0.4, 9)
 	self:_at(p.battery, ART_AT.X, ART_AT.Y)
-	p.muzzle = self:_fx("Muzzle", "glow", 11, Color3.fromRGB(255, 220, 140))
-	p.shells, p.booms, p.smoke = {}, {}, {}
+	p.battery.Visible = true
+	p.muzzle = self:_fx("Muzzle", "smoke", 10, DUST)
+	p.shells, p.dust, p.sparks = {}, {}, {}
 	for i = 1, #SHELLS do
-		p.shells[i] = self:_fx("Shell" .. i, "tracer", 13)
-		p.booms[i] = self:_boom("Hit" .. i)
-		p.smoke[i] = self:_fx("Smoke" .. i, "smoke", 10)
+		for j = 1, #VOLLEY do
+			local n = (i - 1) * #VOLLEY + j
+			p.shells[n] = self:_fx("Kunai" .. n, "kunai", 13)
+			p.dust[n] = self:_fx("Dust" .. n, "smoke", 10, DUST)
+			p.sparks[n] = self:_fx("Spark" .. n, "spark", 14, Color3.fromRGB(255, 236, 190))
+		end
 	end
 end
 
 function ArsenalDemo._step_artillery(self, t: number)
 	local p = self.parts
 	local H = self.H
-	local a = Vector2.new(ART_AT.X, ART_AT.Y - 0.05)
+	-- (they leave from the rack's top right)
+	local a = Vector2.new(ART_AT.X + 0.04, ART_AT.Y - 0.1)
 	local left = ArsenalDemo.ENEMY_TROOPS
 	local last_hit, last_loss, last_at = -1, 0, a
 	local kick, muzzle = 0, -1
+	local kw = H * 0.26
+	local kh = self:_fx_h("kunai", kw)
 	for i, sh in ipairs(SHELLS) do
-		local hit = sh.at + 0.38
-		local s = (t - sh.at) / (hit - sh.at)
-		local m = p.shells[i]
-		if s > 0 and s < 1 then
-			local x, y, h = self:_arc(a, sh.tgt, 0.14, s)
-			self:_show(m, x, y, H * 0.3, H * 0.075)
-			m.Rotation = h
-		else
-			m.Visible = false
+		for j, off in VOLLEY do
+			local n = (i - 1) * #VOLLEY + j
+			local t0 = sh.at + (j - 1) * VOLLEY_GAP
+			local hit = t0 + 0.38
+			local tgt = Vector2.new(sh.tgt.X + off.X * H / self.W, sh.tgt.Y + off.Y)
+			local s = (t - t0) / (hit - t0)
+			local m = p.shells[n]
+			if s > 0 and s < 1 then
+				local x, y, h = self:_arc(a, tgt, 0.14, s)
+				self:_show(m, x, y, kw, kh)
+				m.Rotation = h
+			elseif s >= 1 then
+				-- stuck in the ground, point down, until the loop ends
+				self:_show(m, tgt.X, tgt.Y - 0.03, kw * 0.8, kh * 0.8, ramp(t, self.loop - 0.4, self.loop))
+				m.Rotation = 62
+			else
+				m.Visible = false
+			end
+			self:_puff_at(p.dust[n], tgt.X, tgt.Y, H * 0.16, t - hit, 0.6)
+			local sk = (t - hit) / 0.25
+			if sk >= 0 and sk < 1 then
+				self:_show(p.sparks[n], tgt.X, tgt.Y - 0.02, H * 0.16 * (0.6 + 0.6 * sk), nil, sk)
+			else
+				p.sparks[n].Visible = false
+			end
 		end
-		self:_puff_at(p.smoke[i], a.X + 0.03, a.Y - 0.04, H * 0.2, t - sh.at, 0.8)
-		self:_boom_at(p.booms[i], sh.tgt.X, sh.tgt.Y, H * 0.15, t - hit, 0.7, t)
-		self:_kick(t, hit, 1.5, 0.25)
+		local hit = sh.at + 0.38 + VOLLEY_GAP
+		self:_kick(t, hit, 1.2, 0.25)
 		if t >= hit then
 			local loss = math.floor(left * 0.0288)
 			left -= loss
 			last_hit, last_loss, last_at = hit, loss, sh.tgt
 		end
-		local k = (t - sh.at) / 0.15
+		local k = (t - sh.at) / 0.2
 		if k >= 0 and k <= 1 then
 			kick = 1 - k
 			muzzle = k
 		end
 	end
 	self:_troops(left, last_loss, t, last_hit, last_at.X, last_at.Y - 0.05)
-	-- the battery's recoil and its muzzle flash on each shot
-	p.battery.Rotation = -6 * kick
+	-- the emplacement's jolt and a puff of dust on each volley
+	p.battery.Rotation = -4 * kick
 	if muzzle >= 0 then
-		self:_show(p.muzzle, a.X + 0.04, a.Y - 0.04, H * 0.45, H * 0.45, muzzle)
+		self:_show(p.muzzle, a.X, a.Y, H * 0.3, H * 0.3, 0.3 + 0.7 * muzzle)
 	else
 		p.muzzle.Visible = false
 	end
 end
 
--- Air Strike: a bomber takes off, crosses a marked spot and drops three bombs on it.
+-- Hawk Strike: a messenger hawk leaves its roost, crosses a marked spot and drops three paper bombs.
 local AIR_GO, AIR_SPEED = 0.3, 0.62
 local AIR_DROPS = { 0.72, 0.8, 0.88 }
 local AIR_FALL = 0.32
 local AIR_ALT = 0.2
 local AIR_GROUND = 0.64
+--- its wingbeats a second
+local AIR_FLAP = 7
 function ArsenalDemo._build_airfield(self, _it: any)
 	local p = self.parts
 	local H = self.H
 	self:_land(0.4, THEIRS)
 	self:_nation(0.78, 0.88, 0.7)
-	p.airfield = self:_plate("Airfield", 1, true, dark(MINE, 0.3), self:_plate_d())
-	self:_at(p.airfield, 0.12, 0.72)
-	p.reticle = self:_fx("Reticle", "reticle", 12, RED)
-	-- the bomber, nose right (its render faces left: mirrored), and its shadow on the ground
-	local r = AA.renders and AA.renders.airfield
-	p.jet = self:_render("Jet", "airfield", H * 0.24, 14)
-	p.shadow = self:_render("Shadow", "airfield", H * 0.2, 11)
-	for _, g in { p.jet, p.shadow } do
-		if r ~= nil then
-			g.ImageRectOffset = Vector2.new(r.w, 0)
-			g.ImageRectSize = Vector2.new(-r.w, r.h)
-		end
-	end
+	p.airfield = self:_sprite("Roost", "roost", self:_struct_h() * 1.1, 9)
+	self:_at(p.airfield, 0.12, 0.68)
+	p.reticle = self:_fx("Reticle", "sealring", 12)
+	-- the hawk (a flipbook: its wingbeat) and its shadow on the ground
+	p.jet = self:_flip("Hawk", "hawk", 14)
+	p.shadow = self:_flip("Shadow", "hawk", 11)
 	p.shadow.ImageColor3 = Color3.new(0, 0, 0)
 	p.bombs, p.booms = {}, {}
 	for i = 1, #AIR_DROPS do
-		p.bombs[i] = self:_fx("Bomb" .. i, "bomb", 13)
+		p.bombs[i] = self:_fx("Tag" .. i, "tag", 13)
 		p.booms[i] = self:_boom("Blast" .. i)
 	end
 end
 
---- The bomber's x at `t` (scene fraction), and how high it is (0..1 of AIR_ALT).
+--- The hawk's x at `t` (scene fraction), and how high it is (0..1 of AIR_ALT).
 local function air_x(t: number): (number, number)
 	local x = 0.12 + (t - AIR_GO) * AIR_SPEED
 	return x, ramp(t, AIR_GO, AIR_GO + 0.45)
@@ -1111,18 +1125,12 @@ function ArsenalDemo._step_airfield(self, t: number)
 	local flying = t > AIR_GO and x < 1.3
 	if flying then
 		local alt = AIR_ALT * up
-		local r = AA.renders and AA.renders.airfield
-		local jh = H * 0.24 * (0.8 + 0.2 * up)
-		self:_show(p.jet, x, AIR_GROUND - alt - 0.02, jh * (if r ~= nil then r.w / r.h else 2), jh)
-		p.jet.Rotation = -8 * (1 - up) * up * 4
-		self:_show(
-			p.shadow,
-			x + 0.03 * up,
-			AIR_GROUND + 0.04,
-			jh * 0.85 * (if r ~= nil then r.w / r.h else 2),
-			jh * 0.85,
-			0.55 + 0.2 * up
-		)
+		local d = H * 0.42 * (0.75 + 0.25 * up)
+		-- (a beat: down and up, a frame a quarter of it)
+		local k = ((t * AIR_FLAP) % 1)
+		self:_flip_at(p.jet, "hawk", x, AIR_GROUND - alt - 0.06, d, k)
+		p.jet.Rotation = -18 * (1 - up) * up * 4
+		self:_flip_at(p.shadow, "hawk", x + 0.03 * up, AIR_GROUND + 0.04, d * 0.8, k, 0.6 + 0.15 * up)
 	else
 		p.jet.Visible = false
 		p.shadow.Visible = false
@@ -1131,7 +1139,7 @@ function ArsenalDemo._step_airfield(self, t: number)
 	local tgt_x = air_x(AIR_DROPS[2]) + AIR_SPEED * 0.6 * AIR_FALL
 	if t > 0.1 and t < AIR_DROPS[3] + AIR_FALL then
 		local pulse = 1 + 0.12 * math.sin(t * 12)
-		self:_show(p.reticle, tgt_x, AIR_GROUND, H * 0.46 * pulse, H * 0.46 * pulse, 0.1)
+		self:_show(p.reticle, tgt_x, AIR_GROUND, H * 0.5 * pulse, H * 0.5 * pulse, 0.1)
 		p.reticle.Rotation = -t * 50
 	else
 		p.reticle.Visible = false
@@ -1145,9 +1153,10 @@ function ArsenalDemo._step_airfield(self, t: number)
 		local bx = bx0 + AIR_SPEED * 0.6 * AIR_FALL * clamp01(k)
 		if k >= 0 and k < 1 then
 			local y = lerp(AIR_GROUND - AIR_ALT, AIR_GROUND, k * k)
-			local d = H * 0.16 * (1 - 0.35 * k)
-			self:_show(bomb, bx, y, d, d)
-			bomb.Rotation = 20 + 60 * k
+			local w = H * 0.24 * (1 - 0.3 * k)
+			self:_show(bomb, bx, y, w, self:_fx_h("tag", w))
+			-- (it tumbles, burning end first)
+			bomb.Rotation = 30 + 120 * k
 		else
 			bomb.Visible = false
 		end
@@ -1169,30 +1178,35 @@ function ArsenalDemo._step_airfield(self, t: number)
 	)
 end
 
--- Railgun: it charges, then a beam crosses the whole scene at once.
-local RAIL_AT, RAIL_TGT = Vector2.new(0.11, 0.6), Vector2.new(0.9, 0.58)
+-- Chakra Cannon: an orb of chakra gathers at its mouth, then a beam crosses the whole scene at once.
+local RAIL_AT, RAIL_TGT = Vector2.new(0.13, 0.6), Vector2.new(0.9, 0.58)
 local RAIL_FIRE = 1.25
+--- where its mouth is in its render (fraction of the render's box)
+local RAIL_MOUTH = Vector2.new(0.81, 0.37)
 function ArsenalDemo._build_railgun(self, _it: any)
 	local p = self.parts
+	local H = self.H
 	self:_land(0.3, THEIRS)
 	self:_nation(0.62, 0.66, 0.64)
-	p.charge = self:_fx("Charge", "glow", 8, PURPLE)
-	p.gun = self:_plate("Railgun", 2, true, dark(MINE, 0.3), self:_plate_d())
+	p.charge = self:_fx("Charge", "glow", 8, CHAKRA)
+	p.gun = self:_render("Cannon", "railgun", H * 0.42, 9)
 	self:_at(p.gun, RAIL_AT.X, RAIL_AT.Y)
+	p.gun.Visible = true
+	p.orb = self:_fx("Orb", "orb", 12)
 	p.sparks = {}
 	for i = 1, 4 do
-		p.sparks[i] = self:_fx("Spark" .. i, "spark", 12, Color3.fromRGB(230, 210, 255))
+		p.sparks[i] = self:_fx("Spark" .. i, "spark", 12, CHAKRA_LIGHT)
 	end
-	p.glow_beam = self:_fx("BeamGlow", "beam", 13, PURPLE)
-	p.beam = self:_fx("Beam", "beam", 14, Color3.fromRGB(240, 228, 255))
+	p.glow_beam = self:_fx("BeamGlow", "beam", 13, CHAKRA)
+	p.beam = self:_fx("Beam", "beam", 14, Color3.fromRGB(236, 250, 255))
 	for _, g in { p.glow_beam, p.beam } do
 		g.ScaleType = Enum.ScaleType.Stretch
 	end
-	p.muzzle = self:_fx("Muzzle", "glow", 15, WHITE)
-	p.boom = self:_boom("Hit", PURPLE)
+	p.muzzle = self:_fx("Muzzle", "glow", 15, CHAKRA_LIGHT)
+	p.boom = self:_boom("Hit", CHAKRA)
 	p.burst = {}
 	for i = 1, 5 do
-		p.burst[i] = self:_fx("Burst" .. i, "spark", 18, Color3.fromRGB(240, 220, 255))
+		p.burst[i] = self:_fx("Burst" .. i, "spark", 18, CHAKRA_LIGHT)
 	end
 end
 
@@ -1212,13 +1226,23 @@ end
 function ArsenalDemo._step_railgun(self, t: number)
 	local p = self.parts
 	local H = self.H
-	local a, b = RAIL_AT, RAIL_TGT
-	-- charging: a glow grows on the gun, sparks are drawn in
+	-- the mouth, on screen (from the render's box)
+	local gs = p.gun.Size
+	local a = Vector2.new(
+		RAIL_AT.X + (RAIL_MOUTH.X - 0.5) * gs.X.Offset / self.W,
+		RAIL_AT.Y + (RAIL_MOUTH.Y - 0.5) * gs.Y.Offset / H
+	)
+	local b = RAIL_TGT
+	-- charging: an orb grows at the mouth, sparks are drawn in
 	local ck = ramp(t, 0.2, RAIL_FIRE)
 	if t < RAIL_FIRE + 0.1 and t > 0.15 then
 		self:_show(p.charge, a.X, a.Y, H * (0.3 + 0.55 * ck), H * (0.3 + 0.55 * ck), 0.75 - 0.6 * ck)
+		local od = H * (0.08 + 0.2 * ck)
+		self:_show(p.orb, a.X, a.Y, od, od)
+		p.orb.Rotation = t * 400
 	else
 		p.charge.Visible = false
+		p.orb.Visible = false
 	end
 	for i, g in p.sparks do
 		local k = ((t * 1.6 + i / 4) % 1)
@@ -1230,9 +1254,11 @@ function ArsenalDemo._step_railgun(self, t: number)
 			g.Visible = false
 		end
 	end
-	p.gun.Position =
-		UDim2.fromOffset(a.X * self.W + (if t < RAIL_FIRE then math.sin(t * 70) * ck * 1.5 * self.u else 0), a.Y * H)
-	-- the beam: at once, from the gun to the far end, thinning and fading
+	p.gun.Position = UDim2.fromOffset(
+		RAIL_AT.X * self.W + (if t < RAIL_FIRE then math.sin(t * 70) * ck * 1.5 * self.u else 0),
+		RAIL_AT.Y * H
+	)
+	-- the beam: at once, from the mouth to the far end, thinning and fading
 	local bk = (t - RAIL_FIRE) / 0.55
 	if bk >= 0 and bk < 1 then
 		self:_beam_at(p.beam, a, b, H * (0.2 - 0.15 * bk), bk ^ 1.5)
@@ -1380,20 +1406,23 @@ function ArsenalDemo._step_stars2x(self, t: number)
 	end
 end
 
--- Rapid Reload: two silos side by side; the one with Rapid Reload fires twice for the other's once.
+-- Quick Seals: two Seal Shrines side by side, hands forming the seals beside each; the one with Quick
+-- Seals forms them twice as fast and fires twice for the other's once.
 -- (Right of the card's sticker, which takes the top left corner.)
 local RELOAD_X, RELOAD_HIT = 0.3, 0.86
 local RELOAD_FLY = 0.55
+--- the bar's length (of the width), the hands after it
+local RELOAD_BAR = 0.2
 function ArsenalDemo._build_reload2x(self, _it: any)
 	local p = self.parts
 	self:_land(0.68, THEIRS)
 	local H, u = self.H, self.u
-	local d = math.clamp(H * 0.26, 14 * u, 30 * u)
+	local d = math.clamp(H * 0.3, 16 * u, 36 * u)
 	local fs = math.clamp(H * 0.1, 8 * u, 12 * u)
 	p.rows = {}
-	for i, row in { { y = 0.36, label = "NORMAL", period = 2.8 }, { y = 0.78, label = "RAPID", period = 1.4 } } do
-		local silo = self:_plate("Silo" .. i, SILO_COL, false, dark(MINE, 0.3), d)
-		self:_at(silo, RELOAD_X, row.y)
+	for i, row in { { y = 0.36, label = "NORMAL", period = 2.8 }, { y = 0.78, label = "QUICK", period = 1.4 } } do
+		local shrine = self:_sprite("Shrine" .. i, "shrine", d, 9)
+		self:_at(shrine, RELOAD_X, row.y - 0.02)
 		local bar_bg = new("Frame", {
 			Name = "Bar" .. i,
 			BackgroundColor3 = INK,
@@ -1401,27 +1430,28 @@ function ArsenalDemo._build_reload2x(self, _it: any)
 			BorderSizePixel = 0,
 			AnchorPoint = Vector2.new(0, 0.5),
 			Position = UDim2.fromOffset((RELOAD_X + 0.08) * self.W, row.y * H),
-			Size = UDim2.fromOffset(0.24 * self.W, math.max(4, H * 0.1)),
+			Size = UDim2.fromOffset(RELOAD_BAR * self.W, math.max(4, H * 0.1)),
 			ZIndex = 9,
 		}, self.root)
 		new("UICorner", { CornerRadius = UDim.new(0.5, 0) }, bar_bg)
 		local fill = new("Frame", {
 			Name = "Fill",
-			BackgroundColor3 = if i == 2 then Color3.fromRGB(255, 120, 200) else Color3.fromRGB(200, 200, 210),
+			BackgroundColor3 = if i == 2 then Color3.fromRGB(232, 96, 60) else Color3.fromRGB(200, 200, 210),
 			BorderSizePixel = 0,
 			Size = UDim2.fromScale(0, 1),
 			ZIndex = 10,
 		}, bar_bg)
 		new("UICorner", { CornerRadius = UDim.new(0.5, 0) }, fill)
 		local label =
-			self:_text("Label" .. i, row.label, fs, if i == 2 then Color3.fromRGB(255, 170, 225) else WHITE, 11, FONT_B)
-		self:_at(label, RELOAD_X + 0.2, row.y - 0.15)
+			self:_text("Label" .. i, row.label, fs, if i == 2 then Color3.fromRGB(255, 190, 150) else WHITE, 11, FONT_B)
+		self:_at(label, RELOAD_X + 0.08 + RELOAD_BAR / 2, row.y - 0.15)
 		p.rows[i] = {
 			y = row.y,
 			period = row.period,
 			fill = fill,
-			shot = self:_fx("Shot" .. i, "warhead", 13),
-			trail = self:_trail("Trail" .. i, 4),
+			hands = self:_flip("Hands" .. i, "hands", 11),
+			shot = self:_fx("Shot" .. i, "tag", 13),
+			trail = self:_trail("Trail" .. i, 4, EMBER_SMOKE),
 			puff = self:_fx("Puff" .. i, "smoke", 8),
 			boom = self:_boom("Hit" .. i),
 		}
@@ -1436,12 +1466,17 @@ function ArsenalDemo._step_reload2x(self, t: number)
 		-- both periods, so no shot is cut off by the loop's end)
 		local into = (t + 0.6) % r.period
 		r.fill.Size = UDim2.fromScale(into / r.period, 1)
+		-- the hands run through their three seals once a reload, then hold the last
+		local sk = math.min(0.999, into / (r.period - 0.1))
+		local hx = RELOAD_X + 0.08 + RELOAD_BAR + 0.07
+		self:_flip_at(r.hands, "hands", hx, r.y - 0.02, H * 0.3, sk)
 		local fired = t + 0.6 >= r.period
 		local a, b = Vector2.new(RELOAD_X, r.y), Vector2.new(RELOAD_HIT, r.y)
 		local fs = into / RELOAD_FLY
 		if fired and fs < 1 then
 			local x, y, h = self:_arc(a, b, 0.05, fs)
-			self:_show(r.shot, x, y, H * 0.17, H * 0.17)
+			local w = H * 0.22
+			self:_show(r.shot, x, y, w, self:_fx_h("tag", w))
 			r.shot.Rotation = h
 		else
 			r.shot.Visible = false

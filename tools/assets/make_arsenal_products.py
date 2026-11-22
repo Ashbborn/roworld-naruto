@@ -35,7 +35,9 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.join(ROOT, "build", "products")
 PRODUCTS = os.path.join(ROOT, "src", "shared", "Data", "Products.luau")
 ARSENAL = os.path.join(ROOT, "src", "shared", "Data", "Arsenal.luau")
-FONT = "/System/Library/Fonts/Supplemental/Arial Black.ttf"
+# Arial Black (macOS, then Windows)
+FONT = next((f for f in ("/System/Library/Fonts/Supplemental/Arial Black.ttf", "C:/Windows/Fonts/ariblk.ttf")
+             if os.path.exists(f)), "C:/Windows/Fonts/ariblk.ttf")
 SIZE = 512
 NIGHT = (8, 12, 26)
 API = "https://apis.roblox.com/developer-products/v2/universes"
@@ -46,7 +48,7 @@ def catalogue():
     src = open(ARSENAL, encoding="utf-8").read()
     prices = dict(re.findall(r"^\s*unlock_(\w+) = \{ id = \d+, robux = (\d+)", open(PRODUCTS, encoding="utf-8").read(), re.M))
     items = []
-    for m in re.finditer(r'key = "(\w+)",\s*title = "([^"]+)",\s*kind = "\w+",\s*icon = "(\w+)",\s*tagline = "([^"]+)"', src):
+    for m in re.finditer(r'key = "(\w+)",\s*title = "([^"]+)",\s*kind = "\w+",\s*icon = "(\w+)",\s*(?:--[^\n]*\n\s*)*tagline = "([^"]+)"', src):
         key, title, icon, tagline = m.groups()
         tail = src[m.end():]
         c = re.search(r"color = \{ 0x([0-9A-Fa-f]{6}), 0x([0-9A-Fa-f]{6}) \}", tail)
