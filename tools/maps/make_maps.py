@@ -210,9 +210,14 @@ FOUR = [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
 # A continent's nation has at least MIN_ROOM * min_gap^2 tiles of its own country / province (smaller ones
 # would spawn on a neighbour's land, their own being too small for the map or gone with the small islands).
 MIN_ROOM = 0.2
-LICENSE = "Public domain"
-ATTRIBUTION = "Natural Earth, NOAA"
-CREDITS = "Maps made with Natural Earth and NOAA ETOPO1 data (public domain)."
+# (2026-11-23: the World slot holds the Naruto world map, made from Narutopedia's Naruto World Map,
+# CC BY-SA 3.0, by tools/naruto/make_naruto_map.py; the other maps stay Natural Earth / NOAA.)
+LICENSE = "Public domain; World map CC BY-SA 3.0"
+ATTRIBUTION = "Natural Earth, NOAA; World map: Narutopedia"
+CREDITS = (
+    "World map based on Narutopedia's Naruto World Map (CC BY-SA 3.0). "
+    "Other maps made with Natural Earth and NOAA ETOPO1 data (public domain)."
+)
 
 LAND = 0x80
 SHORE = 0x40

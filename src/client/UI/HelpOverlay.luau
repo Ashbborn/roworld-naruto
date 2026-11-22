@@ -11,6 +11,7 @@ local W = require("./Widgets")
 local GlassPanel = require("./GlassPanel")
 local UICtx = require("./UICtx")
 local UIRules = require("./UIRules")
+local Brand = UICtx.data("Brand")
 local Signal = UITheme.core("Signal")
 local Defs = UICtx.core("Defs")
 
@@ -262,11 +263,19 @@ HelpOverlay.LEGAL = {
 	"RoWorld is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License, version 3, with the additional terms in its LICENSE file. It comes with ABSOLUTELY NO WARRANTY. The licence comes with RoWorld's source code.",
 	"Maps made with Natural Earth and NOAA ETOPO1 data (public domain). Country flags from Wikimedia Commons (public domain). Music by Rodrigo Flores.",
 	"RoWorld is not affiliated with or endorsed by OpenFront.",
+	-- (2026-11-23: the Naruto fork's own notices, after RoWorld's, which stay as they are)
+	Brand.NAME
+		.. " is a modified version of RoWorld (github.com/lukechatton/roworld). Changes © 2026 Ashbborn. Source code: github.com/Ashbborn/roworld-naruto. "
+		.. Brand.NAME
+		.. " is free software under the same licence (GNU AGPL v3), with ABSOLUTELY NO WARRANTY.",
+	"World map based on Narutopedia's Naruto World Map (CC BY-SA 3.0).",
+	"Naruto © Masashi Kishimoto / Shueisha. " .. Brand.NAME .. " is an unofficial fan game.",
 }
 --- Where the source lives, under the credits: plain text with the GitHub mark, since Roblox games
 --- can't link off-platform (2026-10-25: "Source <github logo> <repo>" at the bottom; the public repo is
---- lukechatton/roworld, lukechatton/rofront is private).
-HelpOverlay.SOURCE_REPO = "lukechatton/roworld"
+--- lukechatton/roworld, lukechatton/rofront is private). 2026-11-23: this fork's own source, which the
+--- AGPL says the game must offer (RoWorld's repo is named in LEGAL).
+HelpOverlay.SOURCE_REPO = "Ashbborn/roworld-naruto"
 --- The card that pops up over the repo name when it's pressed (2026-10-25), and how long it stays.
 HelpOverlay.SOURCE_TIP = {
 	title = "Source code",
