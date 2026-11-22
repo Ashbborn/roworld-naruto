@@ -22,7 +22,7 @@ MapList.maps = {
 	{ id = "oceania", name = "Oceania", module = "Oceania", width = 1705, height = 1195, k_lin = 1.0, categories = { "regional", "oceania" }, multiplayer_frequency = 10, land_tiles = 417893, nations = 42 },
 	{ id = "southamerica", name = "South America", module = "SouthAmerica", width = 1165, height = 1420, k_lin = 1.0, categories = { "featured", "continental", "south_america" }, multiplayer_frequency = 10, land_tiles = 587124, nations = 36 },
 	{ id = "unitedstates", name = "United States", module = "UnitedStates", width = 1621, height = 918, k_lin = 1.0, categories = { "regional", "north_america" }, multiplayer_frequency = 10, land_tiles = 1003249, nations = 44 },
-	{ id = "world", name = "World", module = "World", width = 2000, height = 1000, k_lin = 1.0, categories = { "featured", "world" }, multiplayer_frequency = 30, forced_modifiers = { "isCrowded:50" }, land_tiles = 689018, nations = 71, replicated = true },
+	{ id = "world", name = "Shinobi World", module = "World", width = 1700, height = 1000, k_lin = 1.0, categories = { "featured", "world" }, multiplayer_frequency = 30, forced_modifiers = { "isCrowded:50" }, land_tiles = 1056699, nations = 45, replicated = true },
 }
 
 local by_id: { [string]: any } = {}
