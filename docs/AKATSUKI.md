@@ -42,7 +42,7 @@ every beast it sealed breaks free again.
   4. free land (2 %), when it has no neighbour to attack
 
   It has no truce with anyone, but it respects spawn shields. Past `LAND_SHARE_MAX` (3 %) of the
-  map's land it stops at 2: it is a hunter, not a conqueror.
+  map's land it stops at 2. It can still grow far past that by eating holders (see Balance).
 - **Cells.** Every `CELL_EVERY_S` (25 s) it drops a cell: a disk of its land (radius 5) next to its
   priority target that it does not border yet.
   - The target is a wild beast awake for at least `CELL_BEAST_AFTER_S` (60 s), the weakest first,
@@ -187,3 +187,20 @@ sim:is_special(id)     -- a beast or the Akatsuki
 - `tools/naruto/akatsuki_timeline.luau [seed] [minutes] [map] [bots]` runs a 40-minute bot match on
   the World map and prints the timeline. `NODOM=1` turns off the domination win, so the match runs
   to the time limit: that is how far the Akatsuki gets when nobody ends the match first.
+
+### Balance (bot matches, World map, 20 bots, 40 min, at 793dd7c)
+
+- With domination on (seeds 11-42): the Akatsuki won 5 of 32 matches, at 22:22-26:46.
+  - 22 matches ended by domination and 5 hit the time limit.
+  - 12 of the 32 ended before 21:00, when the Nine-Tails emerges, so it could not have won those.
+    One (seed 26) ended at 9:53, before it appeared.
+  - It fell in 11.
+- With no domination win (`NODOM=1`, seeds 11-26): it won 6 of 16 and fell in 4.
+- Open issue: past the 3 % cap it still conquers holders' whole land.
+  - Its peak land across the domination runs had a median of about 110k tiles. The top was about
+    780k tiles, most of the map's land; with no domination win the top was about 910k.
+  - Its land leaves the domination total, so a nation can win by domination while the Akatsuki
+    holds most of the map.
+- Knobs:
+  - `CELL_BEAST_AFTER_S` and `SEAL_GROWTH` set how fast it seals.
+  - Capping or shedding the land it takes from holders would need a new rule.
