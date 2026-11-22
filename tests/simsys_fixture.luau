@@ -31,7 +31,8 @@ F.Defs = Defs
 F.Ev = Ev
 F.Rules = Rules
 F.HAS_ATTACKS = HAS_ATTACKS
-F.MAP_ID = "world"
+require("./fixtures/fixture_maps")
+F.MAP_ID = "earth" -- RoWorld's Earth (World is the Naruto map in this fork)
 F.map = WorldMap.get(F.MAP_ID)
 F.W = F.map.W
 F.H = F.map.H

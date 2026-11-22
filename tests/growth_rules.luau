@@ -182,7 +182,8 @@ end
 -- =============================================================================================
 -- 2 + 3. A player's tick and spawning on a live Sim (World, one human, nothing else)
 -- =============================================================================================
-local world = WorldMap.get("world")
+require("./fixtures/fixture_maps")
+local world = WorldMap.get("earth") -- RoWorld's Earth (World is the Naruto map in this fork)
 expect(world.k_lin == 1 and world.W == 2000 and world.H == 1000, "World is unscaled (k_lin 1, 2000 x 1000)")
 
 --- A land tile whose surrounding (2r+1)^2 box is at least `share` contestable land.
