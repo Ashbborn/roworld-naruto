@@ -567,7 +567,8 @@ end
 function GameState.ranking(self: GameState): { OwnerInfo }
 	local list = {}
 	for _, o in self.owners do
-		if o.alive and o.tiles > 0 then
+		-- (a Tailed Beast is never ranked)
+		if o.alive and o.tiles > 0 and (o.beast or 0) == 0 then
 			table.insert(list, o)
 		end
 	end

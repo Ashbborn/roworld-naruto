@@ -38,7 +38,7 @@ and can be captured for a permanent buff.
   - takeovers and retints (no AI)
   - victory and `top_owners`
   - Stars: field, place and kills
-  - the client's leader and rank
+  - the client's leader, rank, leaderboard (`GameState.ranking`) and crown
   - the late-join troop median
   - the AI's "nations at war with this human" count
 - **Capture.** Whoever takes its last tile captures it (`o_killer`, not a beast, alive).
