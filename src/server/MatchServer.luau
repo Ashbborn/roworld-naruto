@@ -89,6 +89,8 @@ MatchServer.MP_SPAWN_TICKS = 200
 MatchServer.MP_TIME_LIMIT_S = 40 * 60
 --- The Tailed Beasts (Core/SimBeasts) in every public match.
 MatchServer.MP_BEASTS = true
+--- The Akatsuki (Core/SimAkatsuki) in every public match (it needs the beasts).
+MatchServer.MP_AKATSUKI = true
 MatchServer.NOTICE_INFO = 0
 MatchServer.NOTICE_WARNING = 1
 MatchServer.NOTICE_ERROR = 2
@@ -728,6 +730,7 @@ function MatchServer._start_match(self: any)
 		spawn_ticks = MatchServer.MP_SPAWN_TICKS,
 		map_id = self._map_id,
 		beasts = MatchServer.MP_BEASTS,
+		akatsuki = MatchServer.MP_AKATSUKI,
 	}
 	local lobby = self.deps.lobby
 	if lobby ~= nil then
