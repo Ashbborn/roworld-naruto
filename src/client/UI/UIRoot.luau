@@ -334,6 +334,11 @@ function UIRoot._check_new_player(self, forced: boolean?)
 		if UICtx.IS_ROBLOX and workspace:GetAttribute("AF_DIAG") == true then
 			return
 		end
+		-- Studio: saved settings don't persist in a local place file, so every Play looked like a new
+		-- player. Testers start the tutorial from the menu instead.
+		if UICtx.IS_ROBLOX and game:GetService("RunService"):IsStudio() then
+			return
+		end
 		local stats = if type(s.load_settings) == "function" then s:load_settings("stats") else nil
 		if not TutorialData.is_new(ctx.settings, stats) then
 			return
