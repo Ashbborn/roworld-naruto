@@ -79,6 +79,8 @@ local SIGNALS = {
 	"akatsuki_cell", -- (tile, target) it dropped a cell next to `target` (Ev.AKATSUKI_CELL)
 	"beast_sealed", -- (tails, sealed_count, from) it sealed a beast (from: its holder; 0 wild)
 	"akatsuki_fell", -- (slayer) it was eliminated (slayer 0: by nobody that gets the bonus)
+	"beast_cool", -- (tails) its holder's Tailed Beast Bomb / power cooldowns changed (Ev.BEAST_COOL)
+	"beast_power", -- (tails, user, tile, target, until_tick) a beast's power was used (Ev.BEAST_POWER)
 }
 GameState.SIGNAL_NAMES = SIGNALS
 
@@ -177,6 +179,9 @@ export type BeastInfo = {
 	emerge_tick: number,
 	id: number,
 	holder: number,
+	--- its holder's Tailed Beast Bomb and power are ready from these ticks (Core/SimBeasts)
+	bomb_ready: number,
+	power_ready: number,
 }
 --- retreating: a retreat was ordered (the attack is frozen until its troops come home).
 export type AttackInfo = {
@@ -215,6 +220,9 @@ function GameState.new(world: any?)
 	--- Tailed Beasts by tails (1..9) once they stir: {tails, state (Defs.BEAST_*), tile, emerge_tick,
 	--- id (the beast's owner id once awake), holder (who holds it once captured)}.
 	self.beasts = {} :: { [number]: BeastInfo }
+	--- Timed beast powers running (Core/SimBeasts.beast_fx): owner * 16 + the power's tails -> the
+	--- tick it ends (GameState.beast_fx).
+	self.bfx = {} :: { [number]: number }
 	--- The Akatsuki (Core/SimAkatsuki): its state (Defs.AKATSUKI_*), where it appears and when, its
 	--- owner id, the beasts it sealed (in order), its slayer, and after its fall the sealed beasts'
 	--- re-emergence ticks (flat {tails, emerge_tick, ...}).
@@ -881,6 +889,7 @@ function GameState.load_snapshot(self: GameState, snap: { [string]: any })
 	clear(self.requests)
 	clear(self._req_last)
 	clear(self.beasts)
+	clear(self.bfx)
 	self.akatsuki = GameState._new_akatsuki()
 
 	local grid = snap.owner
@@ -981,7 +990,15 @@ function GameState.load_snapshot(self: GameState, snap: { [string]: any })
 				emerge_tick = tonumber(row[4]) or 0,
 				id = tonumber(row[5]) or 0,
 				holder = tonumber(row[6]) or 0,
+				bomb_ready = tonumber(row[7]) or 0,
+				power_ready = tonumber(row[8]) or 0,
 			}
+		end
+	end
+	for _, row in snap.beast_fx or {} do
+		local o, k, u = tonumber(row[1]) or 0, tonumber(row[2]) or 0, tonumber(row[3]) or 0
+		if o > 0 and k > 0 then
+			self.bfx[o * 16 + k] = u
 		end
 	end
 	local ar = snap.akatsuki
@@ -1172,7 +1189,7 @@ end
 local function beast_info(self: any, tails: number): BeastInfo
 	local b = self.beasts[tails]
 	if b == nil then
-		b = { tails = tails, state = Defs.BEAST_HIDDEN, tile = -1, emerge_tick = 0, id = 0, holder = 0 }
+		b = { tails = tails, state = Defs.BEAST_HIDDEN, tile = -1, emerge_tick = 0, id = 0, holder = 0, bomb_ready = 0, power_ready = 0 }
 		self.beasts[tails] = b
 	end
 	return b
@@ -1208,6 +1225,42 @@ HANDLERS[Ev.BEAST_HOLDER] = function(self, e)
 	b.holder = holder
 	b.state = if holder > 0 then Defs.BEAST_CAPTURED else Defs.BEAST_GONE
 	self.beast_holder:Fire(e[2], holder, tonumber(e[4]) or 0)
+end
+
+HANDLERS[Ev.BEAST_COOL] = function(self, e)
+	local b = beast_info(self, e[2])
+	b.bomb_ready = tonumber(e[3]) or 0
+	b.power_ready = tonumber(e[4]) or 0
+	self.beast_cool:Fire(e[2])
+end
+
+--- The owner a timed power of beast `tails` runs on: its user, or (Ink) its target.
+local function fx_owner(tails: number, user: number, target: number): number
+	return if tails == 8 then target else user
+end
+GameState.fx_owner = fx_owner
+
+HANDLERS[Ev.BEAST_POWER] = function(self, e)
+	local tails, user, tile, target, until_tick = e[2], e[3], e[4], tonumber(e[5]) or 0, tonumber(e[6]) or 0
+	if until_tick > 0 then
+		local o = fx_owner(tails, user, target)
+		if o > 0 then
+			self.bfx[o * 16 + tails] = until_tick
+		end
+	end
+	self.beast_power:Fire(tails, user, tile, target, until_tick)
+end
+
+--- True while owner `id` is under the timed power of beast `tails` (Core/SimBeasts.beast_fx).
+function GameState.beast_fx(self: GameState, id: number, tails: number): boolean
+	local u = self.bfx[id * 16 + tails]
+	return u ~= nil and u > self.tick
+end
+
+--- The tick owner `id`'s timed power of beast `tails` ends (0: none running).
+function GameState.beast_fx_until(self: GameState, id: number, tails: number): number
+	local u = self.bfx[id * 16 + tails]
+	return if u ~= nil and u > self.tick then u else 0
 end
 
 --- Land held by awake Tailed Beasts (left out of the land total shares and victory count against).
@@ -1672,6 +1725,9 @@ function GameState._add_nuke(self: GameState, args: { any }, o: number)
 		to_tile = args[o + 5],
 		launch_tick = args[o + 6],
 		flight_ticks = args[o + 7],
+		-- (a Tailed Beast Bomb: its beast and whether a wild beast fired it)
+		tails = tonumber(args[o + 8]) or 0,
+		wild = args[o + 9] == 1,
 	}
 	self.nukes[n.uid] = n
 end

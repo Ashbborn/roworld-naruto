@@ -453,7 +453,7 @@ do
 		end
 	end
 	expect(told, "everyone hears it, without the usual elimination news")
-	expect(math.abs(cm - 1.13) < 1e-9 and math.abs(lm - 0.88) < 1e-9, "Nine-Tails: troop cap x1.13, attack loss x0.88")
+	expect(math.abs(cm - 1.23) < 1e-9 and math.abs(lm - 0.88) < 1e-9, "Nine-Tails: troop cap x1.23, attack loss x0.88")
 	expect(sim.o_cap_mult[p] == cm and sim.o_loss_mult[p] == lm, "the captor carries the buff")
 	sim.tick += 1
 	sim:_economy_tick()

@@ -29,14 +29,60 @@ Beasts.TEXT = {
 	-- (title, captor)
 	captured = "%s captured the %s!",
 	captured_banner = "YOU CAPTURED THE %s",
-	-- (troop cap bonus %, attack loss cut %)
-	captured_sub = "Troop cap +%d%%, attack losses -%d%%",
+	-- (beast name, power name) the captor's banner line: what it can do now
+	captured_sub = "You are its jinchuriki: Tailed Beast Bomb and %s",
+	-- the beast's identity in toasts and the feed: "the Nine-Tails (Kurama)"
+	tails_line = "%d tails",
 	-- (taker, title, former holder)
 	stolen = "%s took the %s from %s!",
 	gone = "The %s is gone",
 	-- the HUD line of the beasts one holds (a list of short titles)
 	held = "Beasts: %s",
+	-- the jinchuriki's Tailed Beast Bomb (seconds left; holder, title, target name)
+	bomb_wait = "Tailed Beast Bomb ready in %d s",
+	bomb_at_you = "%s fired the %s's Tailed Beast Bomb at you!",
+	bomb_fired = "%s fired the %s's Tailed Beast Bomb at %s",
+	bomb_hit = "The %s's Tailed Beast Bomb hit your land",
+	wild_bomb = "The %s fires a Tailed Beast Bomb at you!",
+	-- powers (power name, seconds; user, ...)
+	power_wait = "%s ready in %d s",
+	power_used = "%s!",
+	power_used_by = "%s used %s",
+	power_no_target = "Aim at an enemy's land",
+	inked = "Ink blinds your army: you can't attack yet",
+	inked_you = "%s blinded you with Ink: no attacks for %d s",
+	sand_blocked = "%s is behind a Sand Shield",
+	ghost_fire_you = "%s's Ghost Fire burned %d%% of your army!",
+	acid_none = "No enemy buildings in reach there",
+	acid_you = "%s's Acid melted %d of your buildings!",
+	flight_land = "Fly to land that isn't yours",
+	flight_range = "Too far: Flight reaches %d tiles from your border",
+	flight_you = "%s flew troops onto your land!",
 }
+
+--- Each beast's power (index tails): its name, a one-line description for the button and tooltip,
+--- and whether it is aimed ("enemy": at an enemy's land; "land": at any land tile; nil: on yourself).
+--- Numbers: Rules.BEASTS.POWERS.
+Beasts.POWERS = {
+	{ name = "Sand Shield", text = "Your land can't be attacked for 10 s" },
+	{ name = "Ghost Fire", text = "An enemy loses 15% of its army", aim = "enemy" },
+	{ name = "Coral Wall", text = "Attacks on you cost 2x and go half as fast for 30 s" },
+	{ name = "Lava", text = "Your attacks lose half the troops for 20 s" },
+	{ name = "Steam Charge", text = "Your attacks advance 2x faster for 20 s" },
+	{ name = "Acid", text = "Melts an enemy's buildings within 40 tiles", aim = "enemy" },
+	{ name = "Flight", text = "Fly troops to any land within 300 tiles, over sea", aim = "land" },
+	{ name = "Ink", text = "An enemy can't attack for 15 s", aim = "enemy" },
+	{ name = "Nine-Tails Chakra", text = "Troop cap +50% for 30 s, army filled to it" },
+}
+
+--- The Tailed Beast Bomb's button text.
+Beasts.BOMB_NAME = "Tailed Beast Bomb"
+Beasts.BOMB_TEXT = "Free blast from anywhere in your land. Barrier Towers can't stop it"
+
+function Beasts.power_name(tails: number): string
+	local p = Beasts.POWERS[tails]
+	return if p ~= nil then p.name else "Power"
+end
 
 function Beasts.get(tails: number): Beast?
 	return Beasts.LIST[tails]

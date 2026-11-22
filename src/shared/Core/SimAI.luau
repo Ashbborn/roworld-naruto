@@ -416,6 +416,9 @@ function SimAI:_think_nation(sim, id: number)
 	self:_consider_mopup(sim, id, age)
 	self:_consider_invasion(sim, id, age)
 	self:_consider_nuke(sim, id, age)
+	if sim.beasts_on then
+		self:_consider_beasts(sim, id, age)
+	end
 	self:_consider_diplomacy(sim, id, age)
 end
 
@@ -887,6 +890,164 @@ function SimAI:_consider_nuke(sim, id: number, age: number)
 		-- Follow up on the ground while the defender reels.
 		if sim.sc_count[best] > 0 and sim.o_troops[id] > sim.o_troops[best] * 0.6 then
 			sim:intent_attack(id, sim.sc_tile[best], 0.3)
+		end
+	end
+end
+
+-- =============================================================================================
+-- Jinchuriki: an AI that holds Tailed Beasts uses their bombs and powers (Core/SimBeasts)
+-- =============================================================================================
+
+--- Troops of the attacks on `id` now, and the attacker with the most of them.
+function SimAI._incoming(sim, id: number): (number, number)
+	local sum, best, bt = 0.0, 0, 0.0
+	local by = {}
+	for _, a in sim.attacks do
+		if not a.dead and a.target == id and a.attacker > 0 then
+			sum += a.troops
+			by[a.attacker] = (by[a.attacker] or 0) + a.troops
+			if by[a.attacker] > bt or (by[a.attacker] == bt and a.attacker < best) then
+				best, bt = a.attacker, by[a.attacker]
+			end
+		end
+	end
+	return sum, best
+end
+
+--- Troops of `id`'s own attacks on owners (not free land).
+function SimAI._outgoing(sim, id: number): number
+	local sum = 0.0
+	for _, a in sim.attacks do
+		if not a.dead and a.attacker == id and a.target ~= 0 then
+			sum += a.troops
+		end
+	end
+	return sum
+end
+
+--- The neighbour an AI jinchuriki aims its bomb and hostile powers at: the Akatsuki first, then the
+--- strongest hostile player or nation on its border (people only within the AI's human-protection
+--- rules), then a wild beast. 0: none. (Uses the border scan of this think.)
+function SimAI:_beast_foe(sim, id: number, age: number): number
+	local best, tier, bt = 0, 9, -1.0
+	for _, o in sim.sc_list do
+		if sim.o_alive[o] == 0 or sim:allied(id, o) or sim:shielded(o) or sim.o_kind[o] == KIND_TRIBE then
+			continue
+		end
+		local tr = 3
+		if sim.o_special[o] == Defs.SPECIAL_AKATSUKI then
+			tr = 1
+		elseif sim.o_special[o] ~= 0 then
+			tr = 4
+		elseif sim:is_human(o) and not self:_may_attack_human(sim, id, o, age - HUMAN_NUKE_EXTRA) then
+			continue
+		elseif sim.o_troops[o] < sim.o_troops[id] * 0.25 then
+			continue
+		else
+			tr = 2
+		end
+		local t = sim.o_troops[o]
+		if tr < tier or (tr == tier and t > bt) then
+			best, tier, bt = o, tr, t
+		end
+	end
+	return best
+end
+
+--- A tile of `p` to aim at: one of its cities, silos or Barrier Towers, else its border tile.
+function SimAI._foe_tile(sim, p: number): number
+	for _, k in { Defs.S_CITY, Defs.S_SILO, Defs.S_SAM, Defs.S_FACTORY } do
+		if sim:struct_count(p, k) > 0 then
+			for _, s in sim:structs_of(p, k) do
+				return s.tile
+			end
+		end
+	end
+	return if sim.sc_count[p] > 0 then sim.sc_tile[p] else -1
+end
+
+function SimAI:_consider_beasts(sim, id: number, age: number)
+	local held = sim:beasts_of(id)
+	if #held == 0 then
+		return
+	end
+	local tick = sim.tick
+	local troops = sim.o_troops[id]
+	local cap = math.max(sim.o_cap[id], 1.0)
+	local incoming, raider = SimAI._incoming(sim, id)
+	local foe = -1
+	local function get_foe(): number
+		if foe < 0 then
+			foe = self:_beast_foe(sim, id, age)
+		end
+		return foe
+	end
+	for _, t in held do
+		local b = sim.beasts[t]
+		if tick >= b.bomb_ready then
+			local f = get_foe()
+			local at = if f > 0 then SimAI._foe_tile(sim, f) else -1
+			if at >= 0 then
+				sim:beast_bomb(id, t, at)
+			end
+		end
+		if tick < b.power_ready then
+			continue
+		end
+		if t == 1 or t == 3 then
+			-- Sand Shield / Coral Wall: when a real attack comes in
+			if incoming > troops * (if t == 1 then 0.3 else 0.2) then
+				sim:beast_power(id, t, -1, 0)
+			end
+		elseif t == 4 or t == 5 then
+			-- Lava / Steam Charge: while its own war is under way
+			if SimAI._outgoing(sim, id) > troops * 0.2 then
+				sim:beast_power(id, t, -1, 0)
+			end
+		elseif t == 9 then
+			-- Nine-Tails Chakra: low on troops while fighting
+			if troops < cap * 0.6 and (incoming > 0 or SimAI._outgoing(sim, id) > 0) then
+				sim:beast_power(id, t, -1, 0)
+			end
+		elseif t == 8 then
+			-- Ink: on whoever attacks it hardest, else its foe
+			local f = if raider > 0 and not sim:allied(id, raider) then raider else get_foe()
+			local at = if f > 0 then (if sim.sc_count[f] > 0 then sim.sc_tile[f] else sim.o_spawn_tile[f]) else -1
+			if at >= 0 and f > 0 and sim.o_troops[f] > troops * 0.4 then
+				sim:beast_power(id, t, at, 0)
+			end
+		elseif t == 2 then
+			-- Ghost Fire: on a strong foe
+			local f = get_foe()
+			if f > 0 and sim.o_troops[f] > troops * 0.5 then
+				sim:beast_power(id, t, SimAI._foe_tile(sim, f), 0)
+			end
+		elseif t == 6 then
+			-- Acid: on a foe's buildings
+			local f = get_foe()
+			if f > 0 then
+				for _, k in { Defs.S_SILO, Defs.S_SAM, Defs.S_CITY, Defs.S_FACTORY } do
+					if sim:struct_count(f, k) > 0 then
+						local s = sim:structs_of(f, k)[1]
+						if s ~= nil then
+							sim:beast_power(id, t, s.tile, 0)
+						end
+						break
+					end
+				end
+			end
+		elseif t == 7 then
+			-- Flight: onto a wild beast it could take (or the Akatsuki) within reach
+			for _, ab in sim:active_beasts() do
+				local bid = ab[2]
+				if sim.o_alive[bid] == 1 and troops * 0.4 > sim.o_troops[bid] * 1.2 and sim.o_tiles[bid] > 0 then
+					local st = sim.o_spawn_tile[bid]
+					if st >= 0 and readi32(sim.owner, st * 4) == bid then
+						sim:beast_power(id, t, st, 0.4)
+						break
+					end
+				end
+			end
 		end
 	end
 end

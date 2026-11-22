@@ -579,6 +579,7 @@ function Sim.snapshot(self: any): { [string]: any }
 		allies = allies,
 		requests = reqs,
 		beasts = if self.beasts_on then self:beast_rows() else nil,
+		beast_fx = if self.beasts_on then self:beast_fx_rows() else nil,
 		akatsuki = if self.akatsuki_on then self:akatsuki_row() else nil,
 	}
 end
@@ -1036,6 +1037,9 @@ function Sim._apply_intent(self: any, id: number, it: { [string]: any })
 		self:donate(id, _int(it, "target", 0), _int(it, "troops", 0))
 	elseif kind == "reinforce" then
 		self:reinforce(id)
+	elseif kind == "beast" then
+		-- a jinchuriki's Tailed Beast Bomb or its beast's power (SimBeasts; `uid` = the beast's tails)
+		self:beast_intent(id, _str(it, "kind"), _int(it, "uid", 0), tile, _num(it, "ratio", Rules.DEFAULT_ATTACK_RATIO))
 	end
 end
 
@@ -1160,6 +1164,10 @@ end
 --- on a human within the AI's human-protection rules.
 function Sim._landing_allowed(self: any, id: number, tg: number): boolean
 	if self:shielded(tg) then
+		return false
+	end
+	if self.beasts_on and self:beast_fx(tg, 1) then
+		-- (behind a Sand Shield: Core/SimBeasts)
 		return false
 	end
 	if self.o_ai[id] == 0 or not self:is_human(tg) or self:attack_between(id, tg) ~= nil then
@@ -1353,6 +1361,14 @@ function Sim.intent_attack_troops(self: any, id: number, t: number, amount: numb
 	if self:shielded(tg) then
 		self:msg(id, Defs.MSG_INFO, self:shield_text(tg))
 		return false
+	end
+	if self.beasts_on then
+		-- (a beast power: Ink on the attacker, a Sand Shield on the target, the Akatsuki's barrier)
+		local block = self:beast_attack_block(id, tg)
+		if block ~= nil then
+			self:msg(id, Defs.MSG_INFO, block)
+			return false
+		end
 	end
 	local o_troops = self.o_troops
 	-- An attack takes min(amount, home troops), floored (troops are whole numbers).
@@ -1585,6 +1601,7 @@ function Sim._economy_tick(self: any)
 	local o_skill = self.o_skill
 	local o_special = self.o_special
 	local o_cap_mult = self.o_cap_mult
+	local o_regen_mult = self.o_regen_mult
 	local NOVICE = Sim.NOVICE_SKILL
 	for id = 1, self.owner_total do
 		-- (a special owner, a Tailed Beast or the Akatsuki: its own cap and regeneration, no gold;
@@ -1604,7 +1621,13 @@ function Sim._economy_tick(self: any)
 		o_cap[id] = cap
 		-- Per-tick player update: + troopIncreaseRate troops (whole troops: truncated) and
 		-- + goldAdditionRate gold every tick, never during the spawn phase.
-		o_troops[id] += troop_growth_applied(tkind, o_troops[id], cap, tdiff)
+		local grow = troop_growth_applied(tkind, o_troops[id], cap, tdiff)
+		local rm = o_regen_mult[id]
+		if rm ~= 1.0 and grow > 0 then
+			-- (a jinchuriki regenerates faster: SimBeasts.buff; never past the cap)
+			grow = math.min(math.floor(grow * rm), math.max(math.floor(cap - o_troops[id]), 0))
+		end
+		o_troops[id] += grow
 		if (tick + id) % 10 == 0 then
 			o_income[id] = Rules.passive_income(kind, o_tiles[id])
 		end

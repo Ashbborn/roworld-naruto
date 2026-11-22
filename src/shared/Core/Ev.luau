@@ -17,7 +17,7 @@ Ev.ROAD_DEL = 8 -- rid (, sid_a, sid_b)
 Ev.UNIT_ADD = 9 -- uid, kind, owner, path, start_tick, ticks_per_tile_x100, troops
 Ev.UNIT_MOVE = 10 -- uid, tile
 Ev.UNIT_DEL = 11 -- uid, reason
-Ev.NUKE = 12 -- uid, kind, owner, from_tile, to_tile, launch_tick, flight_ticks
+Ev.NUKE = 12 -- uid, kind, owner, from_tile, to_tile, launch_tick, flight_ticks[, tails, wild (a Tailed Beast Bomb only)]
 Ev.BOOM = 13 -- uid, kind, tile, radius_tiles, owner
 Ev.ATTACK = 14 -- aid, attacker, target, troops, anchor_tile, retreating  (re-sent to update)
 Ev.ATTACK_END = 15 -- aid
@@ -55,7 +55,11 @@ Ev.AKATSUKI_CELL = 40 -- tile, target  (it dropped a cell at tile, next to owner
 Ev.BEAST_SEALED = 41 -- tails, sealed_count, from  (the Akatsuki sealed it: from the wild (from 0) or from holder `from`)
 Ev.AKATSUKI_FALL = 42 -- slayer, releases  (it fell to slayer (0: none); releases = flat {tails, emerge_tick, ...})
 
+Ev.BEAST_COOL = 43 -- tails, bomb_ready_tick, power_ready_tick  (its holder's Tailed Beast Bomb / power cooldowns; Core/SimBeasts)
+Ev.BEAST_POWER = 44 -- tails, user, tile, target, until_tick  (a beast's power was used: at tile (-1: on the user), on owner
+--   target (0: none); a timed one lasts until until_tick (0: instant))
+
 --- Number of event ids (ids are 0..COUNT-1).
-Ev.COUNT = 43
+Ev.COUNT = 45
 
 return Ev

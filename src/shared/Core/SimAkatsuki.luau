@@ -113,6 +113,11 @@ function SimAkatsuki.install(C: any)
 		return math.floor(self.aka_base * (1.0 + Rules.AKATSUKI.SEAL_GROWTH * #self.aka_sealed))
 	end
 
+	--- Why its tile `t` can't be attacked now (its hideout's barrier), or nil.
+	function C.akatsuki_barrier_text(_self: any, _t: number): string?
+		return nil
+	end
+
 	--- Its land while it is on the map (left out of the land total: SimBeasts.special_land).
 	function C.akatsuki_land(self: any): number
 		if not self.akatsuki_on or self.aka_state ~= ACTIVE or self.o_alive[self.aka_id] == 0 then

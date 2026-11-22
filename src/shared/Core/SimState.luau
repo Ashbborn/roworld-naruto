@@ -391,6 +391,8 @@ function SimState.install(C: any)
 		self.o_special = filled(MAXO, 0)
 		self.o_cap_mult = filled(MAXO, 1.0)
 		self.o_loss_mult = filled(MAXO, 1.0)
+		--- troop regeneration multiplier of the beasts an owner holds (1.0 = none: Sim._economy_tick)
+		self.o_regen_mult = filled(MAXO, 1.0)
 		--- Owners whose conquest (Ev.CONQUEST, Sim._conquest_gold) was already announced.
 		self._conquest_sent = {} :: { [number]: boolean }
 		--- Structure counts: o_scount[id * STRUCT_KINDS + kind].
