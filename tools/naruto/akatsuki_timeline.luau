@@ -87,7 +87,9 @@ local function alive_bots(): number
 end
 
 local cells = 0
-local summary = { sealed = 0, captured = 0, fell = false, won = false, appear = "" }
+local summary = { sealed = 0, captured = 0, fell = false, won = false, appear = "", peak = 0, abandons = 0 }
+local AkatsukiData = require("../../src/shared/Data/Akatsuki")
+local abandon_prefix = string.sub(AkatsukiData.TEXT.abandons, 1, (string.find(AkatsukiData.TEXT.abandons, "%", 1, true) or 1) - 1)
 local last_status = -1
 local step_t = os.clock()
 while sim.phase ~= Defs.PHASE_OVER do
@@ -122,11 +124,17 @@ while sim.phase ~= Defs.PHASE_OVER do
 		elseif id == Ev.AKATSUKI_FALL then
 			summary.fell = true
 			print(("%s  AKATSUKI FALLS to %s (%d releases queued)"):format(clock(), name(e[2]), #e[3] // 2))
+		elseif id == Ev.MSG and type(e[4]) == "string" and string.sub(e[4], 1, #abandon_prefix) == abandon_prefix then
+			summary.abandons += 1
+			print(("%s  %s (Akatsuki %d tiles)"):format(clock(), e[4], sim.o_tiles[sim.aka_id]))
 		elseif id == Ev.GAME_OVER then
 			local why = ({ [Defs.OVER_DOMINATION] = "domination", [Defs.OVER_TIME] = "time", [Defs.OVER_DEFEATED] = "defeated", [Defs.OVER_ABANDONED] = "abandoned", [Defs.OVER_AKATSUKI] = "AKATSUKI" })[e[3]]
 			summary.won = e[3] == Defs.OVER_AKATSUKI
 			print(("%s  GAME OVER: %s, winner %s"):format(clock(), tostring(why), name(e[2])))
 		end
+	end
+	if sim.aka_id > 0 and sim.o_tiles[sim.aka_id] > summary.peak then
+		summary.peak = sim.o_tiles[sim.aka_id]
 	end
 	if sim.playing_since >= 0 then
 		local m = (sim.tick - sim.playing_since) // 1200
@@ -147,13 +155,16 @@ while sim.phase ~= Defs.PHASE_OVER do
 		end
 	end
 end
-print(("SUMMARY seed %d: Akatsuki appeared %s, sealed %d, %s; beasts captured %d; %d cells; sim %.0f s (%.1f ms/tick)"):format(
+print(("SUMMARY seed %d: Akatsuki appeared %s, sealed %d, %s; beasts captured %d; %d cells; peak land %d (%.1f%%), %d abandons; sim %.0f s (%.1f ms/tick)"):format(
 	seed,
 	summary.appear,
 	summary.sealed,
 	if summary.won then "WON" elseif summary.fell then "fell" else "still standing",
 	summary.captured,
 	cells,
+	summary.peak,
+	summary.peak * 100 / map.land_count,
+	summary.abandons,
 	os.clock() - step_t,
 	(os.clock() - step_t) * 1000 / math.max(sim.tick, 1)
 ))

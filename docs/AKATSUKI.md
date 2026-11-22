@@ -42,7 +42,16 @@ every beast it sealed breaks free again.
   4. free land (2 %), when it has no neighbour to attack
 
   It has no truce with anyone, but it respects spawn shields. Past `LAND_SHARE_MAX` (3 %) of the
-  map's land it stops at 2. It can still grow far past that by eating holders (see Balance).
+  map's land it stops at 2.
+- **Shedding: it raids, it doesn't rule.** Its land can still pass `LAND_SHARE_MAX` by eating
+  holders, by cells and by waves.
+  - Every second above it, it releases `SHED_PER_S` (3 %) of the excess, at least `SHED_MIN_TILES`
+    (8) and at most the excess, back to ordinary unowned land that anyone can expand into.
+  - The tiles go farthest first: its border tiles farthest from its home disk and its live cells.
+    Ties go in border-list order, with no rng.
+  - Tiles inside its home disk and its live cells are never shed.
+  - Killing a beast holder while it is above the cap tells everyone "The Akatsuki abandons
+    <name>'s lands.", once per kill.
 - **Cells.** Every `CELL_EVERY_S` (25 s) it drops a cell: a disk of its land (radius 5) next to its
   priority target that it does not border yet.
   - The target is a wild beast awake for at least `CELL_BEAST_AFTER_S` (60 s), the weakest first,
@@ -110,7 +119,8 @@ tiles and are divided by the map's `K_LIN` where they are used.
 | REGEN_PER_S / DRAIN_PER_S | 0.02 / 0.25 | per second: share of missing troops back / of the excess lost |
 | ATTACK_EVERY_TICKS / ATTACK_SHARE / ATTACK_SHARE_MAX | 10 / 0.05 / 0.12 | attack waves |
 | ATTACK_MIN_TROOPS / EXPAND_SHARE | 1,000 / 0.02 | smallest wave / free land wave |
-| LAND_SHARE_MAX | 0.03 | above this share of the land it attacks only beasts and holders |
+| LAND_SHARE_MAX | 0.03 | above this share of the land it attacks only beasts and holders, and sheds |
+| SHED_PER_S / SHED_MIN_TILES | 0.03 / 8 | per second above the cap: share of the excess released / fewest tiles |
 | CELL_EVERY_S / CELL_RADIUS / MAX_CELLS | 25 / 5 / 3 | cells |
 | CELL_BEAST_AFTER_S | 60 | a wild beast is a cell target once awake this long |
 | CELL_TRIES / CELL_MIN_TILES | 80 / 5 | spot tries / smallest cell |
@@ -173,6 +183,8 @@ sim:is_special(id)     -- a beast or the Akatsuki
   - the Amegakure spawn on the World map
   - troops, seizing, regeneration
   - the attack priority and the land cap
+  - shedding: 3 % of the excess per second, farthest border tiles first, down to the cap and never
+    below, the home disk and live cells kept, the abandon toast, the tick
   - cells: the delay for fresh beasts, next to beasts and holders, sparing the target, the cap
   - sealing on the last tile and on a holder's elimination
   - the win, with Stars
@@ -188,19 +200,21 @@ sim:is_special(id)     -- a beast or the Akatsuki
   the World map and prints the timeline. `NODOM=1` turns off the domination win, so the match runs
   to the time limit: that is how far the Akatsuki gets when nobody ends the match first.
 
-### Balance (bot matches, World map, 20 bots, 40 min, at 793dd7c)
+### Balance (bot matches, World map, 20 bots, 40 min, with shedding)
 
-- With domination on (seeds 11-42): the Akatsuki won 5 of 32 matches, at 22:22-26:46.
-  - 22 matches ended by domination and 5 hit the time limit.
-  - 12 of the 32 ended before 21:00, when the Nine-Tails emerges, so it could not have won those.
-    One (seed 26) ended at 9:53, before it appeared.
-  - It fell in 11.
-- With no domination win (`NODOM=1`, seeds 11-26): it won 6 of 16 and fell in 4.
-- Open issue: past the 3 % cap it still conquers holders' whole land.
-  - Its peak land across the domination runs had a median of about 110k tiles. The top was about
-    780k tiles, most of the map's land; with no domination win the top was about 910k.
-  - Its land leaves the domination total, so a nation can win by domination while the Akatsuki
-    holds most of the map.
-- Knobs:
-  - `CELL_BEAST_AFTER_S` and `SEAL_GROWTH` set how fast it seals.
-  - Capping or shedding the land it takes from holders would need a new rule.
+The World map has about 1.06M land tiles, so the 3 % cap is about 31.8k.
+
+| | domination on (seeds 11-42) | no domination win (`NODOM=1`, seeds 11-26) |
+|---|---|---|
+| Akatsuki won | 3 / 32 | 2 / 16 |
+| Akatsuki fell | 9 | 6 |
+| match ends | 24 domination, 5 time, 3 Akatsuki | 13 time, 2 Akatsuki, 1 defeated |
+| peak land, median | 52.5k (5.0 %) | 65.8k (6.2 %) |
+| peak land, max | 146.5k (13.9 %) | 149.4k (14.1 %) |
+| before shedding: median / max (sampled every 2 min) | ~107k / ~780k | ~142k / ~914k |
+
+- Peaks are passing: a big bite from a holder is released over the next half minute or so.
+- With domination on, 9 of 32 matches ended before 21:00, when the Nine-Tails emerges. One (seed
+  26) ended at 9:53, before the Akatsuki appeared.
+- Knobs: `CELL_BEAST_AFTER_S` and `SEAL_GROWTH` set how fast it seals. `SHED_PER_S` sets how fast
+  it lets go.
