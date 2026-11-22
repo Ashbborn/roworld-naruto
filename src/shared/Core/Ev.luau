@@ -5,7 +5,7 @@
 -- of the network protocol, so never renumber them.
 local Ev = {}
 
-Ev.OWNER_ADD = 0 -- id, name, color, kind, flags (team), [beast tails: only on a beast's first OWNER_ADD]
+Ev.OWNER_ADD = 0 -- id, name, color, kind, flags (team), [beast tails, special kind: only on a special owner's first OWNER_ADD]
 Ev.OWNER_OUT = 1 -- id, killer_id
 Ev.PHASE = 2 -- phase, ticks_left
 Ev.SPAWNED = 3 -- id, tile
@@ -49,7 +49,13 @@ Ev.BEAST_STIR = 35 -- tails, tile, emerge_tick  (a Tailed Beast will emerge at t
 Ev.BEAST_AWAKE = 36 -- tails, owner_id, tile  (it emerged as owner owner_id)
 Ev.BEAST_HOLDER = 37 -- tails, holder, from  (captured by holder (from 0), stolen from `from`, or gone: holder 0)
 
+Ev.AKATSUKI_STIR = 38 -- tile, appear_tick  (the Akatsuki will appear at tile; Core/SimAkatsuki)
+Ev.AKATSUKI_APPEAR = 39 -- owner_id, tile  (it appeared as owner owner_id)
+Ev.AKATSUKI_CELL = 40 -- tile, target  (it dropped a cell at tile, next to owner `target`)
+Ev.BEAST_SEALED = 41 -- tails, sealed_count, from  (the Akatsuki sealed it: from the wild (from 0) or from holder `from`)
+Ev.AKATSUKI_FALL = 42 -- slayer, releases  (it fell to slayer (0: none); releases = flat {tails, emerge_tick, ...})
+
 --- Number of event ids (ids are 0..COUNT-1).
-Ev.COUNT = 38
+Ev.COUNT = 43
 
 return Ev

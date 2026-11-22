@@ -120,6 +120,13 @@ Names, colours and every player-visible string are in `src/shared/Data/Beasts.lu
 
 ### API (for Akatsuki)
 
+The Akatsuki (`AKATSUKI.md`) uses this API. Its additions on the beast side:
+- A beast it takes, or one held by a holder it eliminates, becomes `Defs.BEAST_SEALED`
+  (`Ev.BEAST_SEALED`).
+- After the Akatsuki's fall, a sealed beast re-stirs at its `release_tick`.
+- The exclusions above are one special-owner check (`o_special`, `is_special`, `special_land`)
+  shared with the Akatsuki.
+
 ```lua
 sim:is_beast(id)
 sim:beast_state(tails)  -- Defs.BEAST_HIDDEN / STIRRING / AWAKE / CAPTURED / GONE

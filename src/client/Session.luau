@@ -37,7 +37,7 @@ local MapFetch: any = if Shared then require(Shared.Net.MapFetch) else nil
 local Stars: any = if Shared then require(Shared.Data.Stars) else require("../shared/Data/Stars")
 local Arsenal: any = if Shared then require(Shared.Data.Arsenal) else require("../shared/Data/Arsenal")
 
---- Studio play-test (solo beasts on a fast schedule; never in a live server)
+--- Studio play-test (solo beasts and the Akatsuki on a fast schedule; never in a live server)
 local IS_STUDIO_TEST = typeof(game) == "Instance" and game:GetService("RunService"):IsStudio()
 local Session = {}
 Session.__index = Session
@@ -422,7 +422,8 @@ end
 --- state_ready then joined_owner fire when it is live (after downloading the map if needed).
 --- `opts.tribes`: how many tribes the map gets; `opts.countdown_ticks`: ticks from placing the capital
 --- to the start (the tutorial's match has fewer tribes and starts at once: Data/Tutorial);
---- `opts.beasts = false`: no Tailed Beasts (the tutorial).
+--- `opts.beasts = false`: no Tailed Beasts, and so no Akatsuki (the tutorial); `opts.akatsuki = false`:
+--- no Akatsuki.
 function Session.start_solo(self: any, p_difficulty: number, map_id: string?, opts: any?)
 	self:_leave_multiplayer_if_needed()
 	self.difficulty = math.clamp(math.floor(tonumber(p_difficulty) or 1), 0, 2)
@@ -441,6 +442,9 @@ function Session.start_solo(self: any, p_difficulty: number, map_id: string?, op
 		map_id = self.map_id,
 		beasts = if type(opts) == "table" and opts.beasts == false then false
 			elseif IS_STUDIO_TEST then { first_s = 60, every_s = 45 } -- Studio play-tests: beasts come fast
+			else true,
+		akatsuki = if type(opts) == "table" and (opts.beasts == false or opts.akatsuki == false) then false
+			elseif IS_STUDIO_TEST then { appear_s = 150, cell_beast_after_s = 30 } -- Studio: it appears at 2:30
 			else true,
 	}, self:local_display_name())
 end
@@ -659,7 +663,7 @@ function Session.can_take_over(self: any, target: number): boolean
 		and o ~= nil
 		and o.alive
 		and o.kind == 0 -- Defs.KIND_NATION: never a tribe or a (bot) player
-		and (o.beast or 0) == 0 -- never a Tailed Beast
+		and (o.special or 0) == 0 and (o.beast or 0) == 0 -- never a Tailed Beast or the Akatsuki
 		and (o.tiles or 0) > 0
 		and st.phase == 1 -- Defs.PHASE_PLAYING
 end

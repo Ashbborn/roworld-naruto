@@ -7,7 +7,9 @@ local map = WorldMap.get(process.args[2] or "world")
 local t0 = os.clock()
 -- (RW_BEASTS=1: with the Tailed Beasts on a fast schedule, all nine out by tick 230)
 local beasts = if process.env.RW_BEASTS then { first_s = 7, every_s = 2, warn_s = 1, rampage_s = 4 } else nil
-local sim = Sim.new(map, { seed = 1, difficulty = 1, tribes = 80, max_humans = 0, beasts = beasts })
+-- (RW_AKATSUKI=1 as well: the Akatsuki too, out at tick ~100)
+local akatsuki = if process.env.RW_AKATSUKI then { appear_s = 9, warn_s = 1, cell_every_s = 2, cell_beast_after_s = 3 } else nil
+local sim = Sim.new(map, { seed = 1, difficulty = 1, tribes = 80, max_humans = 0, beasts = beasts, akatsuki = akatsuki })
 print(("init %.0f ms owners %d"):format((os.clock() - t0) * 1000, sim:owner_count()))
 local ts = os.clock()
 for i = 1, ticks do

@@ -114,6 +114,10 @@ function TopStatus.new(c: any)
 	self._beasts = T.label("", 11, 700, T.AMBER)
 	self._beasts:set_visible(false)
 	sb:add_child(self._beasts)
+	-- the Akatsuki's count of sealed beasts (Core/SimAkatsuki); shown while it is on the map
+	self._aka = T.label("", 11, 700, T.RED)
+	self._aka:set_visible(false)
+	sb:add_child(self._aka)
 	row:add_child(sb)
 	self:_build_mini()
 	return self
@@ -377,6 +381,7 @@ function TopStatus.refresh(self)
 		end
 	end
 	self:_refresh_beasts(s, me)
+	self:_refresh_akatsuki(s)
 	self._bar.fill_color = mcol
 	self._bar:set_target(if me ~= 0 then ctx:win_share(me) else 0.0)
 	table.clear(self._bar.markers)
@@ -436,6 +441,22 @@ function TopStatus._refresh_beasts(self, s: any, me: number)
 		self._beasts_text = text
 		self._beasts:set_text(text)
 		self._beasts:set_visible(text ~= "")
+	end
+end
+
+--- "Akatsuki: 3/9 sealed" while the Akatsuki is on the map (full layout only).
+function TopStatus._refresh_akatsuki(self, s: any)
+	local a = s.akatsuki
+	local text = ""
+	if type(a) == "table" and a.state == 2 then -- Defs.AKATSUKI_ACTIVE
+		local A = require("./UICtx").data("Akatsuki")
+		local of = if type(s.akatsuki_sealable) == "function" then s:akatsuki_sealable() else 9
+		text = string.format(A.TEXT.hud, #(a.sealed or {}), of)
+	end
+	if text ~= self._aka_text then
+		self._aka_text = text
+		self._aka:set_text(text)
+		self._aka:set_visible(text ~= "")
 	end
 end
 

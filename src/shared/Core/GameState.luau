@@ -74,6 +74,11 @@ local SIGNALS = {
 	"beast_stirring", -- (tails, tile, emerge_tick) a Tailed Beast will emerge there (Ev.BEAST_STIR)
 	"beast_awakened", -- (tails, owner_id, tile) it emerged (Ev.BEAST_AWAKE)
 	"beast_holder", -- (tails, holder, from) captured (from 0), stolen from `from`, or gone (holder 0)
+	"akatsuki_stirring", -- (tile, appear_tick) the Akatsuki will appear there (Ev.AKATSUKI_STIR)
+	"akatsuki_appeared", -- (owner_id, tile) it appeared (Ev.AKATSUKI_APPEAR)
+	"akatsuki_cell", -- (tile, target) it dropped a cell next to `target` (Ev.AKATSUKI_CELL)
+	"beast_sealed", -- (tails, sealed_count, from) it sealed a beast (from: its holder; 0 wild)
+	"akatsuki_fell", -- (slayer) it was eliminated (slayer 0: by nobody that gets the bonus)
 }
 GameState.SIGNAL_NAMES = SIGNALS
 
@@ -98,6 +103,8 @@ local function new_owner_info(id: number)
 		killer = 0,
 		--- the Tailed Beast this owner is (tails 1..9; 0 = none)
 		beast = 0,
+		--- the special owner it is (Defs.SPECIAL_*: a Tailed Beast, the Akatsuki; 0 = none)
+		special = 0,
 		-- sums of the owned tiles' x and y (territory centroid = (cx, cy) / tiles); cz unused (0)
 		cx = 0.0,
 		cy = 0.0,
@@ -208,6 +215,10 @@ function GameState.new(world: any?)
 	--- Tailed Beasts by tails (1..9) once they stir: {tails, state (Defs.BEAST_*), tile, emerge_tick,
 	--- id (the beast's owner id once awake), holder (who holds it once captured)}.
 	self.beasts = {} :: { [number]: BeastInfo }
+	--- The Akatsuki (Core/SimAkatsuki): its state (Defs.AKATSUKI_*), where it appears and when, its
+	--- owner id, the beasts it sealed (in order), its slayer, and after its fall the sealed beasts'
+	--- re-emergence ticks (flat {tails, emerge_tick, ...}).
+	self.akatsuki = GameState._new_akatsuki()
 	--- Shells in flight (Ev.SHELL), by shell id; removed at their impact tick (signal shell_impact).
 	self.shells = {} :: { [number]: ShellInfo }
 	--- SAM missiles in flight, by the uid of the nuke they chase; removed by that nuke's BOOM.
@@ -560,16 +571,17 @@ function GameState.land_share(self: GameState, id: number): number
 	if o == nil or self.map.contestable_count <= 0 then
 		return 0.0
 	end
-	-- (Tailed Beasts' land is not counted in the total, as in the Sim)
-	return o.tiles / math.max(self.map.contestable_count - self:beast_land(), 1)
+	-- (special owners' land, Tailed Beasts' and the Akatsuki's, is not counted in the total, as in
+	-- the Sim)
+	return o.tiles / math.max(self.map.contestable_count - self:special_land(), 1)
 end
 
 --- Alive owners holding land, sorted by territory, largest first (ties: lower id first).
 function GameState.ranking(self: GameState): { OwnerInfo }
 	local list = {}
 	for _, o in self.owners do
-		-- (a Tailed Beast is never ranked)
-		if o.alive and o.tiles > 0 and (o.beast or 0) == 0 then
+		-- (a special owner, a Tailed Beast or the Akatsuki, is never ranked)
+		if o.alive and o.tiles > 0 and (o.special or 0) == 0 and (o.beast or 0) == 0 then
 			table.insert(list, o)
 		end
 	end
@@ -869,6 +881,7 @@ function GameState.load_snapshot(self: GameState, snap: { [string]: any })
 	clear(self.requests)
 	clear(self._req_last)
 	clear(self.beasts)
+	self.akatsuki = GameState._new_akatsuki()
 
 	local grid = snap.owner
 	if typeof(grid) == "buffer" and buffer.len(grid) == N * 4 then
@@ -914,6 +927,7 @@ function GameState.load_snapshot(self: GameState, snap: { [string]: any })
 		o.spawn_tile = row[13]
 		o.spawned = o.spawn_tile >= 0
 		o.beast = tonumber(row[14]) or 0
+		o.special = tonumber(row[15]) or (if o.beast > 0 then Defs.SPECIAL_BEAST else 0)
 		self.owners[o.id] = o
 	end
 	self:_recount_tiles()
@@ -969,6 +983,17 @@ function GameState.load_snapshot(self: GameState, snap: { [string]: any })
 				holder = tonumber(row[6]) or 0,
 			}
 		end
+	end
+	local ar = snap.akatsuki
+	if type(ar) == "table" then
+		local a = self.akatsuki
+		a.state = tonumber(ar[1]) or 0
+		a.tile = tonumber(ar[2]) or -1
+		a.appear_tick = tonumber(ar[3]) or 0
+		a.id = tonumber(ar[4]) or 0
+		a.sealed = if type(ar[5]) == "table" then table.clone(ar[5]) else {}
+		a.slayer = tonumber(ar[6]) or 0
+		a.release = if type(ar[7]) == "table" then table.clone(ar[7]) else {}
 	end
 	self.loaded = true
 	self.snapshot_loaded:Fire()
@@ -1124,9 +1149,11 @@ HANDLERS[Ev.OWNER_ADD] = function(self, e)
 	o.color = Defs.color_from_int(e[4])
 	o.kind = e[5]
 	o.team = tonumber(e[6]) or 0
-	-- (a beast's first OWNER_ADD carries its tails; re-sends without it keep the flag)
+	-- (a special owner's first OWNER_ADD carries its beast tails and special kind; re-sends without
+	-- them keep the flags)
 	if e[7] ~= nil then
 		o.beast = tonumber(e[7]) or 0
+		o.special = tonumber(e[8]) or (if o.beast > 0 then Defs.SPECIAL_BEAST else 0)
 	end
 	o.alive = true -- a re-sent OWNER_ADD also revives an owner (join → leave → join)
 	self.owner_added:Fire(o.id)
@@ -1156,6 +1183,9 @@ HANDLERS[Ev.BEAST_STIR] = function(self, e)
 	b.state = Defs.BEAST_STIRRING
 	b.tile = e[3]
 	b.emerge_tick = e[4]
+	-- (a sealed beast released by the Akatsuki's fall stirs again: a new beast, no owner yet)
+	b.id = 0
+	b.holder = 0
 	self.beast_stirring:Fire(e[2], e[3], e[4])
 end
 
@@ -1167,6 +1197,7 @@ HANDLERS[Ev.BEAST_AWAKE] = function(self, e)
 	local o = self.owners[e[3]]
 	if o ~= nil then
 		o.beast = e[2]
+		o.special = Defs.SPECIAL_BEAST
 	end
 	self.beast_awakened:Fire(e[2], e[3], e[4])
 end
@@ -1197,6 +1228,99 @@ end
 function GameState.is_beast(self: GameState, id: number): boolean
 	local o = self.owners[id]
 	return o ~= nil and (o.beast or 0) > 0
+end
+
+--- True when owner `id` is a special owner (a Tailed Beast or the Akatsuki): never ranked, never
+--- under the crown, its land left out of the land total.
+function GameState.is_special(self: GameState, id: number): boolean
+	local o = self.owners[id]
+	return o ~= nil and ((o.special or 0) ~= 0 or (o.beast or 0) > 0)
+end
+
+-- The Akatsuki (Core/SimAkatsuki)
+function GameState._new_akatsuki(): any
+	return {
+		state = Defs.AKATSUKI_HIDDEN,
+		tile = -1,
+		appear_tick = 0,
+		id = 0,
+		sealed = {} :: { number },
+		slayer = 0,
+		release = {} :: { number },
+	}
+end
+
+HANDLERS[Ev.AKATSUKI_STIR] = function(self, e)
+	local a = self.akatsuki
+	a.state = Defs.AKATSUKI_STIRRING
+	a.tile = e[2]
+	a.appear_tick = e[3]
+	self.akatsuki_stirring:Fire(e[2], e[3])
+end
+
+HANDLERS[Ev.AKATSUKI_APPEAR] = function(self, e)
+	local a = self.akatsuki
+	a.state = Defs.AKATSUKI_ACTIVE
+	a.id = e[2]
+	a.tile = e[3]
+	local o = self.owners[e[2]]
+	if o ~= nil then
+		o.special = Defs.SPECIAL_AKATSUKI
+	end
+	self.akatsuki_appeared:Fire(e[2], e[3])
+end
+
+HANDLERS[Ev.AKATSUKI_CELL] = function(self, e)
+	self.akatsuki_cell:Fire(e[2], e[3])
+end
+
+HANDLERS[Ev.BEAST_SEALED] = function(self, e)
+	local b = beast_info(self, e[2])
+	b.state = Defs.BEAST_SEALED
+	b.holder = 0
+	local a = self.akatsuki
+	if table.find(a.sealed, e[2]) == nil then
+		table.insert(a.sealed, e[2])
+	end
+	self.beast_sealed:Fire(e[2], tonumber(e[3]) or #a.sealed, tonumber(e[4]) or 0)
+end
+
+HANDLERS[Ev.AKATSUKI_FALL] = function(self, e)
+	local a = self.akatsuki
+	a.state = Defs.AKATSUKI_FALLEN
+	a.slayer = tonumber(e[2]) or 0
+	a.release = if type(e[3]) == "table" then table.clone(e[3]) else {}
+	self.akatsuki_fell:Fire(a.slayer)
+end
+
+--- True when owner `id` is the Akatsuki.
+function GameState.is_akatsuki(self: GameState, id: number): boolean
+	local o = self.owners[id]
+	return o ~= nil and (o.special or 0) == Defs.SPECIAL_AKATSUKI
+end
+
+--- How many beasts the Akatsuki must have sealed to win (those not gone from the match), as the Sim.
+function GameState.akatsuki_sealable(self: GameState): number
+	local n = 9
+	for _, b in self.beasts do
+		if b.state == Defs.BEAST_GONE then
+			n -= 1
+		end
+	end
+	return n
+end
+
+--- Land held by special owners (awake beasts, the Akatsuki on the map): left out of the land total.
+function GameState.special_land(self: GameState): number
+	local n = self:beast_land()
+	local a = self.akatsuki
+	if a ~= nil and a.state == Defs.AKATSUKI_ACTIVE then
+		local o = self.owners[a.id]
+		if o ~= nil and o.alive then
+			n += o.tiles
+		end
+	end
+	return n
 end
 
 --- The tails of the beasts owner `id` holds, ascending.

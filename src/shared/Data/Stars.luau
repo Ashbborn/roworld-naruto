@@ -168,8 +168,12 @@ local PHASE_PLAYING = Defs.PHASE_PLAYING
 local PHASE_OVER = Defs.PHASE_OVER
 local TICKS_PER_MINUTE = Defs.TICK_RATE * 60
 
---- A Tailed Beast (Core/SimBeasts): never counted in the field or the placing.
-local function is_beast(sim: any, id: number): boolean
+--- A special owner, a Tailed Beast (Core/SimBeasts) or the Akatsuki (Core/SimAkatsuki): never
+--- counted in the field or the placing, its fall no place nor a kill.
+local function is_special(sim: any, id: number): boolean
+	if sim.o_special ~= nil and (sim.o_special[id] or 0) ~= 0 then
+		return true
+	end
 	return sim.o_beast ~= nil and (sim.o_beast[id] or 0) ~= 0
 end
 
@@ -194,7 +198,7 @@ function Tracker._count(self: any)
 	self._counted = true
 	local n = 0
 	for id = 1, sim.owner_total do
-		if sim.o_kind[id] ~= KIND_TRIBE and sim.o_alive[id] == 1 and sim.o_spawned[id] == 1 and not is_beast(sim, id) then
+		if sim.o_kind[id] ~= KIND_TRIBE and sim.o_alive[id] == 1 and sim.o_spawned[id] == 1 and not is_special(sim, id) then
 			n += 1
 		end
 	end
@@ -257,8 +261,8 @@ function Tracker.step(self: any, events: { { any } }?)
 	for _, e in events do
 		if e[1] == Ev.OWNER_OUT then
 			local id, killer = e[2], e[3]
-			-- (a Tailed Beast is no seat: its fall is no place, nor a kill)
-			if sim.o_kind[id] ~= KIND_TRIBE and not is_beast(sim, id) then
+			-- (a special owner is no seat: its fall is no place, nor a kill)
+			if sim.o_kind[id] ~= KIND_TRIBE and not is_special(sim, id) then
 				local seat = self.seats[id]
 				if seat ~= nil and seat.out_tick == nil then
 					seat.out_tick = sim.tick
@@ -307,7 +311,7 @@ function Tracker.result(self: any, id: number, left: boolean?): Result
 				o ~= id
 				and sim.o_kind[o] ~= KIND_TRIBE
 				and sim.o_alive[o] == 1
-				and not is_beast(sim, o)
+				and not is_special(sim, o)
 				and (sim.o_tiles[o] or 0) > mine
 			then
 				place += 1

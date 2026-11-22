@@ -294,7 +294,7 @@ function UIAdvisor.on_tiles_changed(self: any, changed: { number })
 	local progress = 0.0
 	local o = ctx:my()
 	if o ~= nil and s.map ~= nil then
-		local bl = if type(s.beast_land) == "function" then s:beast_land() else 0
+		local bl = if type(s.special_land) == "function" then s:special_land() else 0
 		local land = math.max((s.map.land_count or 0) - (s.fallout_count or 0) - bl, 1)
 		progress = (o.tiles or 0) / (land * R.WIN_SHARE)
 	end
@@ -912,6 +912,54 @@ function UIAdvisor.on_beast_holder(self: any, tails: number, holder: number, _fr
 		string.format(Beasts.TEXT.captured_sub, cap, cut)
 	)
 	ctx:sfx("victory")
+end
+
+--- The Akatsuki (Core/SimAkatsuki; its toasts come as Sim messages): a centred banner in its red when
+--- it appears, seals a beast and falls (its slayer gets its own).
+function UIAdvisor._akatsuki_banner(self: any, title: string, sub: string)
+	local ctx = self.ctx
+	local ui = self.ui
+	if not ctx:in_match() then
+		return
+	end
+	local A = UICtx.data("Akatsuki")
+	local banner = UICtx.mod("Banner").make(ctx, title, sub, Color3.fromHex(A.ACCENT), 2.6)
+	ui.float_layer:add_child(banner)
+	if banner.text_area ~= nil and ui.add_hud_control ~= nil then
+		ui:add_hud_control(banner.text_area)
+	end
+end
+
+function UIAdvisor.on_akatsuki_appeared(self: any, _id: number)
+	local A = UICtx.data("Akatsuki")
+	self:_akatsuki_banner(A.TEXT.appear_banner, A.TEXT.appear_sub)
+	self.ctx:sfx("alarm")
+end
+
+function UIAdvisor.on_beast_sealed(self: any, tails: number, n: number, _from: number)
+	local A = UICtx.data("Akatsuki")
+	local Beasts = UICtx.data("Beasts")
+	local s = self.ctx.state
+	local of = if s ~= nil and type(s.akatsuki_sealable) == "function" then s:akatsuki_sealable() else 9
+	self:_akatsuki_banner(
+		string.format(A.TEXT.sealed_banner, string.upper(Beasts.title(tails))),
+		string.format(A.TEXT.sealed_sub, n, of)
+	)
+	self.ctx:sfx("alarm")
+end
+
+function UIAdvisor.on_akatsuki_fell(self: any, slayer: number)
+	local ctx = self.ctx
+	local A = UICtx.data("Akatsuki")
+	if slayer ~= 0 and slayer == ctx:me() then
+		local pct = math.floor((Rules().AKATSUKI.SLAYER_CAP_MULT - 1.0) * 100 + 0.5)
+		self:_akatsuki_banner(A.TEXT.slayer_banner, string.format(A.TEXT.slayer_sub, pct))
+		ctx:sfx("victory")
+		return
+	end
+	local s = ctx.state
+	local releases = if s ~= nil and s.akatsuki ~= nil then #s.akatsuki.release // 2 else 0
+	self:_akatsuki_banner(A.TEXT.fallen, if releases > 0 then A.TEXT.fallen_sub_release else A.TEXT.fallen_sub_none)
 end
 
 --- Spawn phase camera. The globe turned away from an ocean-only view here; flat maps show the whole

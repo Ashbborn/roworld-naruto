@@ -897,7 +897,7 @@ function SimAttacks.install(C: any)
 					not neutral
 					and o_tiles[tg] * K_AREA < Rules.ANNEX_BELOW_FULL_TILES
 					and (o_kind[tg] ~= Defs.KIND_HUMAN or a.troops > o_troops[tg])
-					and self.o_beast[tg] == 0 -- (a Tailed Beast falls tile by tile)
+					and self.o_special[tg] == 0 -- (a Tailed Beast or the Akatsuki falls tile by tile)
 				then
 					-- (a person's small nation only once the attack outnumbers its army at home)
 					self:_annex(tg, at)
@@ -996,7 +996,7 @@ function SimAttacks.install(C: any)
 				n = t + W
 			end
 			local o = readi32(owner, n * 4)
-			if o > 0 and o ~= victim and not self:allied(o, victim) and self.o_beast[o] == 0 then
+			if o > 0 and o ~= victim and not self:allied(o, victim) and self.o_special[o] == 0 then
 				return o
 			end
 		end

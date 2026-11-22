@@ -725,7 +725,7 @@ function UICtx.leader(self: any): any
 	end
 	local best = nil
 	for _, o in s.owners do
-		if o.alive and o.tiles > 0 and (o.beast or 0) == 0 and (best == nil or ranks_before(o, best)) then
+		if o.alive and o.tiles > 0 and (o.special or 0) == 0 and (o.beast or 0) == 0 and (best == nil or ranks_before(o, best)) then
 			best = o
 		end
 	end
@@ -740,7 +740,7 @@ function UICtx.rank_of(self: any, id: number): number
 	end
 	local r = 1
 	for _, o in s.owners do
-		if o ~= me and o.alive and o.tiles > 0 and (o.beast or 0) == 0 and ranks_before(o, me) then
+		if o ~= me and o.alive and o.tiles > 0 and (o.special or 0) == 0 and (o.beast or 0) == 0 and ranks_before(o, me) then
 			r += 1
 		end
 	end
@@ -1333,8 +1333,8 @@ function UICtx.win_share(self: any, id: number): number
 		return 0.0
 	end
 	local fo = tonumber(s.fallout_count) or 0
-	-- (Tailed Beasts' land does not count either: Sim._check_victory)
-	local bl = if type(s.beast_land) == "function" then s:beast_land() else 0
+	-- (special owners' land, Tailed Beasts' and the Akatsuki's, does not count either: Sim._check_victory)
+	local bl = if type(s.special_land) == "function" then s:special_land() else 0
 	local denom = (s.map.contestable_count or 1) - fo - bl
 	return (o.tiles or 0) / math.max(denom, 1)
 end
@@ -1352,7 +1352,7 @@ function UICtx.team_share(self: any, t: number): number
 		end
 	end
 	local fo = tonumber(s.fallout_count) or 0
-	local bl = if type(s.beast_land) == "function" then s:beast_land() else 0
+	local bl = if type(s.special_land) == "function" then s:special_land() else 0
 	return tiles / math.max((s.map.contestable_count or 1) - fo - bl, 1)
 end
 

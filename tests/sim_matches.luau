@@ -27,6 +27,8 @@ Protocol.set_codec({
 local TICKS = tonumber(process.args[1]) or 400
 --- RW_BEASTS=1: the same matches with the Tailed Beasts on, on a fast schedule (all nine out ~22 s into play).
 local BEASTS = if process.env.RW_BEASTS then { first_s = 6, every_s = 2, warn_s = 1, rampage_s = 4 } else nil
+--- RW_AKATSUKI=1 (with RW_BEASTS=1): the Akatsuki too, on a fast schedule.
+local AKATSUKI = if process.env.RW_AKATSUKI then { appear_s = 8, warn_s = 1, cell_every_s = 2, cell_beast_after_s = 3 } else nil
 local fails = 0
 local function expect(c: any, w: string)
 	if c then
@@ -94,7 +96,7 @@ end
 --- One match; returns the sim, the mirror and the per-tick timing.
 local function run(map_id: string, seed: number, ticks: number, with_mirror: boolean): (any, any, number)
 	local map = WorldMap.get(map_id)
-	local sim = Sim.new(map, { seed = seed, difficulty = 1, max_humans = 1, beasts = BEASTS })
+	local sim = Sim.new(map, { seed = seed, difficulty = 1, max_humans = 1, beasts = BEASTS, akatsuki = AKATSUKI })
 	local me = sim:add_human("tester", "Tester")
 	local gs = nil
 	if with_mirror then
@@ -311,6 +313,8 @@ for _, case in { { "pangaea", 11, TICKS }, { "world", 5, math.max(200, TICKS // 
 		end
 		if sim.o_beast[o] ~= 0 then
 			beasts += 1
+		elseif sim.o_special[o] ~= 0 then
+			-- (the Akatsuki: no manifest nation)
 		elseif sim.o_kind[o] == Defs.KIND_NATION then
 			nations += 1
 		elseif sim.o_kind[o] == Defs.KIND_TRIBE then
@@ -338,7 +342,7 @@ for _, case in { { "pangaea", 11, TICKS }, { "world", 5, math.max(200, TICKS // 
 	expect(tribes == Sim.default_tribes(sim.map) and tribes == 400, id .. ": 400 tribes (the default bots)")
 	local spawned_near = 0
 	for o = 1, sim.owner_total do
-		if sim.o_kind[o] == Defs.KIND_NATION and sim.o_beast[o] == 0 then
+		if sim.o_kind[o] == Defs.KIND_NATION and sim.o_special[o] == 0 then
 			local nd = sim.map.nations[o]
 			if
 				nd.tile >= 0

@@ -847,6 +847,16 @@ function GameOver._copy(self, kind: string, winner: number, killer: number, reas
 	local red_top = Color3.new(1.0, 0.85, 0.85)
 	local cyan_top = Color3.new(0.92, 0.97, 1.0)
 	local c = { kicker = "MATCH COMPLETE", title = "GAME OVER", sub = "", top = cyan_top, bottom = UITheme.CYAN }
+	-- the Akatsuki sealed every Tailed Beast (Core/SimAkatsuki): nobody won
+	if reason == Defs.OVER_AKATSUKI and kind ~= "eliminated" then
+		local A = UICtx.data("Akatsuki")
+		c.kicker = A.TEXT.over_kicker
+		c.title = A.TEXT.over_title
+		c.sub = A.TEXT.over_sub
+		c.top = red_top
+		c.bottom = UITheme.RED
+		return c
+	end
 	-- a team game: the team won, together
 	local wt = if s ~= nil then tonumber(s.winner_team) or 0 else 0
 	if kind ~= "eliminated" and wt ~= 0 and ctx.team_share ~= nil then

@@ -386,6 +386,9 @@ function SimState.install(C: any)
 		--- Tailed Beasts (Core/SimBeasts): the beast an owner is (its tails, 1..9; 0 = none), and the
 		--- troop cap / attack loss multipliers of the beasts an owner holds (1.0 = none).
 		self.o_beast = filled(MAXO, 0)
+		--- Special owners (Defs.SPECIAL_*: a Tailed Beast, the Akatsuki; 0 = an ordinary owner): never
+		--- win, rank, ally, get annexed whole or nuked off the map (see Sim.is_special).
+		self.o_special = filled(MAXO, 0)
 		self.o_cap_mult = filled(MAXO, 1.0)
 		self.o_loss_mult = filled(MAXO, 1.0)
 		--- Owners whose conquest (Ev.CONQUEST, Sim._conquest_gold) was already announced.
@@ -503,10 +506,10 @@ function SimState.install(C: any)
 		local vals = {}
 		local o_alive = self.o_alive
 		local o_tiles = self.o_tiles
-		local o_beast = self.o_beast
+		local o_special = self.o_special
 		for id = 1, self.owner_total do
-			-- (a Tailed Beast is never one of the top owners)
-			if o_alive[id] == 0 or o_beast[id] ~= 0 then
+			-- (a special owner, a Tailed Beast or the Akatsuki, is never one of the top owners)
+			if o_alive[id] == 0 or o_special[id] ~= 0 then
 				continue
 			end
 			local v = o_tiles[id]
@@ -614,10 +617,15 @@ function SimState.install(C: any)
 		return string.format("%s just spawned: you can attack them in %d s", self.o_name[id], s)
 	end
 
-	--- `id`'s share of the land (Tailed Beasts' land is not counted in the total: SimBeasts.beast_land).
+	--- True for a special owner (Defs.SPECIAL_*: a Tailed Beast, the Akatsuki).
+	function C.is_special(self: any, id: number): boolean
+		return id > 0 and self.o_special[id] ~= 0
+	end
+
+	--- `id`'s share of the land (special owners' land is not counted in the total: Sim.special_land).
 	function C.land_share(self: any, id: number): number
-		local beasts = if self.beasts_on then self:beast_land() else 0
-		return self.o_tiles[id] / math.max(self.map.contestable_count - beasts, 1)
+		local special = if self.beasts_on then self:special_land() else 0
+		return self.o_tiles[id] / math.max(self.map.contestable_count - special, 1)
 	end
 
 	-- =========================================================================================
