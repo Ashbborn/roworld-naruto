@@ -75,13 +75,20 @@ local BEASTS = {
 	--- (spawn-shielded owners' tiles excepted).
 	RADIUS_BASE = 8.0,
 	RADIUS_PER_TAIL = 2.0,
-	--- Troops (and its fixed troop cap): the strongest army on the map (beasts excluded) x
-	--- (TROOPS_BASE + TROOPS_PER_TAIL x tails), never under TROOPS_FLOOR. It regenerates REGEN_PER_S of
-	--- the troops it is missing every second; it never grows with land.
+	--- Troops (its base cap): the strongest player's army (humans and bot players; with none, any
+	--- owner's, beasts excluded) x (TROOPS_BASE + TROOPS_PER_TAIL x tails), never under TROOPS_FLOOR
+	--- and at least TROOPS_STEP x the previous beast's base cap.
 	TROOPS_FLOOR = 100000.0,
 	TROOPS_BASE = 0.5,
 	TROOPS_PER_TAIL = 0.12,
+	TROOPS_STEP = 1.15,
+	--- Its troop cap follows its land: base cap x (tiles / the most tiles it held) ^ CAP_LAND_EXP,
+	--- never under CAP_FLOOR_SHARE x the base. Every second it regenerates REGEN_PER_S of what it is
+	--- missing below the cap, or loses DRAIN_PER_S of what it holds above it.
+	CAP_LAND_EXP = 0.7,
+	CAP_FLOOR_SHARE = 0.01,
 	REGEN_PER_S = 0.01,
+	DRAIN_PER_S = 0.25,
 	--- Rampage: for RAMPAGE_S after emerging, every RAMPAGE_EVERY_TICKS it attacks every neighbour
 	--- (and the free land around it) with RAMPAGE_WAVE x its cap in fresh troops, split between them
 	--- (at least RAMPAGE_MIN_TROOPS each); its own troops stay home. It ends early once it holds

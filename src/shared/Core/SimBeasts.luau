@@ -50,7 +50,10 @@ function SimBeasts.install(C: any)
 		self.beast_every_s = tonumber(o.every_s) or B.EVERY_S
 		self.beast_warn_s = tonumber(o.warn_s) or B.WARN_S
 		self.beast_rampage_s = tonumber(o.rampage_s) or B.RAMPAGE_S
-		--- tails -> { tails, state, tile, emerge_tick, id, holder, cap, awake_tick, start_tiles, rampage_until }
+		--- The last emerged beast's base cap (the next one gets at least TROOPS_STEP x it).
+		self._beast_last_cap = 0
+		--- tails -> { tails, state, tile, emerge_tick, id, holder, cap (its base cap), awake_tick,
+		--- start_tiles, peak_tiles, rampage_until }
 		self.beasts = {} :: { [number]: any }
 		for t = 1, Beasts.COUNT do
 			self.beasts[t] = {
@@ -63,6 +66,7 @@ function SimBeasts.install(C: any)
 				cap = 0.0,
 				awake_tick = 0,
 				start_tiles = 0,
+				peak_tiles = 0,
 				rampage_until = 0,
 			}
 		end
@@ -299,14 +303,11 @@ function SimBeasts.install(C: any)
 		self.o_spawned[id] = 1
 		self.o_spawn_tile[id] = b.tile
 		self:ev({ Ev.SPAWNED, id, b.tile })
-		-- Troops: a share of the strongest army on the map (beasts excluded), never under the floor.
-		local strongest = 0.0
-		for o = 1, self.owner_total do
-			if self.o_alive[o] == 1 and self.o_spawned[o] == 1 and self.o_beast[o] == 0 then
-				strongest = math.max(strongest, self.o_troops[o])
-			end
-		end
-		local troops = math.floor(math.max(B.TROOPS_FLOOR, strongest * (B.TROOPS_BASE + B.TROOPS_PER_TAIL * b.tails)))
+		-- Troops (its base cap): a share of the strongest player's army, never under the floor, and at
+		-- least TROOPS_STEP x the previous beast's (more tails is never weaker).
+		local troops = math.floor(math.max(B.TROOPS_FLOOR, self:_beast_strongest() * (B.TROOPS_BASE + B.TROOPS_PER_TAIL * b.tails)))
+		troops = math.max(troops, math.floor(self._beast_last_cap * B.TROOPS_STEP))
+		self._beast_last_cap = troops
 		b.cap = troops
 		self.o_troops[id] = troops
 		self.o_cap[id] = troops
@@ -314,13 +315,43 @@ function SimBeasts.install(C: any)
 		b.state = AWAKE
 		b.awake_tick = self.tick
 		b.start_tiles = got
+		b.peak_tiles = got
 		b.rampage_until = self.tick + math.floor(self.beast_rampage_s * TICK_RATE)
 		self._force_stats = true
 		self:ev({ Ev.BEAST_AWAKE, b.tails, id, b.tile })
 	end
 
-	--- An awake beast each tick: regenerates toward its fixed cap, and while rampaging attacks all
-	--- its neighbours every RAMPAGE_EVERY_TICKS; when the rampage ends its armies disperse.
+	--- The strongest army a beast's strength is based on: the strongest player's (humans and bot
+	--- players), or, with no player on the map, the strongest owner's (beasts excluded).
+	function C._beast_strongest(self: any): number
+		local players, anyone = 0.0, 0.0
+		for o = 1, self.owner_total do
+			if self.o_alive[o] == 1 and self.o_spawned[o] == 1 and self.o_beast[o] == 0 then
+				local t = self.o_troops[o]
+				anyone = math.max(anyone, t)
+				if self.o_kind[o] == Defs.KIND_HUMAN then
+					players = math.max(players, t)
+				end
+			end
+		end
+		return if players > 0 then players else anyone
+	end
+
+	--- A beast's troop cap now: its base cap x (tiles / the most tiles it held) ^ CAP_LAND_EXP, never
+	--- under CAP_FLOOR_SHARE of the base (a beast whittled down to a few tiles has few troops).
+	function C.beast_cap(self: any, tails: number): number
+		local B = Rules.BEASTS
+		local b = self.beasts[tails]
+		if b == nil or b.state ~= AWAKE then
+			return 0.0
+		end
+		local share = (self.o_tiles[b.id] / math.max(b.peak_tiles, 1)) ^ B.CAP_LAND_EXP
+		return math.floor(b.cap * math.max(share, B.CAP_FLOOR_SHARE))
+	end
+
+	--- An awake beast each tick: its cap follows its land; every second it regenerates toward the cap
+	--- (or drains toward it from above); while rampaging it attacks all its neighbours every
+	--- RAMPAGE_EVERY_TICKS; when the rampage ends its armies disperse.
 	function C._beast_live(self: any, b: any)
 		local B = Rules.BEASTS
 		local id = b.id
@@ -329,10 +360,19 @@ function SimBeasts.install(C: any)
 		end
 		local tick = self.tick
 		local o_troops = self.o_troops
-		local cap = b.cap
+		if self.o_tiles[id] > b.peak_tiles then
+			b.peak_tiles = self.o_tiles[id]
+		end
+		local cap = self:beast_cap(b.tails)
+		self.o_cap[id] = cap
 		local age = tick - b.awake_tick
-		if age % TICK_RATE == 0 and o_troops[id] < cap then
-			o_troops[id] += math.floor((cap - o_troops[id]) * B.REGEN_PER_S)
+		if age % TICK_RATE == 0 then
+			local t = o_troops[id]
+			if t < cap then
+				o_troops[id] = t + math.floor((cap - t) * B.REGEN_PER_S)
+			elseif t > cap then
+				o_troops[id] = t - math.ceil((t - cap) * B.DRAIN_PER_S)
+			end
 		end
 		if b.rampage_until > 0 then
 			-- (the rampage ends at RAMPAGE_S, or once it holds RAMPAGE_MAX_GROWTH x the land it emerged on)
@@ -348,9 +388,22 @@ function SimBeasts.install(C: any)
 				self:_beast_wave(b)
 			end
 		end
-		if o_troops[id] > cap then
-			o_troops[id] = cap
+	end
+
+	--- Land held by awake beasts: it does not count toward the land total victory and land shares
+	--- are measured against (Sim._check_victory, SimState.land_share).
+	function C.beast_land(self: any): number
+		if not self.beasts_on then
+			return 0
 		end
+		local n = 0
+		for t = 1, Beasts.COUNT do
+			local b = self.beasts[t]
+			if b.state == AWAKE and self.o_alive[b.id] == 1 then
+				n += self.o_tiles[b.id]
+			end
+		end
+		return n
 	end
 
 	--- One rampage wave: RAMPAGE_WAVE x the cap in fresh troops (on top of the beast's own, which stay

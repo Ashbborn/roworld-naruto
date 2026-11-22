@@ -560,7 +560,8 @@ function GameState.land_share(self: GameState, id: number): number
 	if o == nil or self.map.contestable_count <= 0 then
 		return 0.0
 	end
-	return o.tiles / self.map.contestable_count
+	-- (Tailed Beasts' land is not counted in the total, as in the Sim)
+	return o.tiles / math.max(self.map.contestable_count - self:beast_land(), 1)
 end
 
 --- Alive owners holding land, sorted by territory, largest first (ties: lower id first).
@@ -1176,6 +1177,20 @@ HANDLERS[Ev.BEAST_HOLDER] = function(self, e)
 	b.holder = holder
 	b.state = if holder > 0 then Defs.BEAST_CAPTURED else Defs.BEAST_GONE
 	self.beast_holder:Fire(e[2], holder, tonumber(e[4]) or 0)
+end
+
+--- Land held by awake Tailed Beasts (left out of the land total shares and victory count against).
+function GameState.beast_land(self: GameState): number
+	local n = 0
+	for _, b in self.beasts do
+		if b.state == Defs.BEAST_AWAKE then
+			local o = self.owners[b.id]
+			if o ~= nil and o.alive then
+				n += o.tiles
+			end
+		end
+	end
+	return n
 end
 
 --- True when owner `id` is a Tailed Beast.

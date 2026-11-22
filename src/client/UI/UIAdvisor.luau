@@ -294,7 +294,8 @@ function UIAdvisor.on_tiles_changed(self: any, changed: { number })
 	local progress = 0.0
 	local o = ctx:my()
 	if o ~= nil and s.map ~= nil then
-		local land = math.max((s.map.land_count or 0) - (s.fallout_count or 0), 1)
+		local bl = if type(s.beast_land) == "function" then s:beast_land() else 0
+		local land = math.max((s.map.land_count or 0) - (s.fallout_count or 0) - bl, 1)
 		progress = (o.tiles or 0) / (land * R.WIN_SHARE)
 	end
 	a:pop(n * (R.K_AREA or 1), progress)

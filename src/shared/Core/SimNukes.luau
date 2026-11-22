@@ -626,6 +626,7 @@ function SimNukes.install(C)
 		local flags = self.flags
 		local d_flags = self.d_flags
 		local o_tiles = self.o_tiles
+		local o_beast = self.o_beast
 		local rng = self.rng
 		for _, t in tiles do
 			if range_d2(to, t) > inner2 and rng:randi() % 2 == 0 then
@@ -639,6 +640,11 @@ function SimNukes.install(C)
 					table.insert(order, o)
 				end
 				lost[o] += 1
+				if o_beast[o] ~= 0 then
+					-- A Tailed Beast keeps its land (and no fallout on it): only conquest removes it.
+					-- Its troops still take the blast below, as if the tile were lost.
+					continue
+				end
 				self:set_owner(t, 0)
 			end
 			local f = readu8(flags, t)

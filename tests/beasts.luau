@@ -261,7 +261,91 @@ do
 	end
 	local regen = s2.o_troops[id2] - B.TROOPS_FLOOR / 2
 	expect(regen > 0 and regen <= B.TROOPS_FLOOR / 2 * B.REGEN_PER_S + 1, "regenerates REGEN_PER_S of the missing troops per second (" .. regen .. ")")
-	expect(s2.o_cap[id2] == B.TROOPS_FLOOR, "its cap stays fixed (no tile-based cap)")
+	expect(s2.o_cap[id2] == B.TROOPS_FLOOR, "at its most land its cap is its base cap")
+	-- strength from the strongest PLAYER, not a bigger nation; never weaker with more tails
+	local s3 = bare(FAST, 15)
+	place(s3, "Nation", Defs.KIND_NATION, inland(s3, 30000), 5, 5000000)
+	local hp = place(s3, "Player", Defs.KIND_HUMAN, inland(s3, 60000), 5, 1000000)
+	local b1 = wake(s3, 1, inland(s3, 2000))
+	local want1 = math.floor(1000000 * (B.TROOPS_BASE + B.TROOPS_PER_TAIL))
+	expect(s3.o_troops[b1] == want1, "strength from the strongest player (not a 5M nation): " .. s3.o_troops[b1])
+	s3.o_troops[hp] = 200000
+	local b2 = wake(s3, 2, inland(s3, 90000))
+	expect(s3.o_troops[b2] == math.floor(want1 * B.TROOPS_STEP), "the next beast gets at least 1.15x the previous one: " .. s3.o_troops[b2])
+	local s4 = bare(FAST, 16)
+	place(s4, "Nation", Defs.KIND_NATION, inland(s4, 30000), 5, 3000000)
+	local b4 = wake(s4, 1, inland(s4, 2000))
+	expect(s4.o_troops[b4] == math.floor(3000000 * (B.TROOPS_BASE + B.TROOPS_PER_TAIL)), "no player on the map: the strongest owner")
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- The cap follows the land; nukes can't delete a beast
+-- ---------------------------------------------------------------------------------------------
+do
+	local sim = bare(FAST, 17)
+	local c = inland(sim, 5000)
+	local p = place(sim, "Player", Defs.KIND_HUMAN, c, 6, 100000)
+	local id = wake(sim, 5, c + 40)
+	local b = sim.beasts[5]
+	b.rampage_until = 0
+	sim:end_attacks_of(id)
+	local base, peak = b.cap, sim.o_tiles[id]
+	-- the player takes all but a sliver
+	local keep = 0
+	for _, t in sim:_spawn_disk(c + 40, sim:beast_radius(5)) do
+		if readi32(sim.owner, t * 4) == id then
+			if keep < peak // 10 then
+				keep += 1
+			else
+				sim:set_owner(t, p)
+			end
+		end
+	end
+	for _ = 1, 200 do
+		sim.tick += 1
+		sim:beasts_tick()
+	end
+	local want = math.floor(base * (keep / peak) ^ B.CAP_LAND_EXP)
+	expect(sim.o_cap[id] == want, ("a tenth of its land: cap %d = base %d x (1/10)^0.7"):format(sim.o_cap[id], base))
+	expect(sim.o_troops[id] <= want * 1.02 + 1, "and its troops drained down to it (" .. math.floor(sim.o_troops[id]) .. ")")
+	-- down to a few tiles: few troops (the floor share of the base)
+	local left = 0
+	for _, t in sim:_spawn_disk(c + 40, sim:beast_radius(5)) do
+		if readi32(sim.owner, t * 4) == id then
+			if left < 2 then
+				left += 1
+			else
+				sim:set_owner(t, p)
+			end
+		end
+	end
+	for _ = 1, 300 do
+		sim.tick += 1
+		sim:beasts_tick()
+	end
+	local tiny = math.floor(base * math.max((2 / peak) ^ B.CAP_LAND_EXP, B.CAP_FLOOR_SHARE))
+	expect(
+		sim.o_tiles[id] == 2 and sim.o_cap[id] == tiny and sim.o_troops[id] <= tiny * 1.02 + 1,
+		("two tiles left: %d troops, cap %d (base %d, tiles %d of %d)"):format(math.floor(sim.o_troops[id]), sim.o_cap[id], base, sim.o_tiles[id], peak)
+	)
+	-- a nuke over a beast: its land stays (no fallout), its troops take the blast
+	local s2 = bare(FAST, 18)
+	local cc = inland(s2, 7000)
+	local nuker = place(s2, "Nuker", Defs.KIND_HUMAN, inland(s2, 80000), 5, 100000)
+	local bid = wake(s2, 1, cc)
+	s2.beasts[1].rampage_until = 0
+	s2:end_attacks_of(bid)
+	local tiles0, troops0 = s2.o_tiles[bid], s2.o_troops[bid]
+	s2:_detonate({ uid = 1, kind = Defs.N_HYDROGEN, owner = nuker, to_tile = cc, from_tile = cc, target_owner = bid })
+	local fallout = 0
+	for _, t in s2:_spawn_disk(cc, s2:beast_radius(1)) do
+		if readi32(s2.owner, t * 4) == bid and not s2:claimable(t) then
+			fallout += 1
+		end
+	end
+	s2:_process_eliminations()
+	expect(s2.o_alive[bid] == 1 and s2.o_tiles[bid] == tiles0 and fallout == 0, "a hydrogen bomb leaves a beast's land (and puts no fallout on it)")
+	expect(s2.o_troops[bid] < troops0 * 0.5, ("but its troops take the blast (%d -> %d)"):format(troops0, math.floor(s2.o_troops[bid])))
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -425,6 +509,25 @@ do
 	local dead = s2:add_owner("Fallen", 0, Defs.KIND_HUMAN)
 	s2.o_alive[dead] = 0
 	expect(not s2:can_take_over(dead, b) and s2:can_take_over(dead, n), "a fallen player can't take over a beast")
+	-- beast land is left out of the land the 80 % is measured against
+	local s5 = bare(FAST, 19)
+	local hb = s5:add_owner("Big", 0x808080FF, Defs.KIND_HUMAN)
+	s5.o_spawned[hb] = 1
+	table.insert(s5.humans, hb)
+	local bb5 = wake(s5, 9, inland(s5, 9000))
+	s5:end_attacks_of(bb5)
+	s5.beasts[9].rampage_until = 0
+	local land = map.land_count
+	for k = 0, land - 1 do
+		local t = map:land_tile(k)
+		if s5:claimable(t) and readi32(s5.owner, t * 4) == 0 then
+			s5:set_owner(t, if k % 10 < 3 then bb5 else hb)
+		end
+	end
+	local raw = s5.o_tiles[hb] / s5.map.contestable_count
+	expect(raw < Rules.WIN_SHARE and math.abs(s5:land_share(hb) - 1.0) < 1e-9, ("the player holds %.0f%% of all land, 100%% of the land outside beasts"):format(raw * 100))
+	s5:_check_victory()
+	expect(s5.phase == Defs.PHASE_OVER and s5.winner == hb and s5.over_reason == Defs.OVER_DOMINATION, "so a huge beast doesn't block the domination win")
 	-- domination share held by a beast: no game over
 	local s3 = bare(FAST, 14)
 	local bb = wake(s3, 4, inland(s3, 9000))

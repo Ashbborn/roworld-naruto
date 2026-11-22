@@ -1333,7 +1333,9 @@ function UICtx.win_share(self: any, id: number): number
 		return 0.0
 	end
 	local fo = tonumber(s.fallout_count) or 0
-	local denom = (s.map.contestable_count or 1) - fo
+	-- (Tailed Beasts' land does not count either: Sim._check_victory)
+	local bl = if type(s.beast_land) == "function" then s:beast_land() else 0
+	local denom = (s.map.contestable_count or 1) - fo - bl
 	return (o.tiles or 0) / math.max(denom, 1)
 end
 
@@ -1350,7 +1352,8 @@ function UICtx.team_share(self: any, t: number): number
 		end
 	end
 	local fo = tonumber(s.fallout_count) or 0
-	return tiles / math.max((s.map.contestable_count or 1) - fo, 1)
+	local bl = if type(s.beast_land) == "function" then s:beast_land() else 0
+	return tiles / math.max((s.map.contestable_count or 1) - fo - bl, 1)
 end
 
 --- A team game: the team's name as players read it ("Red team", "Team 3", "Humans").

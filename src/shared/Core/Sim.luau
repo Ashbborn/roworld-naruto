@@ -1734,7 +1734,12 @@ function Sim._check_victory(self: any)
 		end
 		bt = tt
 	end
-	if best > 0 and bt >= Rules.WIN_SHARE * (self.map.contestable_count - self.fallout_count) then
+	-- (the land that counts: contestable, not fallout, not held by a Tailed Beast)
+	local land = self.map.contestable_count - self.fallout_count
+	if self.beasts_on then
+		land -= self:beast_land()
+	end
+	if best > 0 and bt >= Rules.WIN_SHARE * land then
 		self:_game_over(best, Defs.OVER_DOMINATION, team)
 		return
 	end

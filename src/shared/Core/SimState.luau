@@ -614,8 +614,10 @@ function SimState.install(C: any)
 		return string.format("%s just spawned: you can attack them in %d s", self.o_name[id], s)
 	end
 
+	--- `id`'s share of the land (Tailed Beasts' land is not counted in the total: SimBeasts.beast_land).
 	function C.land_share(self: any, id: number): number
-		return self.o_tiles[id] / math.max(self.map.contestable_count, 1)
+		local beasts = if self.beasts_on then self:beast_land() else 0
+		return self.o_tiles[id] / math.max(self.map.contestable_count - beasts, 1)
 	end
 
 	-- =========================================================================================
