@@ -10,7 +10,10 @@ generator re-uploads only images whose bytes changed. Images are served to Studi
 MCP tool from a throwaway localhost HTTP server. Max 1024x1024 recommended per image (Roblox
 downsizes larger uploads); PNG with alpha is preserved.
 """
-import fcntl
+try:
+    import fcntl
+except ImportError:  # Windows: see the end of this file
+    fcntl = None
 import hashlib
 import http.server
 import json
@@ -102,6 +105,11 @@ def upload_images(paths):
             finally:
                 c.close()
         return result
+
+
+if fcntl is None:  # Windows: no Studio MCP upload here; Open Cloud does it (tools/naruto/upload_oc.py)
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "naruto"))
+    from upload_oc import upload_images  # noqa: E402,F811
 
 
 if __name__ == "__main__":

@@ -81,6 +81,9 @@ def _upload_one(path, cfg):
     aid = op.get("response", {}).get("assetId") if op.get("done") else None
     if not aid:
         raise RuntimeError("%s: upload did not finish: %s" % (path, json.dumps(op)[:300]))
+    mod = op.get("response", {}).get("moderationResult", {}).get("moderationState", "?")
+    if mod not in ("Approved", "?"):
+        print("WARNING %s: moderation %s (renders blank until approved)" % (path, mod), file=sys.stderr)
     return "rbxassetid://%s" % aid
 
 
