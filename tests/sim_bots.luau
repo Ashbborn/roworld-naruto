@@ -32,10 +32,12 @@ end
 local map = WorldMap.get("pangaea")
 --- RW_BEASTS=1: the same checks with the Tailed Beasts on, on a fast schedule (all nine out by tick ~520).
 local BEASTS = if require("@lune/process").env.RW_BEASTS then { first_s = 10, every_s = 4, warn_s = 2, rampage_s = 6 } else nil
+--- RW_AKATSUKI=1 (with RW_BEASTS=1): the Akatsuki too, on a fast schedule.
+local AKATSUKI = if require("@lune/process").env.RW_AKATSUKI then { appear_s = 12, warn_s = 2, cell_every_s = 3, cell_beast_after_s = 4 } else nil
 local function run(seed: number, ticks: number)
 	local sim = Sim.new(
 		map,
-		{ seed = seed, difficulty = 1, tribes = 40, max_humans = 12, spawn_ticks = 100, beasts = BEASTS }
+		{ seed = seed, difficulty = 1, tribes = 40, max_humans = 12, spawn_ticks = 100, beasts = BEASTS, akatsuki = AKATSUKI }
 	)
 	local human = sim:add_human("u1", "RealPerson")
 	local r = seed
