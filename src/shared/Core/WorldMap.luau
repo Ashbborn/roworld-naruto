@@ -67,6 +67,8 @@ export type WorldMap = typeof(setmetatable(
 		--- build size relative to the map's data (1, or < 1 for a smaller build: "id@80")
 		scale: number,
 		tile_bytes: buffer,
+		--- render-only biome per tile (Naruto fork; nil on maps without one)
+		biome: buffer?,
 		terrain: buffer,
 		land: buffer,
 		water_body: buffer,
@@ -188,7 +190,7 @@ function WorldMap.from_terrain(data: { [string]: any }, scale: number?): WorldMa
 	m.k_area = m.k_lin * m.k_lin
 	local meta = {}
 	for k, v in data do
-		if k ~= "terrain" and k ~= "nations" then
+		if k ~= "terrain" and k ~= "nations" and k ~= "biome" then
 			meta[k] = v
 		end
 	end
@@ -200,6 +202,22 @@ function WorldMap.from_terrain(data: { [string]: any }, scale: number?): WorldMa
 		bytes = WorldMap._resample(bytes, w0, h0, w, h)
 	end
 	m.tile_bytes = bytes
+	-- biome per tile (Naruto fork, render only: 0 default, 1 desert, 2 snow, 3 forest), same codec as terrain
+	if data.biome ~= nil then
+		Coop.check()
+		local bio = MapCodec.terrain_bytes({ terrain = data.biome, codec = data.codec, size = w0 * h0, width = w0, height = h0 })
+		if w ~= w0 or h ~= h0 then
+			local out = buffer.create(w * h)
+			for y = 0, h - 1 do
+				local sy = math.min(h0 - 1, math.floor(y * h0 / h))
+				for x = 0, w - 1 do
+					buffer.writeu8(out, y * w + x, buffer.readu8(bio, sy * w0 + math.min(w0 - 1, math.floor(x * w0 / w))))
+				end
+			end
+			bio = out
+		end
+		m.biome = bio
+	end
 	Coop.check()
 	m:_derive()
 	local nations = {}

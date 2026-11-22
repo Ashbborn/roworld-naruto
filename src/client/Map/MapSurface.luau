@@ -197,13 +197,25 @@ local HIGHLAND = { 0xDC, 0xCB, 0x9E } -- #DCCB9E
 local MOUNTAIN = { 0xE6, 0xE6, 0xE6 } -- #e6e6e6
 local BACKGROUND = { 0x3C, 0x3C, 0x3C } -- #3c3c3c
 
---- RGBA8 terrain pixel of a terrain byte (see tile_bytes).
-function MapSurface.terrain_pixel(tb: number): number
+-- Biome palettes (Naruto fork): {plains, highland, mountain} per biome code (WorldMap.biome)
+local BIOMES = {
+	[1] = { { 0xEC, 0xD9, 0xA0 }, { 0xDC, 0xBE, 0x86 }, { 0xCC, 0xA9, 0x80 } }, -- desert
+	[2] = { { 0xE4, 0xEC, 0xF0 }, { 0xD2, 0xDC, 0xE4 }, { 0xF4, 0xF6, 0xF8 } }, -- snow
+	[3] = { { 0xA8, 0xD0, 0x7C }, HIGHLAND, MOUNTAIN }, -- forest
+}
+
+--- RGBA8 terrain pixel of a terrain byte (see tile_bytes), in biome `bio` (0 / nil: default).
+function MapSurface.terrain_pixel(tb: number, bio: number?): number
 	local land = tb >= 128
 	local shore = band(tb, 64) ~= 0
 	local mag = band(tb, 31)
+	local pal = if land and bio and bio > 0 then BIOMES[bio] else nil
 	if land and mag == 31 then
 		return pack(BACKGROUND[1], BACKGROUND[2], BACKGROUND[3], 255)
+	elseif pal ~= nil and not (shore and bio ~= 1) then
+		local c = if mag < 10 then pal[1] elseif mag < 20 then pal[2] else pal[3]
+		local m = mag % 10
+		return pack(math.max(0, c[1] - m), math.max(0, c[2] - m), math.max(0, c[3] - m), 255)
 	elseif land and shore then
 		return pack(SAND[1], SAND[2], SAND[3], 255)
 	elseif land then
@@ -501,10 +513,12 @@ function MapSurface.set_map(self: MapSurface, map: any)
 	local of: buffer = map.tile_bytes or MapSurface.legacy_of_bytes(map, yield)
 	--- terrain byte per tile (bit7 land, bit6 shoreline, bit5 ocean, bits0-4 magnitude)
 	self.tile_bytes = of
+	--- biome per tile (Naruto fork: 0 default, 1 desert, 2 snow, 3 forest; nil: none), WorldMap.biome
+	local biome: buffer? = map.biome
 	local N = W * H
 	local terrain = buffer.create(N * 4)
 	for i = 0, N - 1 do
-		writeu32(terrain, i * 4, MapSurface.terrain_pixel(readu8(of, i)))
+		writeu32(terrain, i * 4, MapSurface.terrain_pixel(readu8(of, i), if biome then readu8(biome, i) else 0))
 		if i % 262144 == 262143 then
 			yield()
 		end
