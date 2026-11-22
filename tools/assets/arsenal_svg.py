@@ -695,7 +695,7 @@ def render_stars2x():
 def hand_sign(a, cx, cy, s=1.0, sign=0):
     """Two hands forming a seal, seen from the front, wrists at the bottom, sleeves under them:
     0 the clasp (fingers laced over the backs of the hands, thumbs up side by side), 1 palms pressed
-    together, 2 one flat hand laid across a fist."""
+    together, 2 the clasp with the thumbs crossed."""
     old, oldk = a.tf, a.k
     a.tf = " ".join(x for x in (old, f"translate({f(cx)} {f(cy)}) scale({f(s)})") if x)
     a.k = oldk * s
@@ -724,6 +724,11 @@ def hand_sign(a, cx, cy, s=1.0, sign=0):
                            f"L{dx * 12},28 Z"), SKIN)
             a.shade(th, R(dx * 6.5 if dx > 0 else -12, -20, 6, 50), SKIN_D)
             a.flat(R(dx * 6.5 - 3, -11, 6, 5, 2), "#f8dcc0")
+        if sign == 2:
+            for dx in (1, -1):
+                th = a.solid(P("M-7,-12 Q0,-18 7,-12 L7,24 L-7,24 Z", rot(0, 24, dx * 24)), SKIN)
+                a.shade(th, R(1, -20, 8, 50, 0, rot(0, 24, dx * 24)), SKIN_D)
+                a.flat(R(-3, -12, 6, 5, 2, rot(0, 24, dx * 24)), "#f8dcc0")
     elif sign == 1:
         # palms pressed together, fingers up, splayed a little at the tips
         for dx in (-1, 1):
@@ -733,21 +738,6 @@ def hand_sign(a, cx, cy, s=1.0, sign=0):
                 x0 = dx * (5 + k * 5)
                 a.line(f"M{f(x0)},{f(-44 + k * 4)} L{f(x0 + dx * 1)},{f(-14)}", SKIN_D, 1.3)
             a.solid(P(f"M{dx * 2},20 Q{dx * 6},-4 {dx * 2},-10 Q{dx * 12},-6 {dx * 14},14 Z"), SKIN)
-        if sign == 2:
-            for dx in (1, -1):
-                th = a.solid(P("M-7,-12 Q0,-18 7,-12 L7,24 L-7,24 Z", rot(0, 24, dx * 24)), SKIN)
-                a.shade(th, R(1, -20, 8, 50, 0, rot(0, 24, dx * 24)), SKIN_D)
-                a.flat(R(-3, -12, 6, 5, 2, rot(0, 24, dx * 24)), "#f8dcc0")
-    else:
-        # a fist, a flat hand laid across its top
-        fi = a.solid(P("M-26,36 L-30,4 Q-28,-10 -12,-10 L14,-10 Q30,-10 30,4 L26,36 Z"), SKIN)
-        a.shade(fi, R(8, -20, 40, 70), SKIN_D)
-        for k in range(3):
-            a.line(f"M-26,{4 + k * 9} Q-6,{7 + k * 9} 24,{4 + k * 9}", SKIN_D, 1.4)
-        fl = a.solid(P("M-40,-12 L30,-24 Q40,-24 40,-16 L38,-6 Q36,0 26,0 L-38,-2 Q-46,-6 -40,-12 Z"), SKIN)
-        a.shade(fl, R(-50, -8, 100, 20), SKIN_D)
-        for k in range(3):
-            a.line(f"M{-4 + k * 10},{-18 - k * 1.5} L{30},{-20 - k * 0.5}", SKIN_D, 1.2)
     a.tf, a.k = old, oldk
 
 
@@ -1207,6 +1197,51 @@ def fx_bloom(fr, n=8):
     return a
 
 
+def fx_battery():
+    """The Kunai Battery in the scene (not the shop's render, which the card shows beside it): a low
+    log platform, an A-frame, three kunai racked level and aimed right."""
+    a = Art(200, 140, ow=5, iw=1.5)
+    for x0, x1 in ((40, 84), (150, 112)):
+        p = a.solid(PG([(x0 - 7, 122), (x0 + 7, 122), (x1 + 5, 56), (x1 - 5, 56)]), WOOD)
+        a.shade(p, PG([(x0, 122), (x0 + 18, 122), (x1 + 18, 50), (x1, 50)]), WOOD_D)
+    for i in range(3):
+        a.stack()
+        kunai(a, 30 + i * 12, 52 + i * 21, 124, -12)
+    a.stack()
+    beam = a.solid(R(46, 96, 108, 12, 3), WOOD_L)
+    a.shade(beam, R(44, 103, 112, 8), WOOD)
+    for i, x in enumerate((50, 100, 150)):
+        lg = a.solid(R(x - 30, 116, 60, 18, 8), WOOD)
+        a.shade(lg, R(x - 34, 126, 68, 12), WOOD_D)
+        a.solid(E(x + 27, 125, 6, 9), WOOD_L)
+    return a
+
+
+def fx_cannon():
+    """The Chakra Cannon in the scene: its barrel near level, aimed right (the beam crosses the scene),
+    no orb (the preview grows one at its mouth)."""
+    a = Art(200, 136, ow=5, iw=1.5)
+    c = a.solid(PG([(20, 118), (150, 118), (132, 84), (40, 84)]), WOOD)
+    a.shade(c, R(10, 106, 160, 20), WOOD_D)
+    for x in (52, 120):
+        a.solid(C(x, 118, 15), WOOD_L)
+        a.flat(C(x, 118, 5), WOOD_D)
+        for k in range(4):
+            t = k / 4 * math.pi
+            a.line(f"M{f(x + math.cos(t) * 13)},{f(118 + math.sin(t) * 13)} L{f(x - math.cos(t) * 13)},"
+                   f"{f(118 - math.sin(t) * 13)}", WOOD_D, 2)
+    a.stack()
+    tf = rot(80, 72, -8)
+    bar = a.solid(P("M40,52 L182,60 L182,84 L40,92 Q22,72 40,52 Z", tf), STONE)
+    a.shade(bar, R(20, 74, 180, 30, 0, tf), STONE_D)
+    for x in (80, 120, 172):
+        a.solid(R(x - 5, 52 + (x - 40) * 0.056, 10, 40 - (x - 40) * 0.11, 2, tf), GOLD, ow=4)
+    for x, r in ((100, 26), (146, 22)):
+        a.raw_over(f'<ellipse cx="{x}" cy="72" rx="6" ry="{r}" transform="{tf}" fill="none" stroke="{BLUE_L}" '
+                   f'stroke-width="3.5" opacity="0.9"/>')
+    return a
+
+
 FX = {
     "tag": fx_tag,
     "kunai": fx_kunai,
@@ -1219,6 +1254,8 @@ FX = {
     "shrine": fx_shrine,
     "roost": fx_roost,
     "village": fx_village,
+    "battery": fx_battery,
+    "cannon": fx_cannon,
 }
 # flipbooks: key -> (cell px, frames, cols, the frame's Art)
 FX_FLIP = {
@@ -1228,4 +1265,5 @@ FX_FLIP = {
 }
 # singles' size in pixels (long side)
 FX_PX = {"tag": 96, "kunai": 96, "scroll": 96, "poof": 128, "ninja": 96, "ninja_run": 96, "sealring": 128,
-         "orb": 96, "shrine": 128, "roost": 128, "village": 128}
+         "orb": 96, "shrine": 128, "roost": 128, "village": 128, "battery": 128,
+         "cannon": 128}

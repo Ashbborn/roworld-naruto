@@ -71,8 +71,8 @@ def sprites_sheet():
     H = 228
     sizes = {"tag": ("w", 0.3), "kunai": ("w", 0.28), "scroll": ("w", 0.4), "poof": 0.42, "ninja": 0.3,
              "ninja_run": 0.3, "sealring": 0.5, "orb": 0.3, "shrine": 0.34, "roost": 0.36, "village": 0.36,
-             "hawk": 0.36, "hands": 0.3, "bloom": 0.92}
-    W = 1800
+             "hawk": 0.36, "hands": 0.3, "bloom": 0.92, "battery": 0.34, "cannon": 0.3}
+    W = 2100
     sh = Image.new("RGBA", (W, 2 * (H + 30) + 50), PANEL)
     d = ImageDraw.Draw(sh)
     d.text((12, 8), "Arsenal preview sprites at their size in the preview (228 px tall): A vs B", font=FONT,
