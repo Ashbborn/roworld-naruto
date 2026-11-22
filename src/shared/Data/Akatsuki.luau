@@ -24,6 +24,8 @@ Akatsuki.TEXT = {
 	appear_sub = "It hunts the Tailed Beasts. If it seals all nine, everyone loses",
 	-- (toast for the owner it landed next to)
 	cell = "An Akatsuki cell landed on your border!",
+	-- (the eliminated beast holder's name) when it is above its land cap and will shed their land
+	abandons = "The Akatsuki abandons %s's lands.",
 	-- (beast title, sealed count, beasts that can still be sealed)
 	sealed = "The Akatsuki sealed the %s! (%d/%d)",
 	sealed_banner = "THE AKATSUKI SEALED THE %s",

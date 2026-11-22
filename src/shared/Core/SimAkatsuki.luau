@@ -308,6 +308,7 @@ function SimAkatsuki.install(C: any)
 			elseif t > cap then
 				o_troops[id] = t - math.ceil((t - cap) * A.DRAIN_PER_S)
 			end
+			self:_akatsuki_shed()
 		end
 		if age % A.ATTACK_EVERY_TICKS == 0 then
 			self:_akatsuki_wave()
@@ -315,6 +316,104 @@ function SimAkatsuki.install(C: any)
 		local every = math.max(math.floor(self.aka_cell_every_s * TICK_RATE), 1)
 		if age > 0 and age % every == 0 then
 			self:_akatsuki_cell()
+		end
+	end
+
+	--- The most land it keeps (LAND_SHARE_MAX of the map's land); above it, it sheds.
+	function C._akatsuki_land_cap(self: any): number
+		return math.floor(self.map.land_count * Rules.AKATSUKI.LAND_SHARE_MAX)
+	end
+
+	--- Each second: above its land cap it releases SHED_PER_S of the excess (at least SHED_MIN_TILES,
+	--- at most the excess) to unowned land, however it got it. The tiles are its border tiles farthest
+	--- from its home disk and its live cells; tiles inside those disks are never shed, so its core
+	--- and cells stay whole. Ties go in border-list order (no rng). Returns the tiles released.
+	function C._akatsuki_shed(self: any): number
+		local A = Rules.AKATSUKI
+		local id = self.aka_id
+		local excess = self.o_tiles[id] - self:_akatsuki_land_cap()
+		if excess <= 0 then
+			return 0
+		end
+		local n = math.min(excess, math.max(A.SHED_MIN_TILES, math.ceil(excess * A.SHED_PER_S)))
+		local owner = self.owner
+		local W = self.W
+		local k = self.R.K_LIN
+		-- anchors: x, y, protected radius^2
+		local ax, ay, ar = {}, {}, {}
+		local function anchor(t: number, r: number)
+			table.insert(ax, t % W)
+			table.insert(ay, t // W)
+			table.insert(ar, r * r)
+		end
+		if self.aka_tile >= 0 then
+			anchor(self.aka_tile, A.RADIUS / k + 1)
+		end
+		for _, c in self.aka_cells do
+			if readi32(owner, c[1] * 4) == id then
+				anchor(c[1], A.CELL_RADIUS / k + 1)
+			end
+		end
+		local na = #ax
+		-- border tiles bucketed by whole-tile distance to the nearest anchor
+		local buckets: { [number]: { number } } = {}
+		local far = -1
+		local bnext = self.bnext
+		local t = self.bhead[id]
+		while t ~= -1 do
+			local x, y = t % W, t // W
+			local best = math.huge
+			local inside = false
+			for i = 1, na do
+				local dx, dy = x - ax[i], y - ay[i]
+				local d2 = dx * dx + dy * dy
+				if d2 <= ar[i] then
+					inside = true
+					break
+				end
+				if d2 < best then
+					best = d2
+				end
+			end
+			if not inside then
+				local d = if na == 0 then 0 else math.floor(math.sqrt(best))
+				local b = buckets[d]
+				if b == nil then
+					b = {}
+					buckets[d] = b
+				end
+				table.insert(b, t)
+				if d > far then
+					far = d
+				end
+			end
+			t = readi32(bnext, t * 4)
+		end
+		local out = {}
+		local d = far
+		while d >= 0 and #out < n do
+			local b = buckets[d]
+			if b ~= nil then
+				for _, c in b do
+					table.insert(out, c)
+					if #out >= n then
+						break
+					end
+				end
+			end
+			d -= 1
+		end
+		for _, c in out do
+			self:set_owner(c, 0)
+		end
+		return #out
+	end
+
+	--- It eliminated beast holder `o` (SimBeasts._beasts_on_eliminated): above its land cap it says it
+	--- abandons their lands (the shedding releases them over the next seconds).
+	function C._akatsuki_abandons(self: any, o: number)
+		if self.o_tiles[self.aka_id] > self:_akatsuki_land_cap() then
+			self:msg(-1, Defs.MSG_INFO, string.format(AkatsukiData.TEXT.abandons, self.o_name[o]))
 		end
 	end
 
@@ -343,7 +442,7 @@ function SimAkatsuki.install(C: any)
 		local o_beast = self.o_beast
 		local o_troops = self.o_troops
 		-- (past LAND_SHARE_MAX of the land it hunts only: beasts and holders)
-		local roam = self.o_tiles[id] < self.map.land_count * A.LAND_SHARE_MAX
+		local roam = self.o_tiles[id] < self:_akatsuki_land_cap()
 		local best, best_tier, best_troops = 0, 4, math.huge
 		for _, o in self.sc_list do
 			if o_alive[o] == 0 or self:shielded(o) or self.o_special[o] == SPECIAL_AKATSUKI then

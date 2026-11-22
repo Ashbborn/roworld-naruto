@@ -550,6 +550,9 @@ function SimBeasts.install(C: any)
 				self:msg(-1, Defs.MSG_INFO, string.format(T.gone, title))
 			end
 		end
+		if sealer then
+			self:_akatsuki_abandons(id)
+		end
 		self:_beast_rebuff(id)
 		self:_beast_rebuff(taker)
 		return false

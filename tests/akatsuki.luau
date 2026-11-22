@@ -345,6 +345,107 @@ do
 	expect(not any, ("holding %.0f%% of the land it leaves its other neighbours and free land alone"):format(A.LAND_SHARE_MAX * 100))
 end
 
+-- it raids, it doesn't rule: above the land cap it sheds the excess, farthest border tiles first
+do
+	local sim = bare(10)
+	local c = inland(sim, 12000)
+	local aid = appear(sim, c)
+	local home = sim:_spawn_disk(c, A.RADIUS / sim.R.K_LIN)
+	local home_n = owned(sim, aid, home)
+	local cap_tiles = sim:_akatsuki_land_cap()
+	expect(sim:_akatsuki_shed() == 0, "at or below its land cap it sheds nothing")
+	local target = cap_tiles + 5000
+	local cell_c = -1
+	for k = 0, map.land_count - 1 do
+		if sim.o_tiles[aid] >= target then
+			break
+		end
+		local t = map:land_tile(k)
+		if readi32(sim.owner, t * 4) == 0 and sim:claimable(t) then
+			sim:set_owner(t, aid)
+		end
+	end
+	for k = 0, map.land_count - 1, 97 do
+		local t = map:land_tile(k)
+		local dx, dy = t % sim.W - c % sim.W, t // sim.W - c // sim.W
+		if readi32(sim.owner, t * 4) == aid and dx * dx + dy * dy > 200 * 200 and #sim:_akatsuki_cell_tiles(t) >= 20 then
+			cell_c = t
+			break
+		end
+	end
+	expect(cell_c >= 0, "(a far tile for a cell)")
+	sim.aka_cells = { { cell_c, sim.tick } }
+	local cell = sim:_akatsuki_cell_tiles(cell_c)
+	local cell_n = #cell
+	local W = sim.W
+	local function dist(t: number): number
+		local best = math.huge
+		for _, a in { c, cell_c } do
+			local dx, dy = t % W - a % W, t // W - a // W
+			best = math.min(best, dx * dx + dy * dy)
+		end
+		return math.floor(math.sqrt(best))
+	end
+	local border = {}
+	local t = sim.bhead[aid]
+	while t ~= -1 do
+		border[t] = true
+		t = readi32(sim.bnext, t * 4)
+	end
+	local before = sim.o_tiles[aid]
+	local excess = before - cap_tiles
+	local want = math.min(excess, math.max(A.SHED_MIN_TILES, math.ceil(excess * A.SHED_PER_S)))
+	local got = sim:_akatsuki_shed()
+	expect(got == want and sim.o_tiles[aid] == before - want, ("one second sheds %d%% of the excess (%d of %d)"):format(A.SHED_PER_S * 100, got, excess))
+	local min_out, max_kept, from_border = math.huge, -1, true
+	for b in border do
+		local d = dist(b)
+		if readi32(sim.owner, b * 4) == 0 then
+			min_out = math.min(min_out, d)
+		elseif readi32(sim.owner, b * 4) == aid and d > A.RADIUS / sim.R.K_LIN + 1 then
+			max_kept = math.max(max_kept, d)
+		end
+	end
+	expect(min_out >= max_kept, ("the farthest border tiles go first (shed from %d, kept up to %d)"):format(min_out, max_kept))
+	local seconds = 1
+	while sim.o_tiles[aid] > cap_tiles and seconds < 2000 do
+		sim:_akatsuki_shed()
+		seconds += 1
+	end
+	expect(sim.o_tiles[aid] == cap_tiles, ("it sheds down to its cap, never below (%d s)"):format(seconds))
+	expect(owned(sim, aid, home) == home_n and owned(sim, aid, cell) == cell_n, "its home disk and its live cell stay whole")
+	local free = 0
+	for k = 0, map.land_count - 1 do
+		local lt = map:land_tile(k)
+		if readi32(sim.owner, lt * 4) == 0 and sim:claimable(lt) then
+			free += 1
+		end
+	end
+	expect(free > 0, "the shed land is ordinary unowned land")
+	-- the toast once per holder kill, only when above the cap
+	local h = place(sim, "Holder", Defs.KIND_NATION, c + 300, 3, 10)
+	table.clear(sim.d_ev)
+	sim:_akatsuki_abandons(h)
+	expect(#events_of(sim.d_ev, Ev.MSG) == 0, "at its cap: no abandon toast")
+	for k = 0, map.land_count - 1 do
+		if sim.o_tiles[aid] > cap_tiles + 100 then
+			break
+		end
+		local lt = map:land_tile(k)
+		if readi32(sim.owner, lt * 4) == 0 and sim:claimable(lt) then
+			sim:set_owner(lt, aid)
+		end
+	end
+	sim:_akatsuki_abandons(h)
+	expect(told(sim.d_ev, "The Akatsuki abandons Holder's lands."), "above it: The Akatsuki abandons Holder's lands.")
+	-- through the tick: it sheds once a second while on the map
+	local t0 = sim.o_tiles[aid]
+	for _ = 1, 20 do
+		sim:step()
+	end
+	expect(sim.o_tiles[aid] < t0, "the tick sheds")
+end
+
 -- ---------------------------------------------------------------------------------------------
 -- Cells: next to the priority target it does not border
 -- ---------------------------------------------------------------------------------------------
