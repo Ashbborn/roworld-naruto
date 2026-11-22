@@ -7,3 +7,4 @@ __pycache__/
 assets/audio/
 .claude/worktrees/
 src/server/Lobbies/Secret.luau
+.env
