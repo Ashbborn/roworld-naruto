@@ -383,6 +383,11 @@ function SimState.install(C: any)
 		self.o_shield_until = filled(MAXO, 0)
 		self.o_spawn_tile = filled(MAXO, -1)
 		self.o_killer = filled(MAXO, 0)
+		--- Tailed Beasts (Core/SimBeasts): the beast an owner is (its tails, 1..9; 0 = none), and the
+		--- troop cap / attack loss multipliers of the beasts an owner holds (1.0 = none).
+		self.o_beast = filled(MAXO, 0)
+		self.o_cap_mult = filled(MAXO, 1.0)
+		self.o_loss_mult = filled(MAXO, 1.0)
 		--- Owners whose conquest (Ev.CONQUEST, Sim._conquest_gold) was already announced.
 		self._conquest_sent = {} :: { [number]: boolean }
 		--- Structure counts: o_scount[id * STRUCT_KINDS + kind].
@@ -498,8 +503,10 @@ function SimState.install(C: any)
 		local vals = {}
 		local o_alive = self.o_alive
 		local o_tiles = self.o_tiles
+		local o_beast = self.o_beast
 		for id = 1, self.owner_total do
-			if o_alive[id] == 0 then
+			-- (a Tailed Beast is never one of the top owners)
+			if o_alive[id] == 0 or o_beast[id] ~= 0 then
 				continue
 			end
 			local v = o_tiles[id]
@@ -607,8 +614,10 @@ function SimState.install(C: any)
 		return string.format("%s just spawned: you can attack them in %d s", self.o_name[id], s)
 	end
 
+	--- `id`'s share of the land (Tailed Beasts' land is not counted in the total: SimBeasts.beast_land).
 	function C.land_share(self: any, id: number): number
-		return self.o_tiles[id] / math.max(self.map.contestable_count, 1)
+		local beasts = if self.beasts_on then self:beast_land() else 0
+		return self.o_tiles[id] / math.max(self.map.contestable_count - beasts, 1)
 	end
 
 	-- =========================================================================================

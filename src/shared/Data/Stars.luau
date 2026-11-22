@@ -168,6 +168,11 @@ local PHASE_PLAYING = Defs.PHASE_PLAYING
 local PHASE_OVER = Defs.PHASE_OVER
 local TICKS_PER_MINUTE = Defs.TICK_RATE * 60
 
+--- A Tailed Beast (Core/SimBeasts): never counted in the field or the placing.
+local function is_beast(sim: any, id: number): boolean
+	return sim.o_beast ~= nil and (sim.o_beast[id] or 0) ~= 0
+end
+
 function Tracker.new(sim: any)
 	local self = setmetatable({}, Tracker)
 	self.sim = sim
@@ -189,7 +194,7 @@ function Tracker._count(self: any)
 	self._counted = true
 	local n = 0
 	for id = 1, sim.owner_total do
-		if sim.o_kind[id] ~= KIND_TRIBE and sim.o_alive[id] == 1 and sim.o_spawned[id] == 1 then
+		if sim.o_kind[id] ~= KIND_TRIBE and sim.o_alive[id] == 1 and sim.o_spawned[id] == 1 and not is_beast(sim, id) then
 			n += 1
 		end
 	end
@@ -252,7 +257,8 @@ function Tracker.step(self: any, events: { { any } }?)
 	for _, e in events do
 		if e[1] == Ev.OWNER_OUT then
 			local id, killer = e[2], e[3]
-			if sim.o_kind[id] ~= KIND_TRIBE then
+			-- (a Tailed Beast is no seat: its fall is no place, nor a kill)
+			if sim.o_kind[id] ~= KIND_TRIBE and not is_beast(sim, id) then
 				local seat = self.seats[id]
 				if seat ~= nil and seat.out_tick == nil then
 					seat.out_tick = sim.tick
@@ -297,7 +303,13 @@ function Tracker.result(self: any, id: number, left: boolean?): Result
 		place = 1
 		local mine = sim.o_tiles[id] or 0
 		for o = 1, sim.owner_total do
-			if o ~= id and sim.o_kind[o] ~= KIND_TRIBE and sim.o_alive[o] == 1 and (sim.o_tiles[o] or 0) > mine then
+			if
+				o ~= id
+				and sim.o_kind[o] ~= KIND_TRIBE
+				and sim.o_alive[o] == 1
+				and not is_beast(sim, o)
+				and (sim.o_tiles[o] or 0) > mine
+			then
 				place += 1
 			end
 		end

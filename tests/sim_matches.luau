@@ -25,6 +25,8 @@ Protocol.set_codec({
 })
 
 local TICKS = tonumber(process.args[1]) or 400
+--- RW_BEASTS=1: the same matches with the Tailed Beasts on, on a fast schedule (all nine out ~22 s into play).
+local BEASTS = if process.env.RW_BEASTS then { first_s = 6, every_s = 2, warn_s = 1, rampage_s = 4 } else nil
 local fails = 0
 local function expect(c: any, w: string)
 	if c then
@@ -92,7 +94,7 @@ end
 --- One match; returns the sim, the mirror and the per-tick timing.
 local function run(map_id: string, seed: number, ticks: number, with_mirror: boolean): (any, any, number)
 	local map = WorldMap.get(map_id)
-	local sim = Sim.new(map, { seed = seed, difficulty = 1, max_humans = 1 })
+	local sim = Sim.new(map, { seed = seed, difficulty = 1, max_humans = 1, beasts = BEASTS })
 	local me = sim:add_human("tester", "Tester")
 	local gs = nil
 	if with_mirror then
@@ -302,12 +304,14 @@ for _, case in { { "pangaea", 11, TICKS }, { "world", 5, math.max(200, TICKS // 
 	local id, seed, ticks = case[1], case[2], case[3]
 	print(("%s: %d ticks"):format(id, ticks))
 	local sim, gs, ms = run(id, seed, ticks, true)
-	local alive, nations, tribes = 0, 0, 0
+	local alive, nations, tribes, beasts = 0, 0, 0, 0
 	for o = 1, sim.owner_total do
 		if sim.o_alive[o] == 1 then
 			alive += 1
 		end
-		if sim.o_kind[o] == Defs.KIND_NATION then
+		if sim.o_beast[o] ~= 0 then
+			beasts += 1
+		elseif sim.o_kind[o] == Defs.KIND_NATION then
 			nations += 1
 		elseif sim.o_kind[o] == Defs.KIND_TRIBE then
 			tribes += 1
@@ -328,10 +332,13 @@ for _, case in { { "pangaea", 11, TICKS }, { "world", 5, math.max(200, TICKS // 
 		)
 	)
 	expect(nations == #sim.map.nations and sim.nation_count == nations, id .. ": every manifest nation created")
+	if BEASTS ~= nil then
+		expect(beasts > 0, id .. ": RW_BEASTS: " .. beasts .. " Tailed Beasts emerged")
+	end
 	expect(tribes == Sim.default_tribes(sim.map) and tribes == 400, id .. ": 400 tribes (the default bots)")
 	local spawned_near = 0
 	for o = 1, sim.owner_total do
-		if sim.o_kind[o] == Defs.KIND_NATION then
+		if sim.o_kind[o] == Defs.KIND_NATION and sim.o_beast[o] == 0 then
 			local nd = sim.map.nations[o]
 			if
 				nd.tile >= 0

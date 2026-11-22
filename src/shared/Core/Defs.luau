@@ -34,6 +34,13 @@ Defs.KIND_NATION = 0
 Defs.KIND_TRIBE = 1
 Defs.KIND_HUMAN = 2
 
+-- Tailed Beasts (Core/SimBeasts): a beast's lifecycle
+Defs.BEAST_HIDDEN = 0 -- not yet stirring
+Defs.BEAST_STIRRING = 1 -- warned: emerges at its emerge tick
+Defs.BEAST_AWAKE = 2 -- on the map (an owner)
+Defs.BEAST_CAPTURED = 3 -- held by someone (its holder)
+Defs.BEAST_GONE = 4 -- out of the match
+
 -- Match phases
 Defs.PHASE_SPAWN = 0
 Defs.PHASE_PLAYING = 1

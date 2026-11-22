@@ -39,6 +39,7 @@ local RS = game:GetService("ReplicatedStorage")
 local Airfront = RS:WaitForChild("Airfront")
 local Defs = require(Airfront:WaitForChild("Core"):WaitForChild("Defs")) :: any
 local Rules = require(Airfront:WaitForChild("Core"):WaitForChild("Rules")) :: any
+local BeastsData = require(Airfront:WaitForChild("Data"):WaitForChild("Beasts")) :: any
 local Sprites = require(Airfront:WaitForChild("Assets"):WaitForChild("MapSprites")) :: any
 local WakeRoute = require(script.Parent:WaitForChild("WakeRoute")) :: any
 local TrailBudget = require(script.Parent:WaitForChild("TrailBudget")) :: any
@@ -459,6 +460,7 @@ function UnitLayer.tick(self: any, _dt: number)
 	local clock = FrameClock.now()
 	if still and self._drawn >= UnitLayer.THROTTLE_FROM then
 		local lively = self._selected >= 0
+			or UnitLayer.stirring(st)
 			or next(st.nukes) ~= nil
 			or next(st.shells) ~= nil
 			or next(st.sam_missiles) ~= nil
@@ -641,6 +643,7 @@ function UnitLayer.tick(self: any, _dt: number)
 		ring.BackgroundTransparency = 0.85
 		ring.Visible = true
 	end
+	self:_beast_rings(st, cam, rt, now, rings_seen)
 	for uid, r in self._rings do
 		if not rings_seen[uid] then
 			r:Destroy()
@@ -721,6 +724,65 @@ function UnitLayer.tick(self: any, _dt: number)
 end
 
 --- The warship or transport drawn nearest `pos` within `radius_px`, or -1.
+--- True while a Tailed Beast is stirring (Core/SimBeasts): its marker pulses.
+function UnitLayer.stirring(st: any): boolean
+	for _, b in st.beasts or {} do
+		if b.state == Defs.BEAST_STIRRING then
+			return true
+		end
+	end
+	return false
+end
+
+--- Where a Tailed Beast stirs: a ring as wide as the land it will seize, pulsing in its colour, with
+--- the seconds left until it emerges (rings keyed -tails beside the nukes' uids).
+function UnitLayer._beast_rings(self: any, st: any, cam: any, rt: number, now: number, seen: { [number]: boolean })
+	local k = tonumber(st.map and st.map.k_lin) or 1.0
+	local B = Rules.BEASTS
+	for tails, b in st.beasts or {} do
+		if b.state ~= Defs.BEAST_STIRRING or b.tile < 0 then
+			continue
+		end
+		local key = -tails
+		local ring = self._rings[key]
+		if ring == nil then
+			ring = self:_ring(self.root, "BeastStir", UnitLayer.Z - 2)
+			local l = Instance.new("TextLabel")
+			l.Name = "Count"
+			l.BackgroundTransparency = 1
+			l.AnchorPoint = Vector2.new(0.5, 0.5)
+			l.Position = UDim2.fromScale(0.5, 0.5)
+			l.Size = UDim2.fromOffset(80, 28)
+			l.Font = Enum.Font.GothamBlack
+			l.TextSize = 22
+			l.TextColor3 = Color3.new(1, 1, 1)
+			l.TextStrokeTransparency = 0.3
+			l.ZIndex = UnitLayer.Z - 1
+			l.Parent = ring
+			self._rings[key] = ring
+		end
+		seen[key] = true
+		local radius = (B.RADIUS_BASE + B.RADIUS_PER_TAIL * tails) / k
+		local rx, ry = cam:tile_to_screen(b.tile)
+		local d = math.max(24, radius * 2 * cam.scale)
+		ring.Size = UDim2.fromOffset(d, d)
+		ring.Position = UDim2.fromOffset(math.round(rx), math.round(ry))
+		local info = BeastsData.get(tails)
+		local c = if info ~= nil then Color3.fromHex(info.color) else Color3.new(1, 0.45, 0.1)
+		local stroke = ring:FindFirstChildOfClass("UIStroke") :: UIStroke
+		stroke.Color = c
+		stroke.Thickness = 3
+		stroke.Transparency = 0.1 + 0.4 * (0.5 + 0.5 * math.sin(now * 5))
+		ring.BackgroundColor3 = c
+		ring.BackgroundTransparency = 0.8 + 0.1 * math.sin(now * 5)
+		local lbl = ring:FindFirstChild("Count") :: TextLabel
+		if lbl ~= nil then
+			lbl.Text = tostring(math.max(0, math.ceil((b.emerge_tick - rt) / 10)))
+		end
+		ring.Visible = true
+	end
+end
+
 function UnitLayer.unit_at_screen(self: any, pos: Vector2, radius_px: number): number
 	local st = self._state
 	if st == nil then

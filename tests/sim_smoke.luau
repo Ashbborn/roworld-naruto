@@ -5,7 +5,9 @@ local Sim = require("../src/shared/Core/Sim")
 local ticks = tonumber(process.args[1]) or 300
 local map = WorldMap.get(process.args[2] or "world")
 local t0 = os.clock()
-local sim = Sim.new(map, { seed = 1, difficulty = 1, tribes = 80, max_humans = 0 })
+-- (RW_BEASTS=1: with the Tailed Beasts on a fast schedule, all nine out by tick 230)
+local beasts = if process.env.RW_BEASTS then { first_s = 7, every_s = 2, warn_s = 1, rampage_s = 4 } else nil
+local sim = Sim.new(map, { seed = 1, difficulty = 1, tribes = 80, max_humans = 0, beasts = beasts })
 print(("init %.0f ms owners %d"):format((os.clock() - t0) * 1000, sim:owner_count()))
 local ts = os.clock()
 for i = 1, ticks do
@@ -28,3 +30,13 @@ for i = 1, ticks do
 	end
 end
 print(("avg %.2f ms/tick"):format((os.clock() - ts) * 1000 / ticks))
+if beasts ~= nil then
+	local n = 0
+	for id = 1, sim.owner_total do
+		if sim.o_beast[id] ~= 0 then
+			n += 1
+		end
+	end
+	print(("beasts %d emerged"):format(n))
+	assert(n == 9, "RW_BEASTS: the nine beasts emerge")
+end

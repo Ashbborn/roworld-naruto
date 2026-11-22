@@ -71,6 +71,9 @@ local SIGNALS = {
 	"message", -- (to, category, text)
 	"phase_changed", -- (phase, ticks_left)
 	"game_over", -- (winner, reason)
+	"beast_stirring", -- (tails, tile, emerge_tick) a Tailed Beast will emerge there (Ev.BEAST_STIR)
+	"beast_awakened", -- (tails, owner_id, tile) it emerged (Ev.BEAST_AWAKE)
+	"beast_holder", -- (tails, holder, from) captured (from 0), stolen from `from`, or gone (holder 0)
 }
 GameState.SIGNAL_NAMES = SIGNALS
 
@@ -93,6 +96,8 @@ local function new_owner_info(id: number)
 		income = 0, -- gold per second
 		traitor_until = 0, -- tick
 		killer = 0,
+		--- the Tailed Beast this owner is (tails 1..9; 0 = none)
+		beast = 0,
 		-- sums of the owned tiles' x and y (territory centroid = (cx, cy) / tiles); cz unused (0)
 		cx = 0.0,
 		cy = 0.0,
@@ -158,6 +163,14 @@ export type NukeInfo = {
 	launch_tick: number,
 	flight_ticks: number,
 }
+export type BeastInfo = {
+	tails: number,
+	state: number,
+	tile: number,
+	emerge_tick: number,
+	id: number,
+	holder: number,
+}
 --- retreating: a retreat was ordered (the attack is frozen until its troops come home).
 export type AttackInfo = {
 	aid: number,
@@ -192,6 +205,9 @@ function GameState.new(world: any?)
 	self.playing_since = -1
 	--- MIRVs launched this match (the next MIRV costs Rules.nuke_cost("mirv", mirvs_launched)).
 	self.mirvs_launched = 0
+	--- Tailed Beasts by tails (1..9) once they stir: {tails, state (Defs.BEAST_*), tile, emerge_tick,
+	--- id (the beast's owner id once awake), holder (who holds it once captured)}.
+	self.beasts = {} :: { [number]: BeastInfo }
 	--- Shells in flight (Ev.SHELL), by shell id; removed at their impact tick (signal shell_impact).
 	self.shells = {} :: { [number]: ShellInfo }
 	--- SAM missiles in flight, by the uid of the nuke they chase; removed by that nuke's BOOM.
@@ -544,14 +560,16 @@ function GameState.land_share(self: GameState, id: number): number
 	if o == nil or self.map.contestable_count <= 0 then
 		return 0.0
 	end
-	return o.tiles / self.map.contestable_count
+	-- (Tailed Beasts' land is not counted in the total, as in the Sim)
+	return o.tiles / math.max(self.map.contestable_count - self:beast_land(), 1)
 end
 
 --- Alive owners holding land, sorted by territory, largest first (ties: lower id first).
 function GameState.ranking(self: GameState): { OwnerInfo }
 	local list = {}
 	for _, o in self.owners do
-		if o.alive and o.tiles > 0 then
+		-- (a Tailed Beast is never ranked)
+		if o.alive and o.tiles > 0 and (o.beast or 0) == 0 then
 			table.insert(list, o)
 		end
 	end
@@ -850,6 +868,7 @@ function GameState.load_snapshot(self: GameState, snap: { [string]: any })
 	clear(self.alliance_ext)
 	clear(self.requests)
 	clear(self._req_last)
+	clear(self.beasts)
 
 	local grid = snap.owner
 	if typeof(grid) == "buffer" and buffer.len(grid) == N * 4 then
@@ -894,6 +913,7 @@ function GameState.load_snapshot(self: GameState, snap: { [string]: any })
 		o.traitor_until = row[12]
 		o.spawn_tile = row[13]
 		o.spawned = o.spawn_tile >= 0
+		o.beast = tonumber(row[14]) or 0
 		self.owners[o.id] = o
 	end
 	self:_recount_tiles()
@@ -937,6 +957,19 @@ function GameState.load_snapshot(self: GameState, snap: { [string]: any })
 	for _, row in snap.requests or {} do
 		self.requests[row[1] * 1024 + row[2]] = row[3] or self.tick
 	end
+	for _, row in snap.beasts or {} do
+		local tails = tonumber(row[1]) or 0
+		if tails > 0 then
+			self.beasts[tails] = {
+				tails = tails,
+				state = tonumber(row[2]) or 0,
+				tile = tonumber(row[3]) or -1,
+				emerge_tick = tonumber(row[4]) or 0,
+				id = tonumber(row[5]) or 0,
+				holder = tonumber(row[6]) or 0,
+			}
+		end
+	end
 	self.loaded = true
 	self.snapshot_loaded:Fire()
 end
@@ -946,6 +979,19 @@ local HANDLERS: { [number]: (GameState, { any }) -> () } = {}
 --- Applies one Sim.step() delta table {t, tiles, flags, stats?, ev}. Fires the signals.
 function GameState.apply_delta(self: GameState, delta: { [string]: any })
 	self.tick = delta.t or (self.tick + 1)
+	-- An owner created this tick may already hold land in it (a Tailed Beast seizes its land as it
+	-- appears): new owners first, so the tiles count for them. (Their OWNER_ADD is not applied twice.)
+	local evs = delta.ev
+	local early: { [number]: boolean }? = nil
+	if evs ~= nil then
+		for i, e in evs do
+			if e[1] == Ev.OWNER_ADD and self.owners[e[2]] == nil then
+				HANDLERS[Ev.OWNER_ADD](self, e)
+				early = early or {}
+				;(early :: any)[i] = true
+			end
+		end
+	end
 	local tiles = delta.tiles
 	if tiles ~= nil and #tiles > 0 then
 		self.tiles_changed:Fire(tiles, self:_apply_tiles(tiles))
@@ -971,11 +1017,10 @@ function GameState.apply_delta(self: GameState, delta: { [string]: any })
 		self:_apply_stats(stats)
 	end
 	table.clear(self._removed_now)
-	local evs = delta.ev
 	if evs ~= nil then
-		for _, e in evs do
+		for i, e in evs do
 			local h = HANDLERS[e[1]]
-			if h ~= nil then
+			if h ~= nil and not (early ~= nil and early[i]) then
 				h(self, e)
 			end
 		end
@@ -1079,6 +1124,10 @@ HANDLERS[Ev.OWNER_ADD] = function(self, e)
 	o.color = Defs.color_from_int(e[4])
 	o.kind = e[5]
 	o.team = tonumber(e[6]) or 0
+	-- (a beast's first OWNER_ADD carries its tails; re-sends without it keep the flag)
+	if e[7] ~= nil then
+		o.beast = tonumber(e[7]) or 0
+	end
 	o.alive = true -- a re-sent OWNER_ADD also revives an owner (join → leave → join)
 	self.owner_added:Fire(o.id)
 end
@@ -1090,6 +1139,78 @@ HANDLERS[Ev.OWNER_OUT] = function(self, e)
 		o.killer = e[3]
 	end
 	self.owner_eliminated:Fire(e[2], e[3])
+end
+
+-- Tailed Beasts (Core/SimBeasts)
+local function beast_info(self: any, tails: number): BeastInfo
+	local b = self.beasts[tails]
+	if b == nil then
+		b = { tails = tails, state = Defs.BEAST_HIDDEN, tile = -1, emerge_tick = 0, id = 0, holder = 0 }
+		self.beasts[tails] = b
+	end
+	return b
+end
+
+HANDLERS[Ev.BEAST_STIR] = function(self, e)
+	local b = beast_info(self, e[2])
+	b.state = Defs.BEAST_STIRRING
+	b.tile = e[3]
+	b.emerge_tick = e[4]
+	self.beast_stirring:Fire(e[2], e[3], e[4])
+end
+
+HANDLERS[Ev.BEAST_AWAKE] = function(self, e)
+	local b = beast_info(self, e[2])
+	b.state = Defs.BEAST_AWAKE
+	b.id = e[3]
+	b.tile = e[4]
+	local o = self.owners[e[3]]
+	if o ~= nil then
+		o.beast = e[2]
+	end
+	self.beast_awakened:Fire(e[2], e[3], e[4])
+end
+
+HANDLERS[Ev.BEAST_HOLDER] = function(self, e)
+	local b = beast_info(self, e[2])
+	local holder = tonumber(e[3]) or 0
+	b.holder = holder
+	b.state = if holder > 0 then Defs.BEAST_CAPTURED else Defs.BEAST_GONE
+	self.beast_holder:Fire(e[2], holder, tonumber(e[4]) or 0)
+end
+
+--- Land held by awake Tailed Beasts (left out of the land total shares and victory count against).
+function GameState.beast_land(self: GameState): number
+	local n = 0
+	for _, b in self.beasts do
+		if b.state == Defs.BEAST_AWAKE then
+			local o = self.owners[b.id]
+			if o ~= nil and o.alive then
+				n += o.tiles
+			end
+		end
+	end
+	return n
+end
+
+--- True when owner `id` is a Tailed Beast.
+function GameState.is_beast(self: GameState, id: number): boolean
+	local o = self.owners[id]
+	return o ~= nil and (o.beast or 0) > 0
+end
+
+--- The tails of the beasts owner `id` holds, ascending.
+function GameState.beasts_of(self: GameState, id: number): { number }
+	local out = {}
+	if id > 0 then
+		for t = 1, 9 do
+			local b = self.beasts[t]
+			if b ~= nil and b.state == Defs.BEAST_CAPTURED and b.holder == id then
+				table.insert(out, t)
+			end
+		end
+	end
+	return out
 end
 
 HANDLERS[Ev.CONQUEST] = function(self, e)

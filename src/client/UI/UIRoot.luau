@@ -378,7 +378,7 @@ function UIRoot.start_tutorial(self)
 	ctx:session_call("start_solo", {
 		TutorialData.DIFFICULTY,
 		UIMaps.DEFAULT_ID,
-		{ tribes = TutorialData.TRIBES, countdown_ticks = TutorialData.COUNTDOWN_TICKS },
+		{ tribes = TutorialData.TRIBES, countdown_ticks = TutorialData.COUNTDOWN_TICKS, beasts = false },
 	})
 end
 
@@ -1830,6 +1830,13 @@ function UIRoot._bind_state(self, s: any)
 	end)
 	c("game_over", function(winner, reason)
 		adv:on_game_over(winner, reason)
+	end)
+	c("beast_awakened", function(tails, id, _tile)
+		adv:on_beast_awakened(tails, id)
+	end)
+	c("beast_holder", function(tails, holder, from)
+		adv:on_beast_holder(tails, holder, from)
+		self.top:refresh()
 	end)
 	c("owner_spawned", function(id, tile)
 		self:_on_owner_spawned(id, tile)
