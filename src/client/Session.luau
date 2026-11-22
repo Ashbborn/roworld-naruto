@@ -659,7 +659,7 @@ function Session.can_take_over(self: any, target: number): boolean
 		and o ~= nil
 		and o.alive
 		and o.kind == 0 -- Defs.KIND_NATION: never a tribe or a (bot) player
-		and (o.beast or 0) == 0 -- never a Tailed Beast
+		and (o.special or 0) == 0 and (o.beast or 0) == 0 -- never a Tailed Beast or the Akatsuki
 		and (o.tiles or 0) > 0
 		and st.phase == 1 -- Defs.PHASE_PLAYING
 end

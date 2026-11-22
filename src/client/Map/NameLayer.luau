@@ -533,7 +533,7 @@ function NameLayer.crown_of(st: any): number
 	for id, o in st.owners do
 		local t = o.tiles or 0
 		-- (never a Tailed Beast)
-		if o.alive and t > 0 and (o.beast or 0) == 0 and (t > bt or (t == bt and id < best)) then
+		if o.alive and t > 0 and (o.special or 0) == 0 and (o.beast or 0) == 0 and (t > bt or (t == bt and id < best)) then
 			best, bt = id, t
 		end
 	end
