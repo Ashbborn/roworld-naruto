@@ -14,12 +14,13 @@
 -- dashboard when the build that offers it goes to prod.
 local IS_ROBLOX = typeof(game) == "Instance"
 local Staging: any = if IS_ROBLOX then require((script :: any).Parent.Staging) else (require :: any)("./Staging")
+local Brand: any = if IS_ROBLOX then require((script :: any).Parent.Brand) else (require :: any)("./Brand")
 
 local Subscription = {}
 
 Subscription.ID = "EXP-6347955979564483083"
 Subscription.STAGING = "EXP-287838471589069369"
-Subscription.NAME = "RoWorld General"
+Subscription.NAME = Brand.NAME .. " General"
 --- The price set on the dashboard (Robux a month); the interface shows Roblox's own.
 Subscription.ROBUX = 399
 Subscription.DAILY_STARS = 2500
