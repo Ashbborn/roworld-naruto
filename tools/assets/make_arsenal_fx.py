@@ -5,28 +5,33 @@ the other items, in place of the pixel circles.
 Drawn here, cartoon style to sit on the map's flat pastel lands: puffs cel-shaded in three tones under a
 light from the top left, a bold dark outline round the outside and thin seams inside.
 
+(2026-11-23: the Naruto world's pieces, hand-made SVG in tools/assets/arsenal_svg.py FX / FX_FLIP, in place of
+RoWorld's mushroom cloud, missiles, bombs, tracers, reticle and parachutes.)
+
   assets/arsenal/fx/explosion.png  a fireball, 8 frames of 128 px in a row: the flash, the fireball
                                    (white-hot heart, orange, red edge), cooling into grey smoke that
                                    thins out
-  assets/arsenal/fx/mushroom.png   a nuclear mushroom cloud, 8 frames of 256 px, 4 x 2: a fireball on
-                                   the ground that rises on a stem into a cap glowing orange underneath,
-                                   over a skirt of dust
   assets/arsenal/fx/ring.png       a shockwave: a soft white ring (tinted in the game)
   assets/arsenal/fx/glow.png       a soft round glow (white)
   assets/arsenal/fx/smoke.png      a smoke puff for trails (light grey, shaded)
   assets/arsenal/fx/spark.png      a four-point sparkle (white)
   assets/arsenal/fx/beam.png       a beam's cross-section: a white core in a glow, stretched along
   assets/arsenal/fx/scorch.png     a scorch mark: a dark ragged blot with streaks (tinted)
-  assets/arsenal/fx/tracer.png     a glowing streak, head on the right (an artillery shell in flight)
-  assets/arsenal/fx/bomb.png       an air-dropped bomb, nose right
-  assets/arsenal/fx/warhead.png    a MIRV warhead, nose right, its engine glowing
-  assets/arsenal/fx/reticle.png    a target reticle (white, tinted red)
-  assets/arsenal/fx/chute.png      a parachute's canopy with its lines
+ SVG:
+  bloom      the Grand Explosion Seal's blast, 8 frames of 256 px, 4 x 2 (the ground 86 % down): a seal
+             array flaring on the ground, a column of chakra fire blooming out of it, burning down to smoke
+  hawk       a messenger hawk from above heading right, 4 frames of 128 px: its wingbeat
+  hands      two hands forming seals, 3 frames of 128 px
+  tag        a paper bomb in flight, burning end right       kunai   a kunai, point right
+  scroll     a rolled scroll, burning end right               poof    a clone's burst of smoke
+  ninja      a ninja standing; ninja_run, running right       sealring  a vermilion sealing array
+  orb        a chakra orb                                     shrine  a Seal Shrine
+  roost      a Hawk Roost                                     village an enemy village (the target)
 
 --upload sends them through tools/upload.py (STUDIO_ID / STUDIO_MATCH pick the Studio window that
 uploads) and writes src/shared/Assets/ArsenalFx.luau. A contact sheet: build/arsenal_fx_sheet.png.
 
-Usage: .venv/bin/python tools/assets/make_arsenal_fx.py [--upload]
+Usage: python tools/assets/make_arsenal_fx.py [--upload]
 """
 import argparse
 import math
@@ -35,6 +40,9 @@ import sys
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
+
+sys.path.insert(0, os.path.dirname(__file__))
+import arsenal_svg as A  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.join(ROOT, "assets", "arsenal", "fx")
@@ -249,73 +257,6 @@ def explosion_frame(f, n=8, px=128):
 # The mushroom cloud: 8 frames, 256 px, 4 x 2
 # ---------------------------------------------------------------------------------------------
 
-def mushroom_frame(f, n=8, px=256):
-    L = Layer(px, px)
-    t = f / (n - 1)
-    cx = px / 2
-    ground = px * 0.86
-    R = rng(11 + 0)
-    puffs = []
-    # the dust skirt: two rows of flat overlapping puffs along the ground, spreading
-    sk = px * (0.14 + 0.26 * min(1.0, t * 1.4))
-    grow = 0.75 + 0.35 * min(1.0, t * 2)
-    dust = ramp([DUST, DUST, SMOKE], 0.2 + 0.6 * t)
-    back, front = [], []
-    for i in range(7):
-        u = (i / 6) * 2 - 1
-        r = px * R.uniform(0.05, 0.075) * (1.1 - 0.35 * abs(u)) * grow
-        back.append((cx + u * sk * 0.92 + R.uniform(-3, 3), ground - px * 0.035 - (1 - abs(u)) * px * 0.02, r))
-    for i in range(6):
-        u = ((i + 0.5) / 6) * 2 - 1
-        r = px * R.uniform(0.055, 0.08) * (1.15 - 0.35 * abs(u)) * grow
-        front.append((cx + u * sk + R.uniform(-3, 3), ground - r * 0.25, r))
-    # the stem: a column from the ground up to the cap, thinner up top
-    top = ground - px * (0.12 + 0.5 * (1 - (1 - min(1.0, t * 1.15)) ** 2))
-    stem = ramp(HEAT, min(1.0, 0.3 + 0.8 * t))
-    stem_hw = px * (0.026 + 0.012 * min(1, t * 2))
-    # the cap: a wide ring of puffs, glowing underneath, grey on top
-    cap_w = px * (0.12 + 0.24 * min(1.0, t * 1.2))
-    cap_h = cap_w * 0.42
-    cy = top - cap_h * 0.15
-    k = 12
-    for i in range(k):
-        a = i / k * math.tau
-        x = cx + math.cos(a) * cap_w * 0.78
-        y = cy + math.sin(a) * cap_h * 0.55
-        r = cap_w * R.uniform(0.3, 0.38)
-        under = math.sin(a) * 0.5 + 0.5  # 1 at the bottom of the ring
-        heat = min(1.0, 0.25 + 0.75 * t + 0.3 * (1 - under) - 0.35 * under * (1 - t * 0.6))
-        puffs.append((y, x, y, r, ramp(HEAT, heat)))
-    # the cap's dome on top
-    for i in range(5):
-        u = (i / 4) * 2 - 1
-        x = cx + u * cap_w * 0.5
-        y = cy - cap_h * (0.55 - 0.25 * u * u)
-        r = cap_w * R.uniform(0.32, 0.4)
-        heat = min(1.0, 0.45 + 0.7 * t)
-        puffs.append((y - 50, x, y, r, ramp(HEAT, heat)))
-    # its hot heart, early
-    if t < 0.6:
-        puffs.append((cy + 2000, cx, cy + cap_h * 0.1, cap_w * 0.42 * (1 - t), FIRE_HOT if t < 0.3 else FIRE))
-    if f == 0:
-        # a fireball on the ground, no cloud yet
-        puffs = [(0, cx + dx * px, ground - px * 0.08 + dy * px, r * px, tones) for dx, dy, r, tones in
-                 [(-0.06, 0.0, 0.09, FIRE), (0.06, 0.0, 0.09, FIRE), (0.0, -0.05, 0.1, FIRE_HOT), (0.0, 0.02, 0.07, FIRE_HOT)]]
-        puffs_paint(L, [(x, y, r, tones) for _, x, y, r, tones in puffs], outline=2.6)
-        return L.image(px, px)
-    # back to front: the far dust, the stem, the near dust, the cap
-    puffs_paint(L, [(x, y, r, dust, 0.62) for x, y, r in back], outline=2.2)
-    column_paint(L, cx, top, ground - px * 0.02, stem_hw, stem_hw * 2.4, stem, outline=2.4, wobble=px * 0.006, phase=t * 3)
-    puffs_paint(L, [(x, y + r * 0.2, r * 1.15, dust, 0.6) for x, y, r in front], outline=2.2)
-    puffs.sort(key=lambda p: p[0])
-    puffs_paint(L, [(x, y, r, tones) for _, x, y, r, tones in puffs], outline=2.6)
-    return L.image(px, px)
-
-
-# ---------------------------------------------------------------------------------------------
-# Single images
-# ---------------------------------------------------------------------------------------------
-
 def radial(px, fn):
     ys, xs = np.mgrid[0:px, 0:px].astype(np.float32)
     r = np.hypot(xs + 0.5 - px / 2, ys + 0.5 - px / 2) / (px / 2)
@@ -387,89 +328,10 @@ def scorch_img(px=128):
     return Image.fromarray(rgba.astype(np.uint8), "RGBA")
 
 
-def tracer_img(w=96, h=24):
-    xs = (np.arange(w, dtype=np.float32) + 0.5) / w
-    ys = (np.arange(h, dtype=np.float32) + 0.5 - h / 2) / (h / 2)
-    X, Y = np.meshgrid(xs, ys)
-    width = 0.15 + 0.85 * X ** 1.5
-    a = np.exp(-(Y / (0.55 * width)) ** 2) * X ** 1.3
-    head = np.exp(-(((X - 0.9) / 0.08) ** 2 + (Y / 0.45) ** 2))
-    a = np.clip(a + head, 0, 1)
-    rgba = np.zeros((h, w, 4), np.float32)
-    rgba[..., 0] = 255
-    rgba[..., 1] = 210 + 45 * head
-    rgba[..., 2] = 120 + 135 * head
-    rgba[..., 3] = a * 255
-    return Image.fromarray(np.clip(rgba, 0, 255).astype(np.uint8), "RGBA")
-
-
 def draw_img(px, fn):
     img = Image.new("RGBA", (px * SS, px * SS), (0, 0, 0, 0))
     fn(ImageDraw.Draw(img), px * SS / 64.0, img)
     return img.resize((px, px), Image.LANCZOS)
-
-
-def bomb_img(px=64):
-    def f(d, k, img):
-        dark, mid, hi, ink = (58, 66, 60), (92, 104, 92), (150, 164, 146), (24, 26, 26)
-        # fins at the back (left)
-        d.polygon([(10 * k, 18 * k), (22 * k, 28 * k), (22 * k, 36 * k), (10 * k, 46 * k), (14 * k, 32 * k)], fill=ink)
-        d.polygon([(12 * k, 21 * k), (21 * k, 29 * k), (21 * k, 35 * k), (12 * k, 43 * k), (15 * k, 32 * k)], fill=mid)
-        # the body
-        d.ellipse([16 * k, 21 * k, 58 * k, 43 * k], fill=ink)
-        d.ellipse([18 * k, 23 * k, 56 * k, 41 * k], fill=mid)
-        d.ellipse([20 * k, 25 * k, 52 * k, 33 * k], fill=hi)
-        d.ellipse([22 * k, 34 * k, 54 * k, 40 * k], fill=dark)
-        # a yellow band
-        d.rectangle([30 * k, 23 * k, 33 * k, 41 * k], fill=(232, 190, 40))
-    return draw_img(px, f)
-
-
-def warhead_img(px=64):
-    def f(d, k, img):
-        ink = (30, 20, 24)
-        # the engine's flame (behind, on the left)
-        flame = Image.new("RGBA", img.size, (0, 0, 0, 0))
-        fd = ImageDraw.Draw(flame)
-        fd.polygon([(2 * k, 32 * k), (20 * k, 24 * k), (20 * k, 40 * k)], fill=(255, 150, 40, 230))
-        fd.polygon([(9 * k, 32 * k), (20 * k, 28 * k), (20 * k, 36 * k)], fill=(255, 240, 170, 255))
-        img.alpha_composite(flame.filter(ImageFilter.GaussianBlur(k * 1.2)))
-        # the cone, nose right
-        d.polygon([(18 * k, 22 * k), (44 * k, 24 * k), (62 * k, 32 * k), (44 * k, 40 * k), (18 * k, 42 * k)], fill=ink)
-        d.polygon([(20 * k, 24.5 * k), (44 * k, 26 * k), (58 * k, 32 * k), (44 * k, 38 * k), (20 * k, 39.5 * k)], fill=(206, 62, 50))
-        d.polygon([(20 * k, 24.5 * k), (44 * k, 26 * k), (58 * k, 32 * k), (20 * k, 30 * k)], fill=(246, 116, 92))
-        d.rectangle([24 * k, 24 * k, 28 * k, 40 * k], fill=(40, 30, 34))
-    return draw_img(px, f)
-
-
-def reticle_img(px=128):
-    def f(d, k, img):
-        c, w = 32 * k, int(3.2 * k)
-        d.ellipse([c - 22 * k, c - 22 * k, c + 22 * k, c + 22 * k], outline=(255, 255, 255, 255), width=w)
-        d.ellipse([c - 3 * k, c - 3 * k, c + 3 * k, c + 3 * k], fill=(255, 255, 255, 255))
-        for a in range(4):
-            ang = a * math.pi / 2
-            x0, y0 = c + math.cos(ang) * 14 * k, c + math.sin(ang) * 14 * k
-            x1, y1 = c + math.cos(ang) * 30 * k, c + math.sin(ang) * 30 * k
-            d.line([(x0, y0), (x1, y1)], fill=(255, 255, 255, 255), width=w)
-    return draw_img(px, f)
-
-
-def chute_img(px=128):
-    def f(d, k, img):
-        ink = (40, 44, 34)
-        # lines from the canopy's rim to a point below
-        for x in (8, 20, 32, 44, 56):
-            d.line([(x * k, 28 * k), (32 * k, 58 * k)], fill=(70, 70, 60, 255), width=int(1.2 * k))
-        # the canopy: a dome with stripes
-        d.pieslice([4 * k, 6 * k, 60 * k, 50 * k], 180, 360, fill=ink)
-        d.pieslice([6 * k, 8 * k, 58 * k, 48 * k], 180, 360, fill=(120, 140, 92))
-        for i, x0 in enumerate((6, 19, 32, 45)):
-            if i % 2 == 0:
-                d.polygon([(x0 * k, 28 * k), ((x0 + 13) * k, 28 * k), (32 * k, 8 * k)], fill=(150, 170, 112))
-        d.pieslice([6 * k, 8 * k, 58 * k, 48 * k], 200, 250, fill=(182, 200, 140))
-        d.rectangle([4 * k, 27 * k, 60 * k, 30 * k], fill=ink)
-    return draw_img(px, f)
 
 
 def sheet(frames, cols):
@@ -481,71 +343,123 @@ def sheet(frames, cols):
     return s
 
 
-IMAGES = ["explosion", "mushroom", "ring", "glow", "smoke", "spark", "beam", "scorch", "tracer", "bomb", "warhead",
-          "reticle", "chute"]
+# the drawn effects (kept from RoWorld: generic fire, smoke and light), then the Naruto world's sprites
+# (tools/assets/arsenal_svg.py FX, FX_FLIP)
+IMAGES = ["ring", "glow", "smoke", "spark", "beam", "scorch"]
+FLIPS = {"explosion": (128, 8, 8)}
+# the in-game sizes of the sprites (of the preview's height: UI/ArsenalDemo), for the contact sheet
+# (wide ones by their width: "w")
+SHEET_W = {"tag": 0.3, "kunai": 0.28, "scroll": 0.4}
+SHEET_K = { "poof": 0.42, "ninja": 0.3, "ninja_run": 0.3, "sealring": 0.5,
+           "orb": 0.3, "shrine": 0.34, "roost": 0.36, "village": 0.36, "hawk": 0.36, "hands": 0.3, "bloom": 0.92,
+           "explosion": 0.4}
+
+
+def svg_fx():
+    """{key: image} for the SVG sprites and flipbooks."""
+    out = {}
+    for k, fn in A.FX.items():
+        art = fn()
+        px = A.FX_PX[k]
+        out[k] = art.png(px_w=px) if art.w >= art.h else art.png(px_h=px)
+    for k, (cell, n, cols, fn) in A.FX_FLIP.items():
+        out[k] = sheet([fn(i).png(cell, cell) for i in range(n)], cols)
+    return out
 
 
 def make():
     os.makedirs(OUT, exist_ok=True)
     out = {
         "explosion": sheet([explosion_frame(i) for i in range(8)], 8),
-        "mushroom": sheet([mushroom_frame(i) for i in range(8)], 4),
         "ring": ring_img(),
         "glow": glow_img(),
         "smoke": smoke_img(),
         "spark": spark_img(),
         "beam": beam_img(),
         "scorch": scorch_img(),
-        "tracer": tracer_img(),
-        "bomb": bomb_img(),
-        "warhead": warhead_img(),
-        "reticle": reticle_img(),
-        "chute": chute_img(),
     }
+    out.update(svg_fx())
     for n, img in out.items():
         img.save(os.path.join(OUT, n + ".png"))
-    # a contact sheet on a map-coloured ground (the lands' green and lavender)
-    W = 1100
-    cs = Image.new("RGBA", (W, 1160), (128, 204, 132, 255))
-    ImageDraw.Draw(cs).rectangle([0, 0, W // 2, 1160], fill=(196, 160, 226, 255))
-    cs.alpha_composite(out["explosion"], (20, 20))
-    cs.alpha_composite(out["mushroom"], (20, 170))
-    x, y, row_h = 20, 720, 0
-    for n in IMAGES[2:]:
-        img = out[n]
-        tint = {"ring": (255, 255, 255), "scorch": (40, 30, 30), "glow": (255, 200, 120), "reticle": (255, 80, 80)}.get(n)
-        if tint is not None:
-            arr = np.asarray(img).astype(np.float32)
-            arr[..., :3] = arr[..., :3] * np.array(tint) / 255.0
-            img = Image.fromarray(arr.astype(np.uint8), "RGBA")
-        if x + img.size[0] > W - 20:
-            x, y = 20, y + row_h + 12
-            row_h = 0
-        cs.alpha_composite(img, (x, y))
-        x += img.size[0] + 12
-        row_h = max(row_h, img.size[1])
+    contact(out)
+    return out
+
+
+def first_cell(key, img):
+    fl = FLIPS.get(key) or (A.FX_FLIP[key][:3] if key in A.FX_FLIP else None)
+    if fl is None:
+        return [img]
+    cell, n, cols = fl
+    return [img.crop(((i % cols) * cell, (i // cols) * cell, (i % cols + 1) * cell, (i // cols + 1) * cell))
+            for i in range(n)]
+
+
+def contact(out):
+    """build/arsenal_fx_sheet.png: every sprite big on the panel's dark ground, then at its size in the
+    preview on desktop (228 px tall) and on a phone (140 px) over the map's lands."""
+    keys = list(A.FX) + list(A.FX_FLIP) + ["explosion"]
+    W = 1500
+    cs = Image.new("RGBA", (W, 1500), (18, 22, 38, 255))
+    x, y, row_h = 10, 10, 0
+    for k in keys:
+        for c in first_cell(k, out[k]):
+            im = c.copy()
+            im.thumbnail((180, 180))
+            if x + im.size[0] > W - 10:
+                x, y, row_h = 10, y + row_h + 10, 0
+            cs.alpha_composite(im, (x, y))
+            x += im.size[0] + 10
+            row_h = max(row_h, im.size[1])
+    y += row_h + 20
+    # the lands: the player's (lavender over plains) left, a nation's (red over plains) right
+    for H in (228, 140):
+        band_h = H + 20
+        d = ImageDraw.Draw(cs)
+        d.rectangle([0, y, W // 2, y + band_h], fill=(196, 178, 196, 255))
+        d.rectangle([W // 2, y, W, y + band_h], fill=(208, 156, 120, 255))
+        x = 10
+        for k in keys:
+            cells = first_cell(k, out[k])
+            for c in (cells if k in ("hawk", "hands") else cells[:1] if k != "bloom" else cells[1:7:2]):
+                if k in SHEET_W:
+                    wpx = round(H * SHEET_W[k])
+                    hpx = max(1, round(c.size[1] * wpx / c.size[0]))
+                else:
+                    hpx = max(4, round(H * SHEET_K.get(k, 0.3)))
+                    wpx = max(1, round(c.size[0] * hpx / c.size[1]))
+                im = c.resize((wpx, hpx), Image.LANCZOS)
+                if x + im.size[0] > W - 10:
+                    break
+                cs.alpha_composite(im, (x, y + band_h - im.size[1] - 6))
+                x += im.size[0] + 8
+        y += band_h + 10
+    cs = cs.crop((0, 0, W, y))
     path = os.path.join(ROOT, "build", "arsenal_fx_sheet.png")
     cs.save(path)
-    return out
+    return path
 
 
 def upload():
     sys.path.insert(0, os.path.join(ROOT, "tools"))
     import upload as up
-    paths = {n: os.path.join(OUT, n + ".png") for n in IMAGES}
+    flips = dict(FLIPS)
+    flips.update({k: v[:3] for k, v in A.FX_FLIP.items()})
+    names = list(flips) + IMAGES + list(A.FX)
+    paths = {n: os.path.join(OUT, n + ".png") for n in names}
     ids = up.upload_images(list(paths.values()))
-    size = {n: Image.open(p).size for n, p in paths.items()}
-    L = ["-- GENERATED by tools/assets/make_arsenal_fx.py — do not edit by hand.",
-         "-- Effects for the Arsenal's shop previews (UI/ArsenalDemo): flipbooks { id, cell, frames, cols } and",
-         "-- single images { id, w, h }.",
-         "return {",
-         f'\texplosion = {{ id = "{ids[paths["explosion"]]}", cell = 128, frames = 8, cols = 8 }},',
-         f'\tmushroom = {{ id = "{ids[paths["mushroom"]]}", cell = 256, frames = 8, cols = 4 }},']
-    for n in IMAGES[2:]:
-        w, h = size[n]
-        L.append(f'\t{n} = {{ id = "{ids[paths[n]]}", w = {w}, h = {h} }},')
+    L = ["-- GENERATED by tools/assets/make_arsenal_fx.py - do not edit by hand.",
+         "-- Effects and sprites for the Arsenal's shop previews (UI/ArsenalDemo): flipbooks",
+         "-- { id, cell, frames, cols } and single images { id, w, h }.",
+         "return {"]
+    for n in names:
+        if n in flips:
+            cell, fr, cols = flips[n]
+            L.append(f'\t{n} = {{ id = "{ids[paths[n]]}", cell = {cell}, frames = {fr}, cols = {cols} }},')
+        else:
+            w, h = Image.open(paths[n]).size
+            L.append(f'\t{n} = {{ id = "{ids[paths[n]]}", w = {w}, h = {h} }},')
     L.append("}")
-    with open(MANIFEST, "w") as f:
+    with open(MANIFEST, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(L) + "\n")
     print("manifest ->", os.path.relpath(MANIFEST, ROOT))
 

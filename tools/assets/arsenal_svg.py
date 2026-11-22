@@ -661,7 +661,7 @@ def hand_sign(a, cx, cy, s=1.0, sign=0):
         sl = a.solid(PG([(dx * 6, 34), (dx * 40, 30), (dx * 44, 74), (dx * 2, 74)]), CLOTH)
         a.shade(sl, PG([(dx * 26, 20), (dx * 60, 20), (dx * 60, 80), (dx * 26, 80)]), CLOTH_D)
         a.line(path_of([(dx * 6, 40), (dx * 40, 36)], False), "#565c80", 3)
-    if sign == 0:
+    if sign in (0, 2):
         # the backs of both hands, side by side
         for dx in (-1, 1):
             h = a.solid(P(f"M{dx * 2},38 L{dx * 34},36 Q{dx * 40},14 {dx * 32},-6 L{dx * 2},-8 Z"), SKIN)
@@ -675,8 +675,8 @@ def hand_sign(a, cx, cy, s=1.0, sign=0):
         # knuckle creases
         a.line("M-30,8 Q-16,12 -2,8 M2,8 Q16,12 30,8", SKIN_D, 1.6)
         a.line("M-30,20 Q-16,24 -2,20 M2,20 Q16,24 30,20", SKIN_D, 1.4)
-        # the thumbs, up side by side in front
-        for dx in (-1, 1):
+        # the thumbs, up side by side in front (2: crossed)
+        for dx in ((-1, 1) if sign == 0 else ()):
             th = a.solid(P(f"M{dx * 1},28 L{dx * 1},-4 Q{dx * 1},-14 {dx * 6.5},-14 Q{dx * 12},-14 {dx * 12},-4 "
                            f"L{dx * 12},28 Z"), SKIN)
             a.shade(th, R(dx * 6.5 if dx > 0 else -12, -20, 6, 50), SKIN_D)
@@ -690,6 +690,11 @@ def hand_sign(a, cx, cy, s=1.0, sign=0):
                 x0 = dx * (5 + k * 5)
                 a.line(f"M{f(x0)},{f(-44 + k * 4)} L{f(x0 + dx * 1)},{f(-14)}", SKIN_D, 1.3)
             a.solid(P(f"M{dx * 2},20 Q{dx * 6},-4 {dx * 2},-10 Q{dx * 12},-6 {dx * 14},14 Z"), SKIN)
+        if sign == 2:
+            for dx in (1, -1):
+                th = a.solid(P("M-7,-12 Q0,-18 7,-12 L7,24 L-7,24 Z", rot(0, 24, dx * 24)), SKIN)
+                a.shade(th, R(1, -20, 8, 50, 0, rot(0, 24, dx * 24)), SKIN_D)
+                a.flat(R(-3, -12, 6, 5, 2, rot(0, 24, dx * 24)), "#f8dcc0")
     else:
         # a fist, a flat hand laid across its top
         fi = a.solid(P("M-26,36 L-30,4 Q-28,-10 -12,-10 L14,-10 Q30,-10 30,4 L26,36 Z"), SKIN)
@@ -934,3 +939,250 @@ def mask_png(name, px):
     out = Image.new("RGBA", im.size, (255, 255, 255, 0))
     out.putalpha(im)
     return out
+
+
+# ---------------------------------------------------------------------------------------------------
+# The previews' sprites (UI/ArsenalDemo; Assets/ArsenalFx): singles {w, h} and flipbooks of square
+# cells. The thinner outline (ow) is for their small size on screen.
+# ---------------------------------------------------------------------------------------------------
+
+def fx_tag():
+    """A paper bomb in flight, its burning end to the right."""
+    a = Art(110, 44, ow=5, iw=1.4)
+    tag(a, 50, 22, 26, 76, 90, seed=40, ring=False)
+    sparks(a, 92, 22, 14)
+    return a
+
+
+def fx_kunai():
+    """A kunai in flight, point to the right."""
+    a = Art(110, 30, ow=4.5, iw=1.2)
+    kunai(a, 8, 15, 96, 0)
+    return a
+
+
+def fx_scroll():
+    """A rolled scroll tied with a vermilion band (the Scatter Seal before it opens), its burning end
+    to the right."""
+    a = Art(120, 52, ow=5, iw=1.4)
+    body = a.solid(R(18, 10, 74, 32, 6), PAPER)
+    a.shade(body, R(10, 28, 90, 20), PAPER_D)
+    for x in (12, 92):
+        a.solid(R(x, 6, 10, 40, 4), WOOD_D)
+    a.solid(R(48, 8, 12, 36, 2), VERM)
+    a.flat(R(48, 22, 12, 4), GOLD)
+    for x in (26, 70):
+        a.line(f"M{x},18 l8,0 M{x + 4},14 l0,12 M{x},30 l9,4", INK, 2.4)
+    sparks(a, 108, 26, 12)
+    return a
+
+
+def fx_poof():
+    """The smoke burst a shadow clone appears in."""
+    a = Art(128, 128, ow=5, iw=1.4)
+    # streaks bursting out
+    for i in range(8):
+        t = i / 8 * math.tau + 0.3
+        a.line(f"M{f(64 + math.cos(t) * 46)},{f(64 + math.sin(t) * 46)} L{f(64 + math.cos(t) * 60)},"
+               f"{f(64 + math.sin(t) * 60)}", WHITE, 5, outline=True)
+    a.stack()
+    puff_cloud(a, 64, 66, 52, seed=12, n=8)
+    return a
+
+
+def fx_ninja(run=0.0):
+    """One ninja (the clones), standing or running right."""
+    a = Art(70, 104, ow=5, iw=1.4)
+    if run:
+        a.tf = rot(35, 100, 10)
+    ninja(a, 38, 100, 96, run=run)
+    return a
+
+
+def fx_sealring():
+    """A sealing array in vermilion (the target a seal is aimed at): rings, marks and a star."""
+    a = Art(128, 128, ow=3, iw=1)
+    a.raw_under(f'<circle cx="64" cy="64" r="58" fill="{VERM}" fill-opacity="0.16"/>')
+    # (an ink edge under every stroke so it reads on any ground)
+    for st, col in ((10, INK), (0, VERM)):
+        b = Art(128, 128)
+        seal_circle(b, 64, 64, 54, color=col, width=4.6 + st * 0.0)
+        for it in b.stacks[0]:
+            _, d, c, w, o, cap, op, t, k = it
+            a.raw_over(f'<path d="{d}"{t} fill="none" stroke="{col}" stroke-width="{f(w + (3.2 if col == INK else 0))}" '
+                       f'stroke-linecap="round" stroke-linejoin="round" stroke-opacity="{0.85 if col == INK else 1}"/>')
+    return a
+
+
+def fx_orb():
+    """A chakra orb (charging, and the Chakra Cannon's shot)."""
+    a = Art(100, 100, ow=5, iw=1.4)
+    aura(a, 50, 50, 50, 50, BLUE_L, 0.8, gid="orbglow")
+    swirl(a, 50, 50, 30)
+    return a
+
+
+def fx_shrine():
+    """A Seal Shrine: a stone step, vermilion posts, a sweeping dark roof, a sealed door."""
+    a = Art(120, 112, ow=5, iw=1.5)
+    st = a.solid(R(14, 92, 92, 14, 3), STONE)
+    a.shade(st, R(10, 100, 100, 10), STONE_D)
+    a.solid(R(22, 84, 76, 10, 2), STONE)
+    body = a.solid(R(28, 46, 64, 40), PAPER)
+    a.shade(body, R(60, 40, 40, 50), PAPER_D)
+    for x in (24, 88):
+        p = a.solid(R(x, 44, 9, 42, 2), VERM)
+        a.shade(p, R(x + 5, 40, 6, 50), VERM_D)
+    # the door, sealed with a tag
+    a.solid(R(46, 56, 28, 30, 2), WOOD_D)
+    a.line("M60,56 L60,86", INK, 1.4)
+    a.stack()
+    tag(a, 60, 68, 12, 22, 0, seed=61, ring=False)
+    a.stack()
+    roof = a.solid(P("M2,46 Q30,40 40,22 L80,22 Q90,40 118,46 Q112,52 100,50 L20,50 Q8,52 2,46 Z"), CLOTH)
+    a.shade(roof, R(0, 40, 120, 14), CLOTH_D)
+    a.solid(R(36, 14, 48, 10, 3), CLOTH)
+    for x in (34, 86):
+        a.solid(C(x, 18, 5), GOLD)
+    a.line("M44,30 L76,30 M40,38 L80,38", "#3d4466", 2)
+    return a
+
+
+def fx_roost():
+    """A Hawk Roost: a lashed wooden tower with a little roof, a perch on top."""
+    a = Art(110, 124, ow=5, iw=1.5)
+    for x0, x1 in ((22, 38), (88, 72)):
+        lg = a.solid(PG([(x0 - 5, 120), (x0 + 5, 120), (x1 + 4, 40), (x1 - 4, 40)]), WOOD)
+        a.shade(lg, PG([(x0 + 1, 120), (x0 + 12, 120), (x1 + 12, 40), (x1 + 1, 40)]), WOOD_D)
+    for y in (70, 98):
+        a.solid(R(26 if y == 70 else 20, y, 58 if y == 70 else 70, 7, 2), WOOD_L)
+    a.line("M30,72 L82,100 M80,72 L28,100", WOOD_D, 3, outline=True)
+    # the hut on top
+    a.stack()
+    hut = a.solid(R(26, 28, 58, 18, 2), WOOD_L)
+    a.shade(hut, R(60, 24, 30, 30), WOOD)
+    a.solid(R(46, 32, 18, 14, 2), INK)
+    roof = a.solid(P("M14,30 Q34,22 40,10 L70,10 Q76,22 96,30 Z"), VERM)
+    a.shade(roof, R(10, 24, 90, 8), VERM_D)
+    a.solid(R(36, 6, 38, 6, 2), VERM_D)
+    # the perch and its banner
+    a.line("M55,6 L55,-2", WOOD_D, 3, outline=True)
+    return a
+
+
+def fx_village():
+    """An enemy village (the target): roofs round a water tower, its banner flying."""
+    a = Art(128, 112, ow=5, iw=1.5)
+    # the water tower behind
+    for x0, x1 in ((48, 56), (80, 72)):
+        a.solid(PG([(x0 - 3, 80), (x0 + 3, 80), (x1 + 2, 34), (x1 - 2, 34)]), WOOD_D)
+    tk = a.solid(R(46, 18, 36, 20, 4), WOOD)
+    a.shade(tk, R(66, 10, 30, 40), WOOD_D)
+    a.solid(P("M42,20 Q64,2 86,20 Z"), VERM)
+    a.stack()
+    houses = ((22, 70, 34, 30, "#3c8f8a"), (98, 72, 38, 28, VERM), (60, 84, 44, 26, "#3c8f8a"))
+    for cx, by, w, h, roof in houses:
+        a.stack()
+        wall = a.solid(R(cx - w / 2 + 3, by - h * 0.55, w - 6, h * 0.55 + 6), PAPER)
+        a.shade(wall, R(cx + w * 0.1, by - h, w, h * 2), PAPER_D)
+        a.solid(R(cx - 4, by - h * 0.3, 8, h * 0.3 + 6), WOOD_D)
+        r = a.solid(P(f"M{f(cx - w / 2 - 6)},{f(by - h * 0.5)} Q{f(cx)},{f(by - h * 1.25)} {f(cx + w / 2 + 6)},"
+                      f"{f(by - h * 0.5)} Z"), roof)
+        a.shade(r, R(cx, by - h * 1.4, w, h), INK, 0.25)
+    return a
+
+
+def fx_hawk(flap):
+    """The hawk in flight (seen from above, heading right): one cell of its flap."""
+    a = Art(128, 128, ow=5, iw=1.4)
+    hawk(a, 68, 64, s=0.62, flap=flap)
+    return a
+
+
+def fx_hands(sign):
+    a = Art(128, 128, ow=5, iw=1.4)
+    hand_sign(a, 64, 62, s=1.05, sign=sign)
+    return a
+
+
+def fx_bloom(fr, n=8):
+    """The Grand Explosion Seal's blast, frame `fr` of `n` (256 px cells, the ground 86 % down): a seal
+    array flares on the ground, a column of chakra fire blooms out of it, then burns down to smoke."""
+    a = Art(256, 256, ow=6, iw=1.6)
+    k = fr / (n - 1)
+    gx, gy = 128, 220
+    # the seal array on the ground, flattened (drawn for the first half)
+    if fr <= 4:
+        rr = 40 + 70 * min(1, k * 2.2)
+        b = Art(256, 256)
+        b.tf = f"translate({gx} {gy}) scale(1 0.34) translate({-gx} {-gy})"
+        seal_circle(b, gx, gy, rr, color=GOLD_L if fr < 2 else VERM_L, width=7)
+        for it in b.stacks[0]:
+            _, d, c, w, o, cap, op, t, kk = it
+            a.raw_under(f'<path d="{d}"{t} fill="none" stroke="{c}" stroke-width="{f(w)}" stroke-linecap="round" '
+                        f'stroke-opacity="{f(1 - fr / 6)}"/>')
+    if fr == 0:
+        aura(a, gx, gy - 30, 70, 60, GOLD_L, 0.9, gid="b0")
+        flame(a, gx, gy, 46, 60, seed=1)
+        return a
+    if fr <= 5:
+        grow = min(1.0, fr / 3)
+        hh = 70 + 140 * grow
+        ww = 70 + 70 * grow
+        aura(a, gx, gy - hh * 0.5, ww * 1.1, hh * 0.7, VERM_L, 0.7, gid=f"b{fr}")
+        # side tongues, then the column, then a crown of tongues at its top
+        for i, (dx, s_h, s_w) in enumerate(((-0.6, 0.55, 0.5), (0.62, 0.6, 0.5), (-0.3, 0.8, 0.55), (0.32, 0.78, 0.55))):
+            flame(a, gx + dx * ww, gy, ww * s_w, hh * s_h, seed=fr * 7 + i)
+        a.stack()
+        flame(a, gx, gy, ww * 0.9, hh, seed=fr * 3)
+        if fr >= 2:
+            # the bloom's petals: tongues fanning out of the column's top
+            a.stack()
+            for i, ang in enumerate((-38, 38, -16, 16)):
+                tf = rot(gx, gy - hh * 0.45, ang)
+                a.tf = tf
+                flame(a, gx, gy - hh * 0.45, ww * 0.42, hh * 0.6, seed=fr * 5 + i)
+                a.tf = None
+            a.stack()
+            flame(a, gx, gy, ww * 0.6, hh * 0.98, seed=fr * 11, outer=GOLD, mid=GOLD_L, core=WHITE)
+        # embers
+        rnd = random.Random(fr)
+        for _ in range(8):
+            ex, ey = gx + rnd.uniform(-1, 1) * ww, gy - rnd.uniform(0.2, 1.1) * hh
+            a.raw_over(f'<circle cx="{f(ex)}" cy="{f(ey)}" r="{f(rnd.uniform(2, 4))}" fill="{GOLD_L}" '
+                       f'stroke="{INK}" stroke-width="1"/>')
+        return a
+    # burning down to smoke
+    fade = (fr - 5) / (n - 6)
+    hh = 200 - 60 * fade
+    for i, dx in enumerate((-50, 50, 0)):
+        a.stack()
+        puff_cloud(a, gx + dx * (1 + fade * 0.3), gy - 40 - (30 if dx == 0 else 0) - 30 * fade, 46 - 6 * fade,
+                   seed=40 + fr * 3 + i, n=7, fill="#7c7680", shade="#5a5560")
+    a.stack()
+    flame(a, gx, gy, 60 * (1 - fade * 0.6), 70 * (1 - fade * 0.7), seed=fr)
+    return a
+
+
+FX = {
+    "tag": fx_tag,
+    "kunai": fx_kunai,
+    "scroll": fx_scroll,
+    "poof": fx_poof,
+    "ninja": fx_ninja,
+    "ninja_run": lambda: fx_ninja(0.8),
+    "sealring": fx_sealring,
+    "orb": fx_orb,
+    "shrine": fx_shrine,
+    "roost": fx_roost,
+    "village": fx_village,
+}
+# flipbooks: key -> (cell px, frames, cols, the frame's Art)
+FX_FLIP = {
+    "bloom": (256, 8, 4, fx_bloom),
+    "hawk": (128, 4, 4, lambda i: fx_hawk((0.0, 0.5, 1.0, 0.5)[i])),
+    "hands": (128, 3, 3, fx_hands),
+}
+# singles' size in pixels (long side)
+FX_PX = {"tag": 96, "kunai": 96, "scroll": 96, "poof": 128, "ninja": 96, "ninja_run": 96, "sealring": 128,
+         "orb": 96, "shrine": 128, "roost": 128, "village": 128}
