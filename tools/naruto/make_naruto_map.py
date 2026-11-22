@@ -64,6 +64,16 @@ NATIONS = [
 ]
 
 
+# Authored territory colours (canon-ish); the rest get the game's palette.
+COLORS = {
+    "Konohagakure": "#5aa04a", "Sunagakure": "#d8a85a", "Kirigakure": "#4a8cc4", "Kumogakure": "#e6c84a",
+    "Iwagakure": "#8c6a4a", "Amegakure": "#6f8597", "Otogakure": "#8a5cb0", "Uzushiogakure": "#d0503c",
+    "Uchiha Clan": "#b02c2c", "Hyuga Clan": "#b8a8dc", "Senju Clan": "#2f7a5a", "Nara Clan": "#4f6b3a",
+    "Akimichi Clan": "#e07a3a", "Takigakure": "#3aa6a0", "Kusagakure": "#7cc06a", "Land of Iron": "#9aa4ae",
+    "Hozuki Clan": "#6ac0d8", "Kaguya Clan": "#e8e0d0", "Yuki Clan": "#c8e4f0",
+}
+
+
 def fbm(h, w, rng, octaves=((180, 1.0), (70, 0.5), (25, 0.25), (8, 0.12))):
     out = np.zeros((h, w))
     for sigma, amp in octaves:
@@ -130,7 +140,7 @@ def main():
         if p is None:
             print("no land near", name)
             continue
-        nations.append({"name": name, "flag": "", "x": int(p[0]), "y": int(p[1])})
+        nations.append({"name": name, "flag": "", "x": int(p[0]), "y": int(p[1]), "color": COLORS.get(name, "")})
 
     spec = dict(id="world", name="Shinobi World", module="World", world=True,
                 categories=["featured", "world"], frequency=30, modifiers=["isCrowded:50"])
@@ -141,6 +151,10 @@ def main():
     zb = mm.write_module(spec, P, tiles, land_tiles, nations)
     path = mm.module_path(spec)
     s = open(path, encoding="utf-8").read()
+    for n in nations:
+        if n["color"]:
+            s = s.replace('{ name = %s, flag = "", x' % mm.lua_str(n["name"]),
+                          '{ name = %s, flag = "", color = "%s", x' % (mm.lua_str(n["name"]), n["color"]), 1)
     bio = np.zeros((H, W), np.uint8)
     for n, (name, _, _) in COUNTRIES.items():
         if name in BIOME:

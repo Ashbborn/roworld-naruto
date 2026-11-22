@@ -606,7 +606,10 @@ function Sim._create_nations(self: any)
 		if type(nd) ~= "table" then
 			continue
 		end
-		local hex = if nd.flag ~= nil then NATION_COLOR[string.lower(tostring(nd.flag))] else nil
+		-- (Naruto fork: a map nation may author its colour directly, `color = "#rrggbb"`)
+		local hex = if type(nd.color) == "string" and nd.color ~= "" then nd.color
+			elseif nd.flag ~= nil then NATION_COLOR[string.lower(tostring(nd.flag))]
+			else nil
 		local col = if hex ~= nil then Defs.html_rgba(hex) else 0x888888FF
 		local id = self:add_owner(tostring(nd.name or "Nation"), col, Defs.KIND_NATION)
 		if id <= 0 then

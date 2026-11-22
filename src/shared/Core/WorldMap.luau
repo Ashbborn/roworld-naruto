@@ -230,7 +230,7 @@ function WorldMap.from_terrain(data: { [string]: any }, scale: number?): WorldMa
 			y = math.clamp(math.floor(y * h / h0), 0, h - 1)
 			tile = y * w + x
 		end
-		table.insert(nations, { name = tostring(nd.name or "Nation"), flag = nd.flag, x = x, y = y, tile = tile })
+		table.insert(nations, { name = tostring(nd.name or "Nation"), flag = nd.flag, color = nd.color, x = x, y = y, tile = tile })
 	end
 	m.nations = nations
 	m.ok = true
