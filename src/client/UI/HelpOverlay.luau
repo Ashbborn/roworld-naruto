@@ -212,7 +212,7 @@ HelpOverlay.SECTIONS = {
 		icon = "target",
 		color = "amber",
 		title = "Pick your start",
-		text = "Click any unclaimed land to place your capital. Solo games deploy 5 seconds after you choose; until then you can move it.",
+		text = "Click any unclaimed land to place your capital. Solo games begin 5 seconds after you choose; until then you can move it.",
 	},
 	{
 		icon = "attack",

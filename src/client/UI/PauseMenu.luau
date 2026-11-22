@@ -586,7 +586,7 @@ function PauseMenu._ask_leave(self)
 	if o ~= nil and o.alive and ctx.state ~= nil and ctx.state.phase == Defs.PHASE_PLAYING then
 		self._confirm_text:set_text(
 			"Surrender and return to the title screen? "
-				.. (if mp then "Your nation stays on the map without a commander." else "This campaign will end.")
+				.. (if mp then "Your nation stays on the map without its leader." else "This campaign will end.")
 		)
 	else
 		self._confirm_text:set_text("Return to the title screen?")

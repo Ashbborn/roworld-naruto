@@ -171,6 +171,22 @@ UITheme.INK = Color3.new(0.1, 0.066, 0.02) -- text on amber
 UITheme.WHITE = Color3.new(1, 1, 1)
 UITheme.BLACK = Color3.new(0, 0, 0)
 UITheme.CLEAR = UITheme.rgba(0, 0, 0, 0)
+-- RoNindo's scroll and ink (2026-11-23): text and accents on the command bar's paper (CommandBar,
+-- BuildButton, RatioSlider in `paper` mode) and the accents panels share (vermilion rules, gold edges).
+UITheme.PAPER = Color3.fromRGB(247, 236, 208)
+UITheme.PAPER_DEEP = Color3.fromRGB(233, 216, 176)
+UITheme.PAPER_INK = Color3.fromRGB(34, 24, 18) -- main text on paper
+UITheme.PAPER_INK_2 = Color3.fromRGB(88, 66, 48) -- secondary text on paper
+UITheme.PAPER_INK_3 = Color3.fromRGB(132, 108, 84) -- captions on paper
+UITheme.VERMILION = Color3.fromRGB(214, 58, 32)
+UITheme.VERMILION_HI = Color3.fromRGB(240, 96, 58)
+UITheme.VERMILION_DEEP = Color3.fromRGB(150, 32, 20)
+UITheme.SCROLL_GOLD = Color3.fromRGB(246, 196, 83)
+UITheme.PAPER_GOLD = Color3.fromRGB(156, 100, 12) -- Ryo and costs on paper
+UITheme.PAPER_GREEN = Color3.fromRGB(38, 122, 64) -- rising rates on paper
+UITheme.PAPER_ORANGE = Color3.fromRGB(196, 84, 20) -- falling rates, troops at war on paper
+UITheme.PAPER_RED = Color3.fromRGB(184, 36, 36) -- not affordable on paper
+UITheme.PAPER_TEAL = Color3.fromRGB(28, 112, 140) -- the troop bar on paper
 
 -- --- spacing / radii (8 px scale with a 4 px half step) -----------------------------------------
 UITheme.S1 = 4
@@ -1350,6 +1366,26 @@ function UITheme.crate_art(): any
 		end
 	end
 	return _crate_art
+end
+
+local _naruto_ui: any = nil
+--- RoNindo's own UI art (Assets/NarutoUI, tools/naruto/make_naruto_ui_art.py): the title wordmark and
+--- seal, the command bar's scroll pieces. { key = { image, size = { w, h }, slice = { l, t, r, b }? } };
+--- {} when missing.
+function UITheme.naruto_ui(): any
+	if _naruto_ui == nil then
+		_naruto_ui = {}
+		local ok, m = pcall(function()
+			if IS_ROBLOX then
+				return require((game:GetService("ReplicatedStorage"):WaitForChild("Airfront") :: any).Assets.NarutoUI) :: any
+			end
+			return (require :: any)("../../shared/Assets/NarutoUI")
+		end)
+		if ok and type(m) == "table" then
+			_naruto_ui = m
+		end
+	end
+	return _naruto_ui
 end
 
 function UITheme.icon(icon_name: string): string?

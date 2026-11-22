@@ -1644,7 +1644,7 @@ end
 --- match" and the spectate pill's "Play again". DELIBERATE DEVIATION: ui_root.gd routed these through
 --- _on_play_solo, whose "already in solo" guard (meant for a second tap on the title) made all three
 --- dead buttons. Session.start_solo builds the new world in the background (the old one stays frozen
---- meanwhile, with the "Deploying a new world…" chip) and swaps it in on state_ready.
+--- meanwhile, with the "Preparing a new world…" chip) and swaps it in on state_ready.
 function UIRoot._restart_solo(self, difficulty: number)
 	local ctx = self.ctx
 	if
@@ -1669,7 +1669,7 @@ end
 --- Session builds new worlds in the background: acknowledge instantly, swap when state_ready fires.
 function UIRoot._on_building(self, mode: number)
 	self._building = true
-	local what = if mode == UICtx.MODE_TITLE then "Returning to the title…" else "Deploying a new world…"
+	local what = if mode == UICtx.MODE_TITLE then "Returning to the title…" else "Preparing a new world…"
 	self.title:set_building(mode ~= UICtx.MODE_TITLE)
 	self.over:set_building(mode ~= UICtx.MODE_TITLE)
 	if mode ~= UICtx.MODE_TITLE or self._screen ~= "title" then

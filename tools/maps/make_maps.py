@@ -219,6 +219,11 @@ CREDITS = (
     "Other maps made with Natural Earth and NOAA ETOPO1 data (public domain)."
 )
 
+# The maps players can pick and that public matches rotate through (2026-11-23, the Naruto fork: only
+# the Naruto world; the real-world maps keep their modules and rows, in MapList.retired, so moving an id
+# back here brings a map back).
+LISTED = {"world"}
+
 LAND = 0x80
 SHORE = 0x40
 OCEAN = 0x20
@@ -676,11 +681,12 @@ def write_registry(rows):
         "MapList.CREDITS = %s" % lua_str(CREDITS),
         "",
         "--- {id, name, module, width, height, k_lin, categories, multiplayer_frequency, forced_modifiers,",
-        "--- land_tiles, nations (count), replicated} sorted by name.",
+        "--- land_tiles, nations (count), replicated} sorted by name: the maps players can pick and that",
+        "--- public matches rotate through (make_maps.py LISTED).",
         "MapList.maps = {",
     ]
-    # (one row per line: tools/assets/make_map_thumbs.py reads the rows with a regex)
-    for spec, proj, land_tiles, nation_count in sorted(rows, key=lambda r: r[0]["name"].lower()):
+
+    def row_line(spec, proj, land_tiles, nation_count):
         fields = [
             "id = %s" % lua_str(spec["id"]),
             "name = %s" % lua_str(spec["name"]),
@@ -696,7 +702,19 @@ def write_registry(rows):
         fields += ["land_tiles = %d" % land_tiles, "nations = %d" % nation_count]
         if spec.get("world"):
             fields.append("replicated = true")
-        lines.append("\t{ %s }," % ", ".join(fields))
+        return "\t{ %s }," % ", ".join(fields)
+
+    # (one row per line: tools/assets/make_map_thumbs.py reads the rows with a regex)
+    ordered = sorted(rows, key=lambda r: r[0]["name"].lower())
+    lines += [row_line(*r) for r in ordered if r[0]["id"] in LISTED]
+    lines += [
+        "}",
+        "",
+        "--- Maps out of the game (2026-11-23: the real-world maps, in a Naruto world). Their data modules",
+        "--- stay in src/server/MapData; nothing lists or loads them (MapList.get does not see them).",
+        "MapList.retired = {",
+    ]
+    lines += [row_line(*r) for r in ordered if r[0]["id"] not in LISTED]
     lines += [
         "}",
         "",

@@ -764,7 +764,7 @@ end
 
 function GameOver.set_building(self, on: boolean)
 	self._again:set_disabled(on)
-	self._again:set_text(if on then "DEPLOYING…" else "PLAY AGAIN")
+	self._again:set_text(if on then "GATHERING…" else "PLAY AGAIN")
 end
 
 --- Fills the winner / leader pill for owner `id` (hidden when there is none, and on VICTORY).
@@ -929,10 +929,10 @@ function GameOver._copy(self, kind: string, winner: number, killer: number, reas
 				else string.format("%s won the war with %s of the land.", wname, wshare)
 		elseif reason == Defs.OVER_DEFEATED then
 			c.title = "MATCH OVER"
-			c.sub = string.format("Every commander has fallen. %s leads with %s.", lname, lshare)
+			c.sub = string.format("Every shinobi has fallen. %s leads with %s.", lname, lshare)
 		elseif reason == Defs.OVER_ABANDONED then
 			c.title = "MATCH OVER"
-			c.sub = string.format("Every commander left the match. %s leads with %s.", lname, lshare)
+			c.sub = string.format("Every shinobi left the match. %s leads with %s.", lname, lshare)
 		else
 			c.title = "MATCH OVER"
 			c.sub = string.format("%s leads with %s.", lname, lshare)

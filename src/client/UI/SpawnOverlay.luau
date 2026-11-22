@@ -211,13 +211,13 @@ function SpawnOverlay.refresh(self)
 	local late = s.phase == Defs.PHASE_PLAYING
 	local verb = if ctx.touch then "Tap" else "Click"
 	if ctx:me() == 0 then
-		self._title:set_text("COMMANDERS ARE DEPLOYING")
+		self._title:set_text("SHINOBI ARE GATHERING")
 		self._sub:set_text("You are spectating this match.")
 	elseif late and not placed then
 		self._title:set_text("DROP INTO THE WAR")
-		self._sub:set_text(verb .. " any unclaimed land to deploy your capital.")
+		self._sub:set_text(verb .. " any unclaimed land to found your capital.")
 	elseif placed and solo and left >= 0.0 then
-		self._title:set_text(string.format("DEPLOYING IN %d", math.ceil(left)))
+		self._title:set_text(string.format("STARTING IN %d", math.ceil(left)))
 		self._sub:set_text(verb .. " elsewhere to relocate your capital.")
 	elseif placed then
 		self._title:set_text("CAPITAL PLACED")
@@ -254,7 +254,7 @@ function SpawnOverlay._refresh_players(self)
 		end
 	end
 	if ctx.compact then
-		self._placed:set_text(string.format("%d / %d commanders placed", placed, #humans))
+		self._placed:set_text(string.format("%d / %d shinobi placed", placed, #humans))
 		return
 	end
 	self._count:set_text(string.format("%d / %d placed", placed, #humans))
