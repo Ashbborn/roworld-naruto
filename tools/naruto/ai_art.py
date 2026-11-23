@@ -15,6 +15,8 @@ Usage:
   python tools/naruto/ai_art.py gen [--only kurama,gyuki] [--kinds portrait,icon] [--n 3]
   python tools/naruto/ai_art.py post        # cut-outs + masks from whatever was generated
   python tools/naruto/ai_art.py sheets      # the pick sheets
+  python tools/naruto/ai_art.py gen --only isobu,son_goku --kinds icon --n 4 --redo   # the owner's redos
+  python tools/naruto/ai_art.py final | r3 | tints   # final pick sheet, round-3 icon sheet, game tints
 """
 import argparse
 import json
@@ -199,13 +201,40 @@ ICON_REDO = {
               "each tentacle separate "
               "with a clear black gap between it and the next, curling at the tips. The whole creature is shown "
               "sitting, down to its legs and feet, every part complete.", "4:3"),
-    # the first redo text ("the big domed spiky shell ... the head stretched forward") gave spiky lizards
-    "isobu": ([1], "the one big eye, the line of the shell's rim",
-              "Side view of a giant turtle: a big high-domed shell shaped like half a sphere is the dominant shape, "
-              "with a row of short spikes along its ridge and a thin black line marking the shell's lower rim; the "
-              "head with one big round eye pokes out from under the front of the shell on a short neck; four short "
-              "stubby turtle legs stand below the shell; three thick spiky tails trail out behind, each separate.",
-              "3:2"),
+    # pass 1 ("the big domed spiky shell ... the head stretched forward") gave spiky lizards; pass 2 (a side
+    # view, the shell as half a sphere) plain tortoises: both rejected. Round 3 (11-23, the owner's direction):
+    # front three-quarter, the shell's spikes as a crown, the one eye, three separate spiked tails.
+    # v1 gave A C (and B D, kept in isobu/r3_spare): the eye is ~1 px at 32 px; v2 (head big and near, the eye
+    # a third of the head) gave B D
+    "isobu": ([1, 2], "the one big round eye, a thin line where the shell meets the body",
+              ("Front three-quarter view of the giant beast facing the viewer: its huge domed shell rises high "
+               "behind and above the head, the shell's rim lined with big jagged coral-like spikes that form a "
+               "crown-shaped outline against the black; below the front of the shell, the head with its spiky bony "
+               "crest and one big round eye shown as a clear cut-out; two thick armoured front legs planted wide "
+               "apart; its three thick tails, each lined with sharp spikes, sweep out to one side from behind the "
+               "shell as three separate shapes with clear black gaps between them.",
+               "Front three-quarter view, close and low, of the giant beast facing the viewer: its head is big and "
+               "near the viewer, under the front of a huge domed shell; the shell's rim, lined with big jagged "
+               "coral-like spikes, forms a crown-shaped outline above the head; the head's spiky bony crest frames "
+               "its one big round eye, a bold round cut-out about a third as wide as the head; two thick armoured "
+               "front legs planted wide apart; its three thick tails, each lined with sharp spikes, sweep out to one "
+               "side from behind the shell as three separate shapes with clear black gaps between them."),
+              ("4:3", "4:3")),
+    # round 1 read as a spiky blob (rejected 11-23): the gorilla build, the horn, four separate tails, the
+    # mouth. Two poses, two candidates each (A B upright, C D knuckle-walking)
+    "son_goku": ([1, 2], "the wide open fanged mouth, one eye, a line or two marking the heavy shoulder plates",
+                 ("Front view of the giant four-tailed ape standing upright like a gorilla: massive hunched shoulders "
+                  "and long heavy arms hanging down to big fists; on top of its head one big bony horn, clearly "
+                  "outlined against the black; the snarling gorilla face with its wide open fanged mouth as a clear "
+                  "cut-out; its four thick tails curl up behind it, two on each side of the body, as four separate "
+                  "shapes with clear black gaps between them, each edged with a row of short blunt plates.",
+                  "Side view of the giant four-tailed ape walking on its knuckles like a gorilla, facing left: huge "
+                  "hunched shoulders, long heavy arms planted on big fists, the head thrust forward with one big bony "
+                  "horn on top of it, clearly outlined against the black; the snarling gorilla mouth wide open with "
+                  "fangs as a clear cut-out; its four thick tails rise from the lower back and curl up and over "
+                  "behind it as four separate shapes with clear black gaps between them, each edged with a row of "
+                  "short blunt plates."),
+                 ("1:1", "4:3")),
     "hidan": ([1, 2], "eyes, the gaps between the three scythe blades",
               "Head and shoulders: his hair slicked straight back from the forehead, the cloak's high collar, and "
               "his huge three-bladed scythe held upright beside him, its three long curved blades fanned out big "
@@ -223,11 +252,20 @@ ICON_REDO_T = ("A minimalist flat icon of the {noun} in {tags}: a single solid w
                "with an empty black margin all round, readable at a glance even when tiny.")
 
 
-def icon_prompt(subject, redo=False):
+def redo_variants(subject):
+    """[(composition, canvas)]: a redo holds one composition, or several (the candidates split between them)."""
+    _, _, comp, aspect = ICON_REDO[subject]
+    comps = comp if isinstance(comp, tuple) else (comp,)
+    aspects = aspect if isinstance(aspect, tuple) else (aspect,) * len(comps)
+    return list(zip(comps, aspects))
+
+
+def icon_prompt(subject, redo=False, variant=0):
     group, folder, idx, noun, desc, feats, _ = SUBJECTS[subject]
     if redo:
-        ridx, rfeats, comp, _ = ICON_REDO[subject]
+        ridx, rfeats, _, _ = ICON_REDO[subject]
         tags = " and ".join(f"@img{k + 1}" for k in range(len(ridx)))
+        comp = redo_variants(subject)[variant][0]
         return ICON_REDO_T.format(noun=noun, tags=tags, features=rfeats, composition=comp)
     return ICON.format(noun=noun, features=feats, framing=FRAMING[group][1])
 
@@ -238,28 +276,34 @@ def sdir(subject):
     return d
 
 
-def gen(subjects, kinds, n, redo=False):
+def gen(subjects, kinds, n, redo=False, variant=None):
     jobs = []
     for s in subjects:
         refs = refs_of(s)
         for kind in kinds:
             aspect = ASPECT.get(s, "1:1")
-            if kind == "portrait":
-                prompt, rr = portrait_prompt(s), refs
-            elif redo:
-                ridx, _, _, aspect = ICON_REDO[s]
-                prompt = icon_prompt(s, redo=True)
-                rr = [os.path.join(REFS, SUBJECTS[s][1], f"{i}.png") for i in ridx]
-            else:
-                prompt, rr = icon_prompt(s), refs[:1]
             d = sdir(s)
-            have = [L for L in LETTERS[:n] if os.path.exists(os.path.join(d, f"{kind}_{L}.png"))]
-            todo = [L for L in LETTERS[:n] if L not in have]
+            todo = [L for L in LETTERS[:n] if not os.path.exists(os.path.join(d, f"{kind}_{L}.png"))]
             if not todo:
                 continue
-            outs = [os.path.join(d, f"{kind}_{L}.png") for L in todo]
-            jobs.append((f"{s}/{kind}{' redo' if redo else ''} x{len(todo)} {aspect}", prompt, rr, len(todo), outs,
-                         aspect))
+            if kind == "portrait":
+                variants = [(portrait_prompt(s), refs, aspect)]
+            elif redo:
+                rr = [os.path.join(REFS, SUBJECTS[s][1], f"{i}.png") for i in ICON_REDO[s][0]]
+                variants = [(icon_prompt(s, True, v), rr, va) for v, (_, va) in enumerate(redo_variants(s))]
+                if variant:  # --variant N: every missing candidate from composition N
+                    variants = [variants[variant - 1]]
+            else:
+                variants = [(icon_prompt(s), refs[:1], aspect)]
+            per = -(-len(todo) // len(variants))  # the candidates split between the compositions, in order
+            for v, (prompt, rr, va) in enumerate(variants):
+                letters = todo[v * per:(v + 1) * per]
+                if not letters:
+                    continue
+                outs = [os.path.join(d, f"{kind}_{L}.png") for L in letters]
+                vnum = variant or (v + 1 if len(variants) > 1 else None)
+                tag = (" redo" + (f" v{vnum}" if vnum else "")) if redo and kind != "portrait" else ""
+                jobs.append((f"{s}/{kind}{tag} x{len(letters)} {va}", prompt, rr, len(letters), outs, va))
     est = sum(ai.estimate(j[3], "1K", len(j[2])) for j in jobs)
     print(f"{len(jobs)} jobs, estimate {est} credits")
     c0 = ai.credits()
@@ -526,18 +570,25 @@ def sheets():
 PICKS = {
     "shukaku": ("C", "owner's pick (the curse-mark linework)"),
     "matatabi": ("A", "owner's pick (flame markings)"),
+    "kokuo": ("A", "owner's pick"),
+    "saiken": ("B", "owner's pick"),
     "chomei": ("C", "owner's pick"),
-    "kokuo": ("A", "owner liked all three; A has the clearest tail loop at 32 px"),
+    "gyuki": ("A", "owner's pick (redo A: ox head and horns, 8 tentacles)"),
+    "kurama": ("A", "owner's pick"),
+    "akatsuki": ("B", "owner's pick (the minimalist cloud)"),
     "itachi": ("B", "owner's pick (leaf headband, tear-trough lines)"),
-    "kisame": ("A", "owner liked all three; A is the cleanest"),
-    "deidara": ("AB", "owner liked both: choose one"),
-    "pain": ("C", "owner's pick (piercing dots)"),
+    "kisame": ("A", "owner's pick"),
+    "deidara": ("A", "owner: 'you choose': A, its dark face cut-out keeps the profile at 32 px (B's thin lines go grey)"),
     "sasori_face": ("A", "owner's pick (Sasori = his face, not the Hiruko puppet)"),
-    "akatsuki": ("B", "owner: the minimalist cloud is cool; B has the boldest curls"),
-    "gyuki": ("redo", "new: ox head and horns first, 8 tentacles, 4 a side"),
-    "isobu": ("redo", "new: side view, domed shell, 3 tails"),
-    "hidan": ("redo", "new: the three-bladed scythe as big as his head"),
-    "kakuzu": ("redo", "new: hood, mask, eye slit, thread tendrils"),
+    "hidan": ("B", "owner's pick (redo B: the scythe)"),
+    "pain": ("C", "owner's pick (piercing dots)"),
+    "konan": ("B", "owner's pick"),
+    "tobi": ("A", "owner's pick"),
+    "zetsu": ("A", "owner's pick"),
+    "isobu": ("redo", "round 3: front three-quarter, the shell's spikes as a crown, one eye, three spiked tails "
+                      "(B D: head and eye drawn bigger so the eye survives at 32 px)"),
+    "son_goku": ("redo", "round 3: the gorilla with its horn, four tails, open mouth (A B upright, C D knuckle-walking)"),
+    "kakuzu": ("redo", "redo candidates, not judged yet: hood, mask, eye slit, thread tendrils"),
 }
 FINAL_ROWS = BEASTS + ["akatsuki", "itachi", "kisame", "deidara", "sasori_face", "sasori_hiruko", "hidan", "kakuzu",
                        "pain", "konan", "tobi", "zetsu"]
@@ -639,6 +690,148 @@ def final_sheet(out=None):
     return out
 
 
+#: the round-3 icon sheet: the redos (4 candidates), Kakuzu's candidates, and every accepted icon as a family
+R3_REDO = [("isobu", "ABCD"), ("son_goku", "ABCD"), ("kakuzu", "ABC")]
+FAMILY = ["shukaku", "matatabi", "kokuo", "saiken", "chomei", "gyuki", "kurama", "akatsuki", "itachi", "kisame",
+          "deidara", "sasori_face", "hidan", "pain", "konan", "tobi", "zetsu"]
+
+
+def _srgb(lin):
+    c = min(max(lin, 0.0), 1.0)
+    return round(255 * (12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055))
+
+
+def human_palette():
+    """The game's territory colours for players (src/shared/Core/SimColors.luau human_palette): OKLab lightness
+    0.64/0.70/0.76, chroma 0.11/0.155, every 15 degrees of hue, yellow-greens only at the top lightness,
+    out-of-gamut variants dropped. -> [(hue in degrees, L, C, (r, g, b))]"""
+    import math
+    out = []
+    for i in range(24):
+        h = 2 * math.pi * i / 24
+        deg = math.degrees(h)
+        for L in (0.64, 0.70, 0.76):
+            for C in (0.11, 0.155):
+                if 75.0 < deg < 140.0 and L < 0.74:
+                    continue
+                a, b = math.cos(h) * C, math.sin(h) * C
+                l_, m_, s_ = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3, \
+                    (L - 0.1055613458 * a - 0.0638541728 * b) ** 3, (L - 0.0894841775 * a - 1.2914855480 * b) ** 3
+                lin = (4.0767416621 * l_ - 3.3077115913 * m_ + 0.2309699292 * s_,
+                       -1.2684380046 * l_ + 2.6097574011 * m_ - 0.3413193965 * s_,
+                       -0.0041960863 * l_ - 0.7034186147 * m_ + 1.7076147010 * s_)
+                if min(lin) < -0.002 or max(lin) > 1.002:
+                    continue
+                out.append((deg, L, C, tuple(_srgb(c) for c in lin)))
+    return out
+
+
+def territory_colours(n):
+    """n territory colours spread round the hue circle: per hue the middle lightness and the stronger chroma."""
+    best = {}
+    for deg, L, C, rgb in human_palette():
+        score = (L == 0.70, L, C)
+        if deg not in best or score > best[deg][0]:
+            best[deg] = (score, rgb)
+    hues = sorted(best)
+    return [best[hues[int(i * len(hues) / n)]][1] for i in range(n)]
+
+
+def _value(rgb, k):
+    import colorsys
+    h, s_, v = colorsys.rgb_to_hsv(*(c / 255 for c in rgb))
+    return tuple(round(255 * c) for c in colorsys.hsv_to_rgb(h, s_, v * k))
+
+
+def terr_tile(mask, px, rgb, glyph=0.82):
+    """A glyph as the map draws one (StructureLayer): fill = the territory colour at 65 % HSV value, rim = the
+    colour at 10 % value, the glyph white."""
+    t = Image.new("RGBA", (px, px), _value(rgb, 0.1) + (255,))
+    w = max(1, px // 32)
+    ImageDraw.Draw(t).rectangle((w, w, px - 1 - w, px - 1 - w), fill=_value(rgb, 0.65) + (255,))
+    if mask is not None:
+        c = mask.copy()
+        c.thumbnail((round(px * glyph), round(px * glyph)), Image.LANCZOS)
+        t.alpha_composite(c, ((px - c.width) // 2, (px - c.height) // 2))
+    return t
+
+
+def r3_sheet(out=None):
+    """build/ai_pick_icons_r3.png: the Isobu and Son Goku redos and Kakuzu's candidates at 96 / 48 / 32 / 24 px
+    (real pixels) and 32 px on a territory tile, then every accepted icon together on territory colours at
+    96 px and at real 32 px."""
+    out = out or os.path.join(BUILD, "ai_pick_icons_r3.png")
+    try:
+        with open(os.path.join(OUT, "clipped.json"), encoding="utf-8") as fh:
+            clip = json.load(fh)
+    except OSError:
+        clip = {}
+    cols = territory_colours(len(FAMILY))
+    TW = 110
+    W = 40 + len(FAMILY) * TW
+    RH = 168
+    y_fam = 128 + len(R3_REDO) * RH + 10
+    H = y_fam + 40 + 96 + 30 + 32 + 40
+    sheet = Image.new("RGBA", (W, H), BG + (255,))
+    d = ImageDraw.Draw(sheet)
+    d.text((20, 12), "Icons round 3: the Isobu and Son Goku redos, Kakuzu's candidates, and the accepted set together",
+           fill=TEXT, font=font(22))
+    d.text((20, 44), "Each candidate: 96 px, then 48 / 32 / 24 px at real size (white on the dark panel), then 32 px on a "
+                     "territory tile. Letters A B C D: pick by letter.", fill=SUB, font=font(14))
+    d.text((20, 64), "Territory tiles are drawn the way the map draws a structure glyph: the territory colour at 65 % "
+                     "value, a dark rim, the glyph white (StructureLayer).", fill=SUB, font=font(14))
+    d.text((20, 96), "REDO (new candidates from the references) and NOT JUDGED YET", fill=GOLD, font=font(16))
+    y = 128
+    for (s, letters), tc in zip(R3_REDO, territory_colours(len(R3_REDO) + 2)[1:]):
+        d.line([(20, y - 8), (W - 20, y - 8)], fill=(60, 60, 70), width=1)
+        d.text((20, y), ROW_NAME.get(s, s), fill=GOLD, font=font(18))
+        pick, note = PICKS.get(s, (None, ""))
+        d.text((20, y + 26), "REDO" if s != "kakuzu" else "OPEN", fill=GOLD if s != "kakuzu" else SUB, font=font(14))
+        # the references the candidates were drawn from
+        x = 170
+        for i in ICON_REDO[s][0]:
+            rp = os.path.join(REFS, SUBJECTS[s][1], f"{i}.png")
+            if os.path.exists(rp):
+                r = Image.open(rp).convert("RGBA")
+                r.thumbnail((140, 96))
+                sheet.alpha_composite(r, (x, y))
+                x += r.width + 8
+        x = max(x, 470)
+        for L in letters:
+            p = os.path.join(OUT, s, f"mask_{L}.png")
+            im = Image.open(p).convert("RGBA") if os.path.exists(p) else None
+            sheet.alpha_composite(tile(DARK, im, 96), (x, y))
+            sheet.alpha_composite(tile(DARK, im, 48), (x + 102, y + 48))
+            sheet.alpha_composite(tile(DARK, im, 32), (x + 156, y + 64))
+            sheet.alpha_composite(tile(DARK, im, 24), (x + 194, y + 72))
+            sheet.alpha_composite(terr_tile(im, 32, tc), (x + 224, y + 64))
+            d.text((x, y + 100), (f"NEW {L}" if s != "kakuzu" else L) if im else f"{L}: missing", fill=TEXT,
+                   font=font(15))
+            c = clip.get(f"{s}/icon_{L}")
+            if c:
+                d.text((x + 60, y + 101), "cut by the frame: " + ", ".join(c), fill=RED_NOTE, font=font(13))
+            x += 256 + 24
+        d.text((170, y + 124), note, fill=SUB, font=font(13))
+        y += RH
+    # the family
+    d.line([(20, y_fam - 8), (W - 20, y_fam - 8)], fill=(60, 60, 70), width=2)
+    d.text((20, y_fam), "ACCEPTED: every icon the owner picked, on territory colours: 96 px, and below at real 32 px "
+                        "(Isobu and Son Goku join when picked; Kakuzu when judged)", fill=GREEN_OK, font=font(16))
+    yt = y_fam + 32
+    for i, (s, rgb) in enumerate(zip(FAMILY, cols)):
+        L = PICKS[s][0]
+        p = os.path.join(OUT, s, f"mask_{L}.png")
+        im = Image.open(p).convert("RGBA") if os.path.exists(p) else None
+        x = 20 + i * TW
+        sheet.alpha_composite(terr_tile(im, 96, rgb), (x, yt))
+        lab = f"{ROW_NAME.get(s, s)} {L}"
+        d.text((x + (96 - d.textlength(lab, font=font(12))) / 2, yt + 100), lab, fill=TEXT, font=font(12))
+        sheet.alpha_composite(terr_tile(im, 32, rgb), (x + 32, yt + 124))
+    sheet.save(out)
+    print(out, sheet.size)
+    return out
+
+
 #: the game's colours (main: src/shared/Data/Beasts.luau, src/client/UI/AkatsukiPanel.luau)
 BEAST_COL = ["#c9a66b", "#3a6fd8", "#2a9d9a", "#c8312b", "#eceae4", "#9fc79a", "#9be02f", "#7b4fb0", "#f08a1c"]
 GAME_BG = (8, 10, 20)  # Color3.new(0.03, 0.04, 0.08)
@@ -709,15 +902,16 @@ def tint_check(out=None):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["gen", "post", "sheets", "prompts", "tints", "final"])
+    ap.add_argument("cmd", choices=["gen", "post", "sheets", "prompts", "tints", "final", "r3"])
     ap.add_argument("--only")
     ap.add_argument("--kinds", default="portrait,icon")
     ap.add_argument("--n", type=int, default=3)
     ap.add_argument("--redo", action="store_true", help="icons: the owner's redo compositions (ICON_REDO)")
+    ap.add_argument("--variant", type=int, help="with --redo: every missing candidate from composition N (1-based)")
     a = ap.parse_args()
     subjects = a.only.split(",") if a.only else list(SUBJECTS)
     if a.cmd == "gen":
-        gen(subjects, a.kinds.split(","), a.n, a.redo)
+        gen(subjects, a.kinds.split(","), a.n, a.redo, a.variant)
     elif a.cmd == "post":
         post()
     elif a.cmd == "sheets":
@@ -726,9 +920,14 @@ def main():
         tint_check()
     elif a.cmd == "final":
         final_sheet()
+    elif a.cmd == "r3":
+        r3_sheet()
     else:
         for s in subjects:
-            print(s, "\n  P:", portrait_prompt(s), "\n  I:", icon_prompt(s, a.redo and s in ICON_REDO))
+            redo = a.redo and s in ICON_REDO
+            print(s, "\n  P:", portrait_prompt(s))
+            for v in range(len(redo_variants(s)) if redo else 1):
+                print("  I:", icon_prompt(s, redo, v))
 
 
 if __name__ == "__main__":
