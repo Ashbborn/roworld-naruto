@@ -31,17 +31,31 @@ TINT = "#e04848"
 GLOW = None
 
 
-def cloak(collar_top=330, collar_x=372):
-    """The shoulders and the tall stand-up collar: one piece flaring up and out round the jaw, a V
-    open at the front, in front of everything below the chin. Returns parts, back to front."""
+def cloak(collar_top=330, collar_x=372, style="closed"):
+    """The shoulders and the tall stand-up collar, in front of everything below the chin. Returns
+    parts, back to front.
+      style "closed": one piece flaring up and out round the jaw, a narrow V at the front
+      style "open":   two wings flaring up and out to sharp points, a deep V open on the neck
+                      (Itachi; also for whoever wears the cloak open)"""
     ct, cx = collar_top, collar_x
     body = smooth(sym([(256, 420), (340, 418), (424, 440), (480, 474), (506, 512), (256, 512)]))
-    collar = smooth(sym([(256, ct + 62), (268, ct + 44, 0.5), (300, ct + 22), (346, ct + 8), (cx, ct, 0),
-                         (cx - 2, ct + 60), (cx - 10, ct + 120, 0), (300, ct + 136), (256, ct + 140)]))
-    lining = smooth(sym([(256, ct + 62), (268, ct + 44, 0.5), (300, ct + 22), (346, ct + 8), (cx, ct, 0),
-                         (cx - 1, ct + 15), (348, ct + 22), (302, ct + 36), (272, ct + 56), (256, ct + 78)]))
-    parts = [solid(body, "cloak"), solid(collar, "cloak", sep=GAP), Part(lining, "lining", only="colour", shade=0)]
-    parts.append(cutline([(256, ct + 66), (256, ct + 136)], 5, only="colour"))
+    parts = [solid(body, "cloak")]
+    if style == "open":
+        # the inner edge rises steeply from the V, then flares out to the point
+        inner = [(262 + (cx - 262) * t ** 1.7, 486 + (ct - 486) * t) for t in (0.3, 0.6, 0.85)]
+        lin_in = [(x - 4 + 10 * t, y + 18 * t) for (x, y), t in zip(inner, (0.3, 0.6, 0.85))]
+        for f in ((lambda p: p), mirror_x):
+            wing = smooth([(262, 486, 0)] + inner + [(cx, ct, 0), (cx + 10, ct + 50), (cx + 20, 452), (cx - 14, 490),
+                                                     (300, 500)])
+            lining = smooth([(266, 482)] + inner + [(cx, ct, 0), (cx - 4, ct + 22)] + lin_in[::-1] + [(282, 488)])
+            parts += [solid(f(wing), "cloak", sep=GAP), Part(f(lining), "lining", only="colour", shade=0)]
+    else:
+        collar = smooth(sym([(256, ct + 62), (268, ct + 44, 0.5), (300, ct + 22), (346, ct + 8), (cx, ct, 0),
+                             (cx - 2, ct + 60), (cx - 10, ct + 120, 0), (300, ct + 136), (256, ct + 140)]))
+        lining = smooth(sym([(256, ct + 62), (268, ct + 44, 0.5), (300, ct + 22), (346, ct + 8), (cx, ct, 0),
+                             (cx - 1, ct + 15), (348, ct + 22), (302, ct + 36), (272, ct + 56), (256, ct + 78)]))
+        parts += [solid(collar, "cloak", sep=GAP), Part(lining, "lining", only="colour", shade=0)]
+        parts.append(cutline([(256, ct + 66), (256, ct + 136)], 5, only="colour"))
     parts += cloud_badge(436, 478, 30)
     return parts
 
@@ -69,16 +83,18 @@ def cloud_badge(cx, cy, r):
     return out
 
 
-def headband(y_top, y_bot, x0, x1, sag=6, slash=True, symbol="leaf"):
+def headband(y_top, y_bot, x0, x1, sag=6, slash=True, symbol="leaf", plate_w=0.5):
     """A forehead protector across the forehead: the cloth band, the metal plate in the middle, the
-    village symbol and the slash through it (traitors). Returns parts."""
+    village symbol and the slash through it (traitors). Returns parts. In the mask the cloth is a
+    dark band (a hole) and the plate a bright bar on it, so it never melts into the hair."""
     cx = (x0 + x1) / 2
     band = smooth([(x0, y_top + sag), (cx, y_top, 1), (x1, y_top + sag), (x1 + 2, y_bot + sag, 0.4),
                    (cx, y_bot, 1), (x0 - 2, y_bot + sag, 0.4)])
-    pw = (x1 - x0) * 0.62
+    pw = (x1 - x0) * plate_w
     plate = smooth([(cx - pw / 2, y_top + 3, 0.3), (cx + pw / 2, y_top + 3, 0.3), (cx + pw / 2 + 2, y_bot - 2, 0.3),
                     (cx - pw / 2 - 2, y_bot - 2, 0.3)])
-    parts = [solid(band, "cloth", sep=GAP), solid(plate, "plate", sep=5)]
+    parts = [Part(band, "cloth", only="colour", sep=GAP), Part(band, "hole", cut=True, only="mask"),
+             solid(plate, "plate", sep=5)]
     ph = y_bot - y_top
     my = (y_top + y_bot) / 2
     if symbol == "leaf":

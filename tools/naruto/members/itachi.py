@@ -20,28 +20,38 @@ PALETTE.update({
 
 def draft_a():
     parts = []
-    back = smooth(sym([(256, 84), (322, 92), (370, 132), (388, 196), (392, 290), (384, 372), (256, 380)]))
+    # the hair: a smooth cap above the forehead protector, falling behind the bangs to the neck
+    back = smooth(sym([(256, 104), (302, 108), (342, 130), (362, 172), (368, 228), (362, 286), (342, 330),
+                       (256, 336)]))
     parts.append(solid(back, "hair"))
-    face = smooth(sym([(256, 140), (304, 148), (328, 186), (330, 238), (320, 290), (298, 330), (272, 352),
+    # the neck in the open collar, with his necklace (colour only: dark in the mask)
+    neck = smooth(sym([(256, 320), (292, 322), (300, 400), (296, 470), (256, 476)]))
+    parts.append(Part(neck, "body", only="colour"))
+    cord = smooth([(214, 392), (256, 410), (298, 392)], closed=False)
+    parts.append(Part(cord, "ink", only="colour", line=3, cut=True))
+    for x, y in ((230, 401), (256, 410), (282, 401)):
+        parts.append(Part(ell(x, y, 7, 7), "plate", only="colour", line=3))
+    face = smooth(sym([(256, 150), (310, 156), (336, 192), (338, 244), (326, 292), (300, 332), (274, 352),
                        (256, 356)]))
     parts += face_parts(face)
     # eyes: calm, slanted, deadly
     for f in ((lambda p: p), mirror_x):
-        mark = smooth([(268, 228, 0), (292, 212), (322, 210, 0), (312, 228), (290, 234)])
-        eye = smooth([(274, 226, 0), (294, 216), (316, 214, 0), (306, 227), (290, 231)])
+        mark = smooth([(268, 232, 0), (294, 214), (326, 212, 0), (314, 232), (290, 238)])
+        eye = smooth([(274, 230, 0), (296, 218), (320, 216, 0), (308, 231), (290, 235)])
         parts += [Part(f(mark), "mark", only="colour"), solid(f(eye), "eye"),
-                  Part(f(ell(295, 222, 4.5, 4.5)), "pupil", only="colour")]
-        # the tear troughs: a line from each eye's inner corner down along the nose
-        parts += mask_line(f([(278, 242), (271, 272)]), 6)
-    parts.append(cutline([(250, 318), (262, 318)], 4, only="colour"))
-    parts.append(cutline(smooth([(256, 262), (252, 288), (260, 292)], closed=False), 3.5, only="colour"))
-    parts += headband(150, 194, 184, 328, sag=8, symbol="leaf")
-    # the bangs: parted in the middle, in front of the band's ends, down to the collar
+                  Part(f(ell(297, 225, 4.5, 4.5)), "pupil", only="colour")]
+        # the tear troughs: from each eye's inner corner down and out along the cheek
+        parts += mask_line(f([(282, 246), (292, 282)]), 7)
+    parts.append(cutline([(250, 322), (262, 322)], 4, only="colour"))
+    parts.append(cutline(smooth([(256, 266), (252, 292), (260, 296)], closed=False), 3.5, only="colour"))
+    parts += headband(140, 190, 168, 344, sag=10, symbol="leaf", plate_w=0.46)
+    # the bangs: long pointed strands from under the protector, free of the face at their tips
     for f in ((lambda p: p), mirror_x):
-        bang = smooth([(262, 102), (300, 108), (336, 146), (352, 214), (352, 300), (346, 372, 0), (330, 300),
-                       (330, 216), (316, 164), (284, 128)])
-        parts.append(solid(f(bang), "hair", sep=GAP))
-    parts += cloak(collar_top=318)
+        outer = brush([(340, 178), (356, 236), (362, 300), (356, 366)], [40, 38, 28, 0], cap0="flat", cap1="point")
+        inner = brush([(318, 184), (330, 228), (332, 276)], [24, 18, 0], cap0="flat", cap1="point")
+        parts.append(solid(f(outer), "hair", sep=8))
+        parts.append(solid(f(inner), "hair", sep=6))
+    parts += cloak(collar_top=356, collar_x=424, style="open")
     return parts
 
 

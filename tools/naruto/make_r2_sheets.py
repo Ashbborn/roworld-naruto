@@ -38,6 +38,11 @@ SUB = (170, 170, 182)
 BEAST_TINT = ["#c9a66b", "#3a6fd8", "#2a9d9a", "#c8312b", "#eceae4", "#9fc79a", "#9be02f", "#7b4fb0", "#f08a1c"]
 BEAST_TITLE = ["Shukaku", "Matatabi", "Isobu", "Son Goku", "Kokuo", "Saiken", "Chomei", "Gyuki", "Kurama"]
 AKA_RED = (217, 69, 64)
+#: the Akatsuki panel on main (AkatsukiPanel.luau): card BG, DIM, ACCENT; a beast not yet sealed is
+#: tinted col:Lerp(DIM, 0.5) at transparency 0.6, a sealed one ACCENT on a slot ACCENT:Lerp(BG, 0.55)
+AK_BG = (8, 10, 20)
+AK_DIM = (150, 156, 176)
+AK_RED = (224, 48, 60)
 
 
 def tint(im, rgb, alpha=1.0):
@@ -64,43 +69,46 @@ def text(d, xy, s, size=14, fill=TEXT):
 
 def lineup(items, out, title, big=150, colours=None):
     """items [(name, mask)]: a lineup of masks: big white on dark, big in their tints on the panel,
-    48 px on dark / mid / light / tinted, 24 px likewise, and the dimmed state."""
+    48 and 24 px on dark / mid / light / tinted, and the real sizes of the Akatsuki panel (21 px,
+    tinted, and dimmed the way it shows a beast not yet sealed)."""
     n = len(items)
     cw = big + 16
-    W = 130 + n * cw
-    rows = [("white on dark", big), ("game tint", big), ("48 px", 48), ("", 48), ("", 48), ("", 48),
-            ("24 px", 24), ("", 24), ("", 24), ("dimmed (48)", 48)]
-    H = 60 + sum(r[1] + 14 for r in rows) + 30
+    W = 150 + n * cw
+    rows = [("white on dark", big, "dark"), ("game tint", big, "tint"),
+            ("48 px", 48, "dark"), ("", 48, "mid"), ("", 48, "light"), ("", 48, "tint"),
+            ("24 px", 24, "dark"), ("", 24, "mid"), ("", 24, "light"),
+            ("21 px, panel: not sealed", 21, "ak_open"), ("21 px, panel: sealed", 21, "ak_sealed")]
+    H = 70 + sum(r[1] + 14 + 8 for r in rows) + 30
     sheet = Image.new("RGBA", (W, H), BG + (255,))
     d = ImageDraw.Draw(sheet)
     text(d, (14, 12), title, 20)
     text(d, (14, 38), "white mask on dark  |  tinted with the game's colours on its dark panel  |  48 and 24 px on "
-                      "dark, mid, light, tinted  |  dimmed state", 12, SUB)
+                      "dark, mid, light, tinted  |  21 px as the Akatsuki panel shows them (dim until sealed, then red)", 12, SUB)
     y = 64
-    for ri, (label, size) in enumerate(rows):
-        text(d, (12, y + size // 2 - 8), label, 13, SUB)
+    for label, size, kind in rows:
+        text(d, (12, y + size // 2 - 6), label, 12, SUB)
+        pad = 0 if size >= 100 else 4
         for i, (name, m) in enumerate(items):
-            x = 130 + i * cw + (cw - size) // 2
+            x = 150 + i * cw + (cw - size) // 2 - pad
             col = bk.hexrgb(colours[i]) if colours else WHITE
-            if ri == 0:
-                im = tile(DARK, m, size)
-            elif ri == 1:
-                im = tile(PANEL, tint(m, col), size)
-            elif ri in (2, 6):
-                im = tile(DARK, m, size, 4)
-            elif ri in (3, 7):
-                im = tile(MID, m, size, 4)
-            elif ri in (4, 8):
-                im = tile(LIGHT, tint(m, DARK), size, 4)
-            elif ri == 5:
-                im = tile(PANEL, tint(m, col), size, 4)
+            if kind == "dark":
+                im = tile(DARK, m, size, pad)
+            elif kind == "mid":
+                im = tile(MID, m, size, pad)
+            elif kind == "light":
+                im = tile(LIGHT, tint(m, DARK), size, pad)
+            elif kind == "tint":
+                im = tile(PANEL, tint(m, col), size, pad)
+            elif kind == "ak_open":
+                dim = tuple(int(c + (AK_DIM[k] - c) * 0.5) for k, c in enumerate(col))
+                im = tile(AK_BG, tint(m, dim, 0.4), size, pad)
             else:
-                dim = tuple(int(c + (DIMC[k] - c) * 0.5) for k, c in enumerate(col))
-                im = tile(PANEL, tint(m, dim, 0.4), size, 4)
-            sheet.alpha_composite(im, (x - (4 if ri >= 2 else 0), y))
-            if ri == 0:
-                text(d, (130 + i * cw + 4, y + size + 1), name, 12, TEXT)
-        y += size + 14 + (8 if ri == 0 else 0)
+                slot = tuple(int(c + (AK_BG[k] - c) * 0.55) for k, c in enumerate(AK_RED))
+                im = tile(slot, tint(m, AK_RED), size, pad)
+            sheet.alpha_composite(im, (x, y))
+            if label == "white on dark":
+                text(d, (150 + i * cw + 4, y + size + 1), name, 12, TEXT)
+        y += size + 14 + (8 if size >= 100 else 8)
     sheet.save(out)
     return out
 
@@ -207,27 +215,36 @@ def akatsuki_sheet(cloud_c, cloud_rim, cloud_cut, members, out):
     return out
 
 
-def compare_sheet(r1, r2, out):
-    """r1 / r2: [(name, mask)]."""
-    n = len(r2)
+def compare_sheet(r1, r2, out, m1=None, m2=None):
+    """Round 1 against round 2. r1 / r2: the beasts [(name, mask)]; m1 / m2: the Akatsuki (the cloud
+    first, then the members) [(name, mask)]."""
     cw = 140
+    n = max(len(r2), len(m2 or []))
     W = 120 + n * cw
-    H = 60 + 2 * (128 + 30) + 2 * (56 + 16) + 2 * (64 + 16) + 40
+    bands = [(r1, r2, BEAST_TINT, "Tailed Beasts")]
+    if m1 and m2:
+        bands.append((m1, m2, ["#d94540"] * len(m2), "Akatsuki"))
+    H = 40 + len(bands) * (40 + 2 * (128 + 16) + 2 * (48 + 16) + 2 * (64 + 16) + 24)
     sheet = Image.new("RGBA", (W, H), BG + (255,))
     d = ImageDraw.Draw(sheet)
-    text(d, (14, 12), "Tailed Beasts: round 1 (top of each pair) vs round 2", 20)
-    y = 50
-    for size, ground in ((128, "dark"), (48, "dark"), (64, "tint")):
-        for label, items in (("round 1", r1), ("round 2", r2)):
-            text(d, (12, y + size // 2 - 8), f"{label} {size}", 13, SUB)
-            for i, (name, m) in enumerate(items):
-                x = 120 + i * cw + (cw - size) // 2
-                im = tile(DARK, m, size, 4) if ground == "dark" else tile(PANEL, tint(m, bk.hexrgb(BEAST_TINT[i])), size, 4)
-                sheet.alpha_composite(im, (x, y))
-                if size == 128 and label == "round 1":
-                    text(d, (120 + i * cw + 6, 38), BEAST_TITLE[i], 12)
-            y += size + 16
-        y += 8
+    text(d, (14, 12), "Round 1 (upper row of each pair) vs round 2 (lower row)", 20)
+    y = 44
+    for a1, a2, tints, title in bands:
+        text(d, (14, y), title, 16)
+        y += 24
+        for i, (name, _) in enumerate(a2):
+            text(d, (120 + i * cw + 6, y), name, 12)
+        y += 18
+        for size, ground in ((128, "dark"), (48, "dark"), (64, "tint")):
+            for label, items in (("round 1", a1), ("round 2", a2)):
+                text(d, (12, y + size // 2 - 8), f"{label} {size}", 13, SUB)
+                for i, (name, m) in enumerate(items):
+                    x = 120 + i * cw + (cw - size) // 2
+                    im = (tile(DARK, m, size, 4) if ground == "dark"
+                          else tile(PANEL, tint(m, bk.hexrgb(tints[i])), size, 4))
+                    sheet.alpha_composite(im, (x, y))
+                y += size + 16
+            y += 8
     sheet.save(out)
     return out
 
@@ -256,7 +273,10 @@ def build_all():
     for i, name in enumerate(B.BEAST_NAMES):
         p1 = os.path.join(BUILD, "r1", f"beast_{name}.png")
         r1.append((BEAST_TITLE[i], Image.open(p1).convert("RGBA")))
-    paths.append(compare_sheet(r1, masks, os.path.join(BUILD, "r2_compare.png")))
+    m1 = [("cloud", Image.open(os.path.join(BUILD, "r1", "akatsuki.png")).convert("RGBA"))]
+    m1 += [(n, Image.open(os.path.join(BUILD, "r1", f"member_{n}.png")).convert("RGBA")) for n in B.MEMBERS]
+    m2 = [("cloud", akatsuki_cloud.cloud_mask(256, B.CLOUD_STYLE))] + [(n, m) for n, m, _ in members]
+    paths.append(compare_sheet(r1, masks, os.path.join(BUILD, "r2_compare.png"), m1, m2))
     return paths
 
 
