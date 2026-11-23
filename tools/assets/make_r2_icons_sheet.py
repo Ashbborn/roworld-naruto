@@ -396,7 +396,7 @@ def section_ui_forks(sh):
     def conc(fn):
         return UI.naruto_mask(fn(), UI.BOX)
     pairs = [
-        ("gold", [("A stack (live)", conc(G.g_ryo)), ("B round coin", conc(G.g_ryo_round)), ("round 1 oval", ui_mask("gold", 1))]),
+        ("gold", [("B round coin (owner pick, live)", conc(G.g_ryo)), ("A stack", conc(G.g_ryo_stack)), ("round 1 oval", ui_mask("gold", 1))]),
         ("port", [("A junk (live)", mask_from_body(G.g_harbor(), "port")), ("B anchor", mask_from_body(G.g_harbor_anchor(), "port")),
                   ("round 1 junk", ui_mask("port", 1))]),
         ("sam", [("A lantern (live)", mask_from_body(G.g_barrier(), "sam")), ("B dome + tower", mask_from_body(G.g_barrier_dome(), "sam")),

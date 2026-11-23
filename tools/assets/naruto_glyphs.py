@@ -269,6 +269,40 @@ def g_warship_alt():
     return s
 
 
+def g_warship_opt1():
+    """Warship option 1: a war junk side-on, two battened sails, a ram at the bow, a row of gun ports."""
+    s = rect(19, 8, 2.6, 32) + rect(41, 3, 2.6, 37)
+    s += boat_sail(30, 12, 38, 17, battens=2, lean=0.04, cw=3.4) + boat_sail(52, 7, 38, 17, battens=3, lean=0.04, cw=3.4)
+    s += path("M3 38 L61 38 L58 56 Q50 59 40 59 L16 59 Q8 58 5 52 Z")
+    s += poly([(61, 44), (64, 48), (61, 52)]) + path("M0 50 L7 48 L7 54 Z")
+    for x in range(12, 54, 9):
+        s += rect(x, 44, 5, 5, 0.8, K)
+    return s
+
+
+def g_warship_opt2():
+    """Warship option 2: a junk under one huge banner sail carrying the Leaf spiral."""
+    s = rect(31, 2, 3, 40) + poly([(12, 6), (31, 4), (31, 40), (8, 40)]) + poly([(34, 8), (58, 14), (60, 40), (34, 40)])
+    sp = [(24 + (2 + 11 * i / 50) * math.cos(math.radians(-60 + 560 * i / 50)), 23 + (2 + 11 * i / 50) * math.sin(math.radians(-60 + 560 * i / 50))) for i in range(51)]
+    s += '<path d="M' + " L".join(f"{x:.1f} {y:.1f}" for x, y in sp) + '" fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>'
+    s += path("M0 41 L64 41 Q60 54 46 58 L18 58 Q4 54 0 41 Z")
+    return s
+
+
+def g_warship_opt3():
+    """Warship option 3: an armoured turtle ship, a spiked domed roof, a dragon head, oars."""
+    s = path("M6 48 Q8 22 32 20 Q56 22 58 48 Z")
+    for x in (16, 26, 36, 46):
+        s += poly([(x - 3, 28 + (0 if 20 < x < 44 else 5)), (x, 20 + (0 if 20 < x < 44 else 5)), (x + 3, 28 + (0 if 20 < x < 44 else 5))])
+    s += path("M2 48 L62 48 Q58 58 46 60 L18 60 Q6 58 2 48 Z")
+    s += path("M58 44 Q64 38 62 30 L59 32 Q60 38 55 42 Z") + circ(59, 29, 4)
+    s += rect(14, 40, 36, 3.4, 0, K)
+    for x in (14, 26, 38, 50):
+        s += line([(x, 60), (x - 5, 64)], W, 2.6)
+    return s
+
+
+
 def g_boat():
     """Transport: a small sailboat, a main sail and a jib."""
     s = rect(30, 5, 2.8, 40)
@@ -334,16 +368,16 @@ def _coin_slab(cx, cy, rx=25, ry=10, t=9, gap=4.4):
     return o + rect(cx - rx, cy, 2 * rx, t) + ell(cx, cy + t, rx, ry) + ell(cx, cy, rx, ry)
 
 
-def g_ryo():
-    """Ryo: a stack of three coins seen from above at an angle, a square hole in the top one (a single
+def g_ryo_stack():
+    """Alt for the Ryo: a stack of three coins seen from above at an angle, a square hole in the top one (a single
     coin face-on reads as a donut at 16 px)."""
     s = _coin_slab(32, 44) + _coin_slab(32, 33) + _coin_slab(32, 22)
     s += rect(27.5, 19.6, 9, 5.6, 1, K)
     return s
 
 
-def g_ryo_round():
-    """A/B for the Ryo: one round cash coin, a rim, a square hole (round 1 drew it as an oval)."""
+def g_ryo():
+    """Ryo: one round cash coin, a rim, a square hole (owner pick B; the coin stack is the alternative)."""
     return circ(32, 32, 28) + circ(32, 32, 22, "none", K, 3) + rect(25.5, 25.5, 13, 13, 1.5, K)
 
 
@@ -422,7 +456,8 @@ CONCEPTS = {"troops": g_troops, "gold": g_ryo, "attack": g_attack, "globe": g_gl
 
 #: A/B alternatives (drawn only by make_r2_icons_sheet.py; never in STRUCTURES or CONCEPTS, which the
 #: generators iterate wholesale): the UI key they stand against -> the alternative drawing
-ALT_GLYPHS = {"port": g_harbor_anchor, "sam": g_barrier_dome, "warship": g_warship_alt, "gold": g_ryo_round}
+WARSHIP_OPTIONS = {"opt1_ram_ports": g_warship_opt1, "opt2_leaf_banner": g_warship_opt2, "opt3_turtle": g_warship_opt3}
+ALT_GLYPHS = {"port": g_harbor_anchor, "sam": g_barrier_dome, "warship": g_warship_alt, "gold": g_ryo_stack}
 
 
 # ---------------------------------------------------------------------------------------------------

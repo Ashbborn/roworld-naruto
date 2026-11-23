@@ -1,0 +1,436 @@
+[
+ {
+  "set": "buildings",
+  "item": "town",
+  "label": "Town",
+  "old": "buildings/town_old.png",
+  "new": "buildings/town_new.png"
+ },
+ {
+  "set": "buildings",
+  "item": "harbor",
+  "label": "Harbor",
+  "old": "buildings/harbor_old.png",
+  "new": "buildings/harbor_new.png"
+ },
+ {
+  "set": "buildings",
+  "item": "workshop",
+  "label": "Workshop",
+  "old": "buildings/workshop_old.png",
+  "new": "buildings/workshop_new.png"
+ },
+ {
+  "set": "buildings",
+  "item": "watchtower",
+  "label": "Watchtower",
+  "old": "buildings/watchtower_old.png",
+  "new": "buildings/watchtower_new.png"
+ },
+ {
+  "set": "buildings",
+  "item": "barrier_tower",
+  "label": "Barrier Tower",
+  "old": "buildings/barrier_tower_old.png",
+  "new": "buildings/barrier_tower_new.png"
+ },
+ {
+  "set": "buildings",
+  "item": "seal_shrine",
+  "label": "Seal Shrine",
+  "old": "buildings/seal_shrine_old.png",
+  "new": "buildings/seal_shrine_new.png"
+ },
+ {
+  "set": "buildings",
+  "item": "kunai_battery",
+  "label": "Kunai Battery",
+  "old": "buildings/kunai_battery_old.png",
+  "new": "buildings/kunai_battery_new.png"
+ },
+ {
+  "set": "buildings",
+  "item": "hawk_roost",
+  "label": "Hawk Roost",
+  "old": "buildings/hawk_roost_old.png",
+  "new": "buildings/hawk_roost_new.png"
+ },
+ {
+  "set": "buildings",
+  "item": "chakra_cannon",
+  "label": "Chakra Cannon",
+  "old": "buildings/chakra_cannon_old.png",
+  "new": "buildings/chakra_cannon_new.png"
+ },
+ {
+  "set": "units",
+  "item": "transport",
+  "label": "transport",
+  "old": "units/transport_old.png",
+  "new": "units/transport_new.png"
+ },
+ {
+  "set": "units",
+  "item": "trade",
+  "label": "trade",
+  "old": "units/trade_old.png",
+  "new": "units/trade_new.png"
+ },
+ {
+  "set": "units",
+  "item": "warship",
+  "label": "warship",
+  "old": "units/warship_old.png",
+  "new": "units/warship_new.png"
+ },
+ {
+  "set": "units",
+  "item": "atom",
+  "label": "atom",
+  "old": "units/atom_old.png",
+  "new": "units/atom_new.png"
+ },
+ {
+  "set": "units",
+  "item": "hydrogen",
+  "label": "hydrogen",
+  "old": "units/hydrogen_old.png",
+  "new": "units/hydrogen_new.png"
+ },
+ {
+  "set": "units",
+  "item": "mirv",
+  "label": "mirv",
+  "old": "units/mirv_old.png",
+  "new": "units/mirv_new.png"
+ },
+ {
+  "set": "units",
+  "item": "sam",
+  "label": "sam",
+  "old": "units/sam_old.png",
+  "new": "units/sam_new.png"
+ },
+ {
+  "set": "units",
+  "item": "shell",
+  "label": "shell",
+  "old": "units/shell_old.png",
+  "new": "units/shell_new.png"
+ },
+ {
+  "set": "units",
+  "item": "warhead",
+  "label": "warhead",
+  "old": "units/warhead_old.png",
+  "new": "units/warhead_new.png"
+ },
+ {
+  "set": "units",
+  "item": "train",
+  "label": "train",
+  "old": "units/train_old.png",
+  "new": "units/train_new.png"
+ },
+ {
+  "set": "units",
+  "item": "carriage",
+  "label": "carriage",
+  "old": "units/carriage_old.png",
+  "new": "units/carriage_new.png"
+ },
+ {
+  "set": "units",
+  "item": "carriage_loaded",
+  "label": "carriage_loaded",
+  "old": "units/carriage_loaded_old.png",
+  "new": "units/carriage_loaded_new.png"
+ },
+ {
+  "set": "units",
+  "item": "bijudama",
+  "label": "bijudama",
+  "old": "units/bijudama_old.png",
+  "new": "units/bijudama_new.png"
+ },
+ {
+  "set": "status",
+  "item": "crown",
+  "label": "crown",
+  "old": "status/crown_old.png",
+  "new": "status/crown_new.png"
+ },
+ {
+  "set": "status",
+  "item": "traitor",
+  "label": "traitor",
+  "old": "status/traitor_old.png",
+  "new": "status/traitor_new.png"
+ },
+ {
+  "set": "status",
+  "item": "disconnected",
+  "label": "disconnected",
+  "old": "status/disconnected_old.png",
+  "new": "status/disconnected_new.png"
+ },
+ {
+  "set": "status",
+  "item": "alliance",
+  "label": "alliance",
+  "old": "status/alliance_old.png",
+  "new": "status/alliance_new.png"
+ },
+ {
+  "set": "status",
+  "item": "allianceRequest",
+  "label": "allianceRequest",
+  "old": "status/allianceRequest_old.png",
+  "new": "status/allianceRequest_new.png"
+ },
+ {
+  "set": "status",
+  "item": "target",
+  "label": "target",
+  "old": "status/target_old.png",
+  "new": "status/target_new.png"
+ },
+ {
+  "set": "status",
+  "item": "embargo",
+  "label": "embargo",
+  "old": "status/embargo_old.png",
+  "new": "status/embargo_new.png"
+ },
+ {
+  "set": "status",
+  "item": "nukeRed",
+  "label": "nukeRed",
+  "old": "status/nukeRed_old.png",
+  "new": "status/nukeRed_new.png"
+ },
+ {
+  "set": "status",
+  "item": "nukeWhite",
+  "label": "nukeWhite",
+  "old": "status/nukeWhite_old.png",
+  "new": "status/nukeWhite_new.png"
+ },
+ {
+  "set": "status",
+  "item": "allianceFaded",
+  "label": "allianceFaded",
+  "old": "status/allianceFaded_old.png",
+  "new": "status/allianceFaded_new.png"
+ },
+ {
+  "set": "status",
+  "item": "doomsdayClock",
+  "label": "doomsdayClock",
+  "old": "status/doomsdayClock_old.png",
+  "new": "status/doomsdayClock_new.png"
+ },
+ {
+  "set": "status",
+  "item": "verified",
+  "label": "verified",
+  "old": "status/verified_old.png",
+  "new": "status/verified_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "troops",
+  "label": "troops",
+  "old": "ui/troops_old.png",
+  "new": "ui/troops_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "gold",
+  "label": "gold",
+  "old": "ui/gold_old.png",
+  "new": "ui/gold_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "attack",
+  "label": "attack",
+  "old": "ui/attack_old.png",
+  "new": "ui/attack_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "globe",
+  "label": "globe",
+  "old": "ui/globe_old.png",
+  "new": "ui/globe_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "hud_globe",
+  "label": "hud_globe",
+  "old": "ui/hud_globe_old.png",
+  "new": "ui/hud_globe_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "crown",
+  "label": "crown",
+  "old": "ui/crown_old.png",
+  "new": "ui/crown_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "alliance",
+  "label": "alliance",
+  "old": "ui/alliance_old.png",
+  "new": "ui/alliance_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "betray",
+  "label": "betray",
+  "old": "ui/betray_old.png",
+  "new": "ui/betray_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "target",
+  "label": "target",
+  "old": "ui/target_old.png",
+  "new": "ui/target_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "donate",
+  "label": "donate",
+  "old": "ui/donate_old.png",
+  "new": "ui/donate_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "pops",
+  "label": "pops",
+  "old": "ui/pops_old.png",
+  "new": "ui/pops_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "city",
+  "label": "city",
+  "old": "ui/city_old.png",
+  "new": "ui/city_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "port",
+  "label": "port",
+  "old": "ui/port_old.png",
+  "new": "ui/port_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "factory",
+  "label": "factory",
+  "old": "ui/factory_old.png",
+  "new": "ui/factory_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "defense",
+  "label": "defense",
+  "old": "ui/defense_old.png",
+  "new": "ui/defense_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "sam",
+  "label": "sam",
+  "old": "ui/sam_old.png",
+  "new": "ui/sam_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "silo",
+  "label": "silo",
+  "old": "ui/silo_old.png",
+  "new": "ui/silo_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "artillery",
+  "label": "artillery",
+  "old": null,
+  "new": "ui/artillery_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "airfield",
+  "label": "airfield",
+  "old": null,
+  "new": "ui/airfield_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "railgun",
+  "label": "railgun",
+  "old": null,
+  "new": "ui/railgun_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "warship",
+  "label": "warship",
+  "old": "ui/warship_old.png",
+  "new": "ui/warship_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "atom",
+  "label": "atom",
+  "old": "ui/atom_old.png",
+  "new": "ui/atom_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "hydrogen",
+  "label": "hydrogen",
+  "old": "ui/hydrogen_old.png",
+  "new": "ui/hydrogen_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "mirv",
+  "label": "mirv",
+  "old": "ui/mirv_old.png",
+  "new": "ui/mirv_new.png"
+ },
+ {
+  "set": "ui",
+  "item": "boat",
+  "label": "boat",
+  "old": "ui/boat_old.png",
+  "new": "ui/boat_new.png"
+ },
+ {
+  "set": "warship_ui",
+  "item": "opt1_ram_ports",
+  "label": "opt1_ram_ports",
+  "old": null,
+  "new": "warship_ui/opt1_ram_ports.png"
+ },
+ {
+  "set": "warship_ui",
+  "item": "opt2_leaf_banner",
+  "label": "opt2_leaf_banner",
+  "old": null,
+  "new": "warship_ui/opt2_leaf_banner.png"
+ },
+ {
+  "set": "warship_ui",
+  "item": "opt3_turtle",
+  "label": "opt3_turtle",
+  "old": null,
+  "new": "warship_ui/opt3_turtle.png"
+ }
+]
