@@ -622,8 +622,8 @@ PICKS = {
     "konan": ("B", "owner's pick"),
     "tobi": ("A", "owner's pick"),
     "zetsu": ("A", "owner's pick"),
-    "isobu": ("B", "owner's pick (round 3 B), redrawn from the same brief until it showed three tails; the "
-                   "two-tail draw is in isobu/r3_b_2tails (build/ai_isobu_b_compare.png)"),
+    "isobu": ("B", "owner's pick (round 3 B; two tails show). A redraw with three tails is in isobu/r3_b_3tails "
+                   "(build/ai_isobu_b_compare.png): a different, lower drawing whose eye fades at 24 px"),
     "son_goku": ("A", "owner's pick (round 3 A: upright, horn, four tails, open mouth)"),
     "kakuzu": ("redo", "redo 2 (build/ai_pick_kakuzu.png): the Takigakure plate, green-on-red eyes, pointed mask, "
                        "threads; not picked yet"),
@@ -733,7 +733,7 @@ R3_REDO = [("isobu", "ABCD"), ("son_goku", "ABCD"), ("kakuzu", "ABC")]
 #: checked on the raws and at 48 / 32 / 24 px (11-23): misses against the brief, in red beside the letter
 ICON_NOTES = {
     "isobu/icon_A": "the eye is lost at 32 px",
-    "isobu/icon_B": "3 tails (the redraw); the eye is faint at 24 px",
+    "isobu/icon_B": "2 tails read, not 3",
     "isobu/icon_C": "the eye is lost at 32 px",
     "son_goku/icon_A": "goes spidery at 24 px",
     "son_goku/icon_B": "goes spidery at 24 px",
@@ -935,8 +935,9 @@ def subject_sheet(s, title, out=None):
 # wire: the owner's picks -> assets/beast_art/ -> Roblox (tools/upload.py) -> src/shared/Assets/BeastArt.luau
 # ---------------------------------------------------------------------------------------------------
 
-#: the owner's picks (11-23): subject -> (icon letter, portrait letter). Isobu's icon B is the third draw of
-#: its round-3 B design (three tails; the two-tail B is in isobu/r3_b_2tails)
+#: the owner's picks (11-23): subject -> (icon letter, portrait letter). Isobu's icon B is the one the owner
+#: picked (two tails show): the redraws of its brief that showed three changed the drawing and lost the eye
+#: at 24 px (isobu/r3_b_3tails, build/ai_isobu_b_compare.png), so they wait for the owner's word
 WIRED = {
     "shukaku": ("C", "C"), "matatabi": ("A", "A"), "isobu": ("B", "B"), "son_goku": ("A", "A"),
     "kokuo": ("A", "A"), "saiken": ("B", "A"), "chomei": ("C", "A"), "gyuki": ("A", "A"), "kurama": ("A", "B"),

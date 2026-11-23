@@ -7,7 +7,7 @@ return {
 	beasts = {
 		"rbxassetid://83907535670640", -- 1 shukaku
 		"rbxassetid://127880484694922", -- 2 matatabi
-		"rbxassetid://116886467204470", -- 3 isobu
+		"rbxassetid://84407528448173", -- 3 isobu
 		"rbxassetid://76557722433189", -- 4 son_goku
 		"rbxassetid://83035030728053", -- 5 kokuo
 		"rbxassetid://128324010007814", -- 6 saiken
