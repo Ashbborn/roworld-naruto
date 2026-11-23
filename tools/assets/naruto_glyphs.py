@@ -745,3 +745,186 @@ STATUS = {"crown": s_kage_hat, "traitor": s_traitor, "disconnected": s_disconnec
 
 #: A/B alternatives for the status icons (make_r2_icons_sheet.py only; STATUS is what the atlas draws)
 ALT_STATUS = {"crown": s_kage_hat_spiral, "embargo": s_embargo_oval}
+
+
+# ---------------------------------------------------------------------------------------------------
+# Round-1 drawings kept where the owner picked OLD (per-item picks, 2026-11-23)
+# ---------------------------------------------------------------------------------------------------
+GREY, GREY_D = "#9aa0a8", "#747a84"
+
+def r1_g_town():
+    """Town: a two-tier pagoda house, upturned eaves."""
+    s = rect(30, 2, 4, 8)
+    s += path("M10 22 Q20 20 25 11 L39 11 Q44 20 54 22 L54 25 L10 25 Z")
+    s += rect(20, 24, 24, 9)
+    s += path("M2 40 Q16 37 22 30 L42 30 Q48 37 62 40 L62 43 L2 43 Z")
+    s += rect(9, 42, 46, 16)
+    s += rect(5, 57, 54, 5, 1)
+    s += rect(28, 46, 8, 12, 1, K)
+    s += rect(14, 46, 8, 6, 1, K) + rect(42, 46, 8, 6, 1, K)
+    s += rect(28, 26, 8, 5, 1, K)
+    return s
+
+
+def r1_g_watchtower():
+    """Watchtower: a roofed lookout on four braced stilts."""
+    s = path("M4 20 L32 4 L60 20 L54 22 L10 22 Z")
+    s += rect(13, 21, 38, 14)
+    s += rect(20, 25, 24, 6, 1, K)
+    s += line([(17, 35), (11, 61)], W, 5) + line([(47, 35), (53, 61)], W, 5)
+    s += line([(27, 35), (25, 61)], W, 3.5) + line([(37, 35), (39, 61)], W, 3.5)
+    s += line([(15, 42), (49, 54)], W, 3) + line([(49, 42), (15, 54)], W, 3)
+    return s
+
+
+def r1_g_kunai_battery():
+    """Kunai Battery: three kunai fanned up from one point."""
+    s = kunai(18, 34, 46, -26) + kunai(46, 34, 46, 26) + kunai(32, 30, 52, 0)
+    return s
+
+
+def r1_g_warship():
+    """Warship: a ninja war junk, three batten sails, a shield row on the hull, a high stern."""
+    s = rect(30, 4, 3, 36) + rect(48, 12, 2.5, 28) + rect(12, 14, 2.5, 26)
+    s += boat_sail(31, 6, 36, 26, battens=4, lean=0.08)
+    s += boat_sail(49, 14, 36, 16, battens=3, lean=0.08)
+    s += boat_sail(13, 16, 36, 15, battens=3, lean=0.06)
+    s += path("M0 30 L10 34 L10 39 L63 39 Q60 48 50 52 L12 52 Q4 48 1 40 Z")
+    for x in range(16, 52, 7):
+        s += circ(x, 45, 2.2, K)
+    return s
+
+
+def r1_g_explosion_seal():
+    """Explosion Seal: a paper tag, its fuse sparking."""
+    s = tag_shape(19, 14, 26, 46)
+    s += tag_marks(19, 14, 26, 46, 2.6)
+    s += poly(star(32, 8, 8, 3, 4, -90))
+    return s
+
+
+def r1_g_great_seal():
+    """Great Explosion Seal: a tag over a big burst."""
+    s = poly(star(32, 34, 31, 18, 8, -90 + 22.5))
+    s += tag_shape(20, 12, 24, 44, K, K, 4)
+    s += tag_shape(20, 12, 24, 44)
+    s += tag_marks(20, 12, 24, 44, 2.6)
+    return s
+
+
+def r1_g_bomb_storm():
+    """Paper Bomb Storm: three tags flung apart."""
+    s = ""
+    for cx, cy, a in ((15, 36, -24), (49, 36, 24), (32, 28, 0)):
+        t = f'<g transform="rotate({a} {cx} {cy})">'
+        s += t + tag_shape(cx - 10, cy - 18, 20, 36, K, K, 4) + tag_shape(cx - 10, cy - 18, 20, 36) \
+             + tag_marks(cx - 10, cy - 18, 20, 36, 2.2) + "</g>"
+    s += poly(star(32, 5, 5, 2, 4))
+    return s
+
+
+def r1_g_troops():
+    """Troops: hooded shinobi, the eye slit of their masks, one in front of two."""
+    def hood(cx, cy, r):
+        body = path(f"M{cx - r * 1.5} {cy + r * 2.2} Q{cx - r * 1.4} {cy + r * 0.7} {cx} {cy + r * 0.8} "
+                    f"Q{cx + r * 1.4} {cy + r * 0.7} {cx + r * 1.5} {cy + r * 2.2} Z")
+        head = circ(cx, cy, r)
+        return (body.replace('fill="#ffffff"', 'fill="#000000" stroke="#000000" stroke-width="5"')
+                + head.replace('fill="#ffffff"', 'fill="#000000" stroke="#000000" stroke-width="5"')
+                + body + head + rect(cx - r * 0.82, cy - r * 0.28, r * 1.64, r * 0.5, r * 0.2, K)
+                + circ(cx - r * 0.36, cy - r * 0.03, r * 0.14) + circ(cx + r * 0.36, cy - r * 0.03, r * 0.14))
+    return hood(15, 22, 10) + hood(49, 22, 10) + hood(32, 28, 13)
+
+
+def r1_g_kage_hat():
+    """The leader's mark: a Kage's hat, its front panel."""
+    s = path("M2 46 Q22 36 32 8 Q42 36 62 46 Q32 56 2 46 Z")
+    s += path("M23 34 L32 22 L41 34 L32 50 Z", K)
+    s += path("M26.5 34 L32 27 L37.5 34 L32 44 Z", W)
+    s += path("M6 48 Q32 58 58 48 L56 58 Q32 64 8 58 Z")
+    return s
+
+
+def r1_g_betray():
+    """Betray: a forehead protector slashed across."""
+    s = path("M2 26 Q10 20 14 24 L14 40 Q8 38 2 44 Z") + path("M62 26 Q54 20 50 24 L50 40 Q56 38 62 44 Z")
+    s += rect(10, 18, 44, 28, 5)
+    s += rect(14, 22, 36, 20, 3, "none", K, 2)
+    s += curve("M26 32 a6 6 0 1 1 6 6", K, 2.4)
+    s += line([(6, 50), (58, 14)], K, 6)
+    return s
+
+
+def r1_s_kage_hat():
+    hat = lambda fl, st, sw: path("M10 178 Q80 150 128 22 Q176 150 246 178 Q128 222 10 178 Z", fl, st, sw)
+    s = _ink(hat, PAPER, path("M128 22 Q176 150 246 178 Q190 200 128 204 Z", SHADE[PAPER]))
+    s += path("M92 140 L128 96 L164 140 L128 200 Z", VERMILION, INK, 10)
+    s += path("M128 96 L164 140 L128 200 Z", SHADE[VERMILION])
+    s += path("M112 142 L128 122 L144 142 L128 170 Z", PAPER)
+    s += path("M26 190 Q128 230 230 190 L222 214 Q128 248 34 214 Z", VERMILION, INK, 10)
+    s += path("M128 218 Q180 214 230 190 L222 214 Q176 236 128 238 Z", SHADE[VERMILION])
+    return s
+
+
+def r1_s_disconnected():
+    rope = lambda x0, y0, x1, y1: (line([(x0, y0), (x1, y1)], INK, 46) + line([(x0, y0), (x1, y1)], GREY, 24))
+    s = rope(20, 200, 96, 124) + rope(160, 132, 236, 56)
+    for x0, y0, dx, dy in ((96, 124, 1, -1), (160, 132, -1, 1)):
+        for k in (-14, 0, 14):
+            s += line([(x0 + k * 0.7, y0 + k * 0.7), (x0 + dx * 26 + k, y0 + dy * 14 + k)], INK, 8)
+    for t in (0.25, 0.55):
+        for (x0, y0, x1, y1) in ((20, 200, 96, 124), (160, 132, 236, 56)):
+            x, y = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
+            s += line([(x - 6, y - 10), (x + 8, y + 6)], GREY_D, 6)
+    return s
+
+
+def r1_s_alliance_request():
+    s = rect(36, 52, 168, 148, 10, PAPER, INK, OL)
+    s += rect(120, 56, 80, 140, 0, SHADE[PAPER])
+    s += rect(20, 38, 32, 176, 14, VERMILION, INK, 10) + rect(188, 38, 32, 176, 14, VERMILION, INK, 10)
+    for y in (88, 116, 144):
+        s += line([(70, y), (130, y)], INK, 8)
+    s += circ(168, 176, 46, LEAF, INK, 10)
+    s += rect(160, 150, 16, 52, 3, PAPER) + rect(142, 168, 52, 16, 3, PAPER)
+    return s
+
+
+def r1_s_target():
+    s = circ(118, 138, 104, PAPER, INK, OL)
+    s += circ(118, 138, 74, VERMILION, INK, 8) + circ(118, 138, 46, PAPER, INK, 8) + circ(118, 138, 20, VERMILION, INK, 8)
+    s += path("M118 34 A104 104 0 0 1 118 242 Z", "#00000018")
+    s += f'<g transform="translate(176 80) rotate(225) scale(2.9)">' + kunai_shape(52, INK, INK, 7) + kunai_shape(52, "#c9d3da") \
+         + "</g>"
+    return s
+
+
+def _r1_explosion_tag(body, shade):
+    s = poly(star(128, 52, 52, 22, 8, -90 + 22.5), GOLD, INK, 10)
+    s += poly(star(128, 52, 26, 11, 8, -90), "#fff4c2")
+    t = lambda fl, st, sw: tag_shape(74, 64, 108, 180, fl, st, sw)
+    s += _ink(t, body, rect(128, 76, 50, 164, 0, shade))
+    s += tag_marks(74, 64, 108, 180, 11, INK)
+    return s
+
+
+def r1_s_nuke_red():
+    return _r1_explosion_tag(VERMILION, SHADE[VERMILION])
+
+
+def r1_s_nuke_white():
+    return _r1_explosion_tag(PAPER, SHADE[PAPER])
+
+
+# picks: buildings Town + Kunai Battery OLD (the glyph atlas); UI masks troops, crown, betray, city, defense,
+# atom, hydrogen, mirv OLD; status crown, disconnected, allianceRequest, target, nukeRed, nukeWhite OLD
+STRUCTURES[0] = r1_g_town
+STRUCTURES[6] = r1_g_kunai_battery
+UI_STRUCT_OVERRIDE = {"defense": r1_g_watchtower}     # the Watchtower plate glyph is NEW, its UI mask OLD
+UNITS_UI.update({"atom": r1_g_explosion_seal, "hydrogen": r1_g_great_seal, "mirv": r1_g_bomb_storm})
+#: the warship interface icon: opt2 (Leaf banner) for now; the owner's OLD pick is this one-line swap:
+#:   UNITS_UI["warship"] = r1_g_warship
+UNITS_UI["warship"] = g_warship_opt2
+CONCEPTS.update({"troops": r1_g_troops, "crown": r1_g_kage_hat, "betray": r1_g_betray})
+STATUS.update({"crown": r1_s_kage_hat, "disconnected": r1_s_disconnected, "allianceRequest": r1_s_alliance_request,
+               "target": r1_s_target, "nukeRed": r1_s_nuke_red, "nukeWhite": r1_s_nuke_white})

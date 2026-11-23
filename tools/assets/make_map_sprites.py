@@ -267,7 +267,7 @@ def ui_mask(body, key):
 def make_ui():
     """White masks for the interface: the structures' glyphs and the units' (no shadow: they are tinted)."""
     os.makedirs(os.path.join(OUT, "ui"), exist_ok=True)
-    pics = [(k, fn()) for k, fn in zip(UI_KINDS, G.STRUCTURES)]
+    pics = [(k, G.UI_STRUCT_OVERRIDE.get(k, fn)()) for k, fn in zip(UI_KINDS, G.STRUCTURES)]
     pics += [(k, G.UNITS_UI[k]()) for k in UI_UNITS]
     for key, body in pics:
         ui_mask(body, key).save(os.path.join(OUT, "ui", key + ".png"))
@@ -331,12 +331,12 @@ UNITS = {
     ],
     # Explosion Seal: a paper tag, one ink stroke, the fuse sparking at its head
     "atom": [
-        "..#..",
+        "#.#.#",
         ".#o#.",
-        ".###.",
+        "#####",
         "#ooo#",
-        "#o#o#",
-        "#o#o#",
+        "##o##",
+        "#ooo#",
         "#o#o#",
         "#ooo#",
         "#####",
@@ -412,13 +412,13 @@ UNITS = {
     # an empty cart (a hollow crate), and one loaded with goods (a full one)
     "carriage": [
         "###",
-        "#.#",
+        "#o#",
         "###",
     ],
     "carriage_loaded": [
-        "###",
-        "#o#",
-        "###",
+        "ooo",
+        "o#o",
+        "ooo",
     ],
     # Bijudama: a dark chakra orb (border pixels), a glint and a rim of light (territory pixels)
     "bijudama": [

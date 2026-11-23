@@ -4,7 +4,7 @@
 return {
 	--- 9 white glyphs of 64 x 64, a column per structure kind (Defs.S_*): Town, Harbor, Workshop,
 	--- Watchtower, Barrier Tower, Seal Shrine, Kunai Battery, Hawk Roost, Chakra Cannon
-	icons = { id = "rbxassetid://134596181357223", cell = 64, cols = 9 },
+	icons = { id = "rbxassetid://140469374802768", cell = 64, cols = 9 },
 	--- structure plates: the same 9 columns x 2 rows (0 whole shape -> rim colour, 1 inset
 	--- shape -> fill colour), 112 px cells
 	shapes = { id = "rbxassetid://123706365772087", cell = 112, cols = 9 },
@@ -18,29 +18,29 @@ return {
 	--- unit sprites 13 x 13, 13 columns (transport, trade, warship, atom, hydrogen, mirv, sam, shell,
 	--- warhead, train, carriage, carriage_loaded, bijudama) x 2 rows:
 	--- 0 territory colour, 1 border colour (columns are zero-based: bijudama = column 12)
-	units = { id = "rbxassetid://77929783084391", cell = 13, cols = 13 },
+	units = { id = "rbxassetid://86894574378641", cell = 13, cols = 13 },
 	--- `units` with both rows in ONE image (territory pixels white, border pixels grey)
-	units_one = { id = "rbxassetid://135536636470657", cell = 13, cols = 13 },
+	units_one = { id = "rbxassetid://91643045977475", cell = 13, cols = 13 },
 	--- status icons, full colour, 256 px cells (pad 16), 3 columns: crown, traitor, disconnected,
 	--- alliance, allianceRequest, target, embargo, nukeRed, nukeWhite, allianceFaded, doomsdayClock,
 	--- verified
-	status = { id = "rbxassetid://94390674984641", cell = 256, cols = 3, pad = 16 },
+	status = { id = "rbxassetid://115665124458932", cell = 256, cols = 3, pad = 16 },
 	--- white 128 px masks of the same glyphs for the interface (UITheme.icon names; they take the
 	--- place of Assets/UiIcons' and ArsenalArt.ui's for these keys)
 	ui = {
 		city = "rbxassetid://100590683038507",
-		port = "rbxassetid://90118658073211",
+		port = "rbxassetid://82350496699765",
 		factory = "rbxassetid://117107801577851",
 		defense = "rbxassetid://76832288427635",
-		sam = "rbxassetid://136046118833954",
+		sam = "rbxassetid://124234921031737",
 		silo = "rbxassetid://79849645741265",
 		artillery = "rbxassetid://83388363762036",
 		airfield = "rbxassetid://110806076854654",
 		railgun = "rbxassetid://96801631520529",
-		warship = "rbxassetid://82874485025945",
+		warship = "rbxassetid://103284935902335",
 		atom = "rbxassetid://95938268936150",
 		hydrogen = "rbxassetid://87512541152775",
 		mirv = "rbxassetid://140662686194816",
-		boat = "rbxassetid://140084033224266",
+		boat = "rbxassetid://123557022981486",
 	},
 }
