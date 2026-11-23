@@ -22,6 +22,7 @@ local UICtx = require("./UICtx") :: any
 local UITheme = require("./UITheme")
 local W = require("./Widgets")
 local GlassPanel = require("./GlassPanel")
+local ScrollPanel = require("./ScrollPanel")
 local FillBar = require("./FillBar")
 local CountLabel = require("./CountLabel")
 local RatioSlider = require("./RatioSlider")
@@ -85,7 +86,8 @@ function CommandBar.new(c: any)
 	self._buttons_dirty = true
 	self:set_mouse_filter(W.MOUSE_IGNORE)
 	self:set_anchors_and_offsets_preset(W.PRESET_FULL_RECT)
-	self.panel = GlassPanel.new(18.0, 12.0, UITheme.R_LG, true, 22)
+	-- (2026-11-23: the jutsu scroll, ScrollPanel; 18 px top and bottom fit its wave bands)
+	self.panel = ScrollPanel.new(18.0, 18.0, 22)
 	self:add_child(self.panel)
 	self:_build_sections()
 	self:_connect(c.ratio_changed:Connect(function(_r)
@@ -157,7 +159,8 @@ function CommandBar._build_sections(self)
 	gr:add_child(self._income)
 	self._gold_box:add_child(gr)
 	local gv = T.hbox(6)
-	self._gold = CountLabel.new(20, 700, T.GOLD, T.fmt_num)
+	self._gold = CountLabel.new(20, 800, T.GOLD, T.fmt_num)
+	self._gold.metal = "gold" -- (2026-11-23: metallic gold on the scroll)
 	gv:add_child(self._gold)
 	self._gold_box:add_child(gv)
 	self._gold_box:set_min_size(Vector2.new(118, 0))
@@ -168,7 +171,7 @@ function CommandBar._build_sections(self)
 	rr:add_child(T.icon_rect("attack", 12.0, T.TEXT_3))
 	rr:add_child(T.caption("Attack"))
 	rr:add_child(spacer())
-	self._ratio_pct = T.label("35%", 13, 800, T.AMBER)
+	self._ratio_pct = T.label("35%", 13, 800, T.TEXT)
 	rr:add_child(self._ratio_pct)
 	self._ratio_head = rr
 	self._ratio_box:add_child(rr)
@@ -239,7 +242,8 @@ function CommandBar._build_sections(self)
 	local gi = T.icon_rect("gold", 14.0, T.GOLD)
 	gi.size_flags_vertical = W.SHRINK_CENTER
 	mgh:add_child(gi)
-	self._m_gold = CountLabel.new(15, 700, T.GOLD, T.fmt_num)
+	self._m_gold = CountLabel.new(15, 800, T.GOLD, T.fmt_num)
+	self._m_gold.metal = "gold"
 	mgh:add_child(self._m_gold)
 	self._m_stats_box:add_child(mgh)
 	self._m_stats:add_child(self._m_stats_box)
@@ -292,7 +296,8 @@ function CommandBar._build_sections(self)
 	self._builds:add_child(self._arsenal_wrap)
 
 	-- Phone tray + toggle, and the touch placement chip.
-	self.tray = GlassPanel.new(10.0, 8.0, T.R_LG, true, 18)
+	self.tray = ScrollPanel.new(10.0, 8.0, 18)
+	self.tray:set_slim(true)
 	self.tray:set_visible(false)
 	self:add_child(self.tray)
 	local tb = W.Button.new("BUILD", "GlassButton")
@@ -631,10 +636,11 @@ function CommandBar._reflow(self)
 	-- Phones: a slim strip exactly one touch target tall.
 	self.panel:set_padding(
 		if compact then 8.0 else 18.0,
-		if compact then 0.0 else 12.0,
+		if compact then 0.0 else 18.0,
 		if compact then 4.0 else 18.0,
-		if compact then 0.0 else 12.0
+		if compact then 0.0 else 18.0
 	)
+	self.panel:set_slim(compact)
 	-- Icon on top, "Build" underneath, exactly one touch target tall (the caption is a child label
 	-- so it does not add to the button's minimum height).
 	local tb = self._tray_btn
@@ -645,7 +651,7 @@ function CommandBar._reflow(self)
 	tb:add_theme_constant_override("icon_max_width", 16)
 	tb:set_min_size(Vector2.new(52, 44))
 	for _, st in ipairs({ "normal", "hover", "disabled" }) do
-		tb:add_theme_stylebox_override(st, T.flat(T.rgba(1, 1, 1, 0.05), T.R_MD, T.rgba(1, 1, 1, 0.08), 1, 0.0, 5.0))
+		tb:add_theme_stylebox_override(st, T.flat(T.FILL, T.R_MD, T.LINE, 1, 0.0, 5.0))
 	end
 	tb:add_theme_stylebox_override("pressed", T.flat(T.c(T.AMBER, 0.22), T.R_MD, T.AMBER, 1, 0.0, 5.0))
 	tb:add_theme_stylebox_override("hover_pressed", T.flat(T.c(T.AMBER, 0.28), T.R_MD, T.AMBER, 1, 0.0, 5.0))

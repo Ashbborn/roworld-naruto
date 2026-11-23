@@ -464,7 +464,7 @@ local function card_panel(mh: number, mv: number)
 	card:set_mouse_filter(W.MOUSE_IGNORE)
 	card:add_theme_stylebox_override(
 		"panel",
-		UITheme.flat(UITheme.rgba(1, 1, 1, 0.035), 12, UITheme.rgba(1, 1, 1, 0.07), 1, mh, mv)
+		UITheme.flat(UITheme.c(UITheme.BROWN_INK, 0.056), 12, UITheme.c(UITheme.BROWN_INK, 0.112), 1, mh, mv)
 	)
 	return card
 end
@@ -627,7 +627,7 @@ end
 local function keycap(text: string)
 	local cap = W.Panel.new()
 	cap:set_mouse_filter(W.MOUSE_IGNORE)
-	local sb = UITheme.flat(UITheme.rgba(1, 1, 1, 0.09), 6, UITheme.rgba(1, 1, 1, 0.2), 1, 8.0, 2.0)
+	local sb = UITheme.flat(UITheme.c(UITheme.BROWN_INK, 0.144), 6, UITheme.c(UITheme.BROWN_INK, 0.32), 1, 8.0, 2.0)
 	sb.margin = { 8.0, 2.0, 8.0, 3.0 }
 	cap:add_theme_stylebox_override("panel", sb)
 	cap.size_flags_horizontal = W.SHRINK_BEGIN

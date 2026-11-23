@@ -71,7 +71,7 @@ function Banner.make(
 	t:set_shadow(UITheme.rgba(0, 0, 0, 0.5), 3, 6)
 	v:add_child(t)
 	if sub ~= "" and not sm then
-		local s = UITheme.label(sub, if not ctx.compact then 15 else 12, 600, UITheme.TEXT_2, 1)
+		local s = UITheme.label(sub, if not ctx.compact then 15 else 12, 600, UITheme.ON_MAP_2, 1) -- (over the map)
 		s:set_alignment(W.ALIGN_CENTER)
 		v:add_child(s)
 	end

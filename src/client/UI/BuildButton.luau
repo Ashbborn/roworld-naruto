@@ -342,8 +342,9 @@ function BuildButton._redraw(self)
 	local locked = self._av.locked == true
 	local arsenal_locked = self._av.arsenal ~= nil
 	local nuke = R.is_nuke(self.kind)
-	local bg: any = UITheme.rgba(1, 1, 1, 0.035)
-	local border: any = UITheme.rgba(1, 1, 1, 0.07)
+	-- (2026-11-23, the scroll: a tan paper well in a thin brown ink frame; RoWorld's were white washes)
+	local bg: any = UITheme.c(UITheme.PAPER_DEEP, 0.42)
+	local border: any = UITheme.c(UITheme.BROWN_INK, 0.75)
 	if arsenal_locked then
 		bg = UITheme.c(UITheme.GOLD, 0.05)
 		border = UITheme.c(UITheme.GOLD, 0.28)
@@ -353,11 +354,11 @@ function BuildButton._redraw(self)
 		border = UITheme.c(UITheme.RED, 0.22)
 	end
 	if self._hover then
-		bg = if not nuke then UITheme.rgba(1, 1, 1, 0.1) else UITheme.c(UITheme.RED, 0.16)
+		bg = if not nuke then UITheme.c(UITheme.PAPER_DEEP, 0.75) else UITheme.c(UITheme.RED, 0.16)
 		border = UITheme.LINE_2
 	end
 	if self.button_pressed or (self._hover and self._down) then
-		bg = UITheme.rgba(1, 1, 1, 0.05)
+		bg = UITheme.c(UITheme.PAPER_DEEP, 0.9)
 	end
 	if self.active then
 		bg = UITheme.c(UITheme.AMBER, 0.2)
@@ -371,7 +372,7 @@ function BuildButton._redraw(self)
 
 	local icol: any = UITheme.TEXT
 	if nuke then
-		icol = Color3.new(1.0, 0.86, 0.84)
+		icol = Color3.fromRGB(96, 18, 18) -- (seals: a dark red ink)
 	end
 	if not ok then
 		icol = UITheme.c(icol, if arsenal_locked then 0.55 elseif locked then 0.2 else 0.5)

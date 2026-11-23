@@ -32,8 +32,8 @@ function Switch.new(text: string, icon_name: string)
 	self.on = false
 	self._k = 0.0
 	self:set_min_size(Vector2.new(0, 46))
-	local normal = UITheme.flat(UITheme.rgba(1, 1, 1, 0.04), 10, UITheme.rgba(1, 1, 1, 0.08), 1)
-	local hover = UITheme.flat(UITheme.rgba(1, 1, 1, 0.07), 10, UITheme.rgba(1, 1, 1, 0.08), 1)
+	local normal = UITheme.flat(UITheme.c(UITheme.BROWN_INK, 0.064), 10, UITheme.c(UITheme.BROWN_INK, 0.128), 1)
+	local hover = UITheme.flat(UITheme.c(UITheme.BROWN_INK, 0.112), 10, UITheme.c(UITheme.BROWN_INK, 0.128), 1)
 	self:add_theme_stylebox_override("normal", normal)
 	self:add_theme_stylebox_override("pressed", normal)
 	self:add_theme_stylebox_override("disabled", normal)
@@ -106,7 +106,7 @@ function Switch._draw_switch(self)
 	track.Position = UDim2.new(1, -math.floor(14 * s + 0.5), 0.5, 0)
 	track.Size = UDim2.fromOffset(math.floor(tw * s + 0.5), math.floor(th * s + 0.5))
 	self._track_corner.CornerRadius = UDim.new(0, math.floor(11 * s + 0.5))
-	local col = UITheme.lerp(UITheme.rgba(1, 1, 1, 0.14), UITheme.to_rgba(UITheme.AMBER), k)
+	local col = UITheme.lerp(UITheme.c(UITheme.BROWN_INK, 0.224), UITheme.to_rgba(UITheme.AMBER), k)
 	track.BackgroundColor3 = UITheme.color3(col)
 	self:_part(track, "BackgroundTransparency", UITheme.alpha(col))
 	local kx = (-14 - tw + 11) + (tw - 22) * k
@@ -320,7 +320,7 @@ function VolumeRow._draw_row(self)
 	local th = 6.0
 	self._track.Position = UDim2.new(1, -px(from_right), 0.5, 0)
 	self._track.Size = UDim2.fromOffset(px(tw), px(th))
-	local tcol = UITheme.rgba(1, 1, 1, 0.14)
+	local tcol = UITheme.c(UITheme.BROWN_INK, 0.224)
 	self._track.BackgroundColor3 = UITheme.color3(tcol)
 	self:_part(self._track, "BackgroundTransparency", UITheme.alpha(tcol))
 	local fw = tw * self.value

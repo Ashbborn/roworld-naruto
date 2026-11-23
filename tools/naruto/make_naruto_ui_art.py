@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """RoNindo's own UI art (2026-11-23, the Naruto fork's UI identity): the title wordmark and the
-jutsu-scroll pieces of the command bar. Re-runnable and deterministic (the upload cache is
+scroll the interface is drawn on. Re-runnable and deterministic (the upload cache is
 content-hashed: unchanged renders are not uploaded again).
 
   wordmark      "RONINDO" set in Ninja Naruto (sk89q / The Risen Realm, 2004: free for personal and
@@ -9,21 +9,22 @@ content-hashed: unchanged renders are not uploaded again).
                 outline and a soft shadow (the owner's pick, 2026-11-23); 1024 px wide at most. Roblox
                 does not let a game upload its own font files (create.roblox.com/docs/projects/assets:
                 "You cannot import fonts"), so the name is an image.
-  scroll_paper  9-slice paper body of the command bar (straight cut, aged top and bottom bands, a thin
-                vermilion rule along both long edges).
-  scroll_roller 9-slice wooden roller with brass end knobs (stretches along the rod).
-  card_frame    9-slice ofuda (seal-tag) frame of a build slot: white lines, tinted per state in game.
-  card_paper    9-slice tag paper under it (white, tinted per state in game).
-
-Every piece except the wordmark is hand-written SVG below (owner rule: icons and art are hand-made
-SVG, no image-generation models), rendered with resvg.
+  The scroll the interface is drawn on (the owner's pick 2026-11-23, option C of the round 5 sheet;
+  sources in tools/naruto/ui_src, generated with ai33 image-v3 from his reference pictures, as he
+  asked: detailed art comes from image generation, small icons stay hand-made SVG):
+  paper_canvas       512 px seamless cream canvas (tiled; a quiet weave)
+  paper_band         the seigaiha wave border along a panel's top edge (tiles along x)
+  paper_band_bottom  the same, flipped, for the bottom edge
+  paper_kanji        a row of faint brush kanji (tiles along x): the command bar's watermark
+  paper_seal         the Eight Trigrams seal in tan: the watermark of the bigger panels
+  scroll_roller      9-slice red lacquer roller (teal band, orange stripes, wooden caps); only the
+                     teal band stretches
 
 Outputs: assets/naruto_ui/<key>.png and src/shared/Assets/NarutoUI.luau (GENERATED: asset ids and the
 sizes / slice centres the client needs).
 Usage (repo root): python tools/naruto/make_naruto_ui_art.py [--no-upload]
 """
 import argparse
-import io
 import json
 import os
 import sys
@@ -69,12 +70,6 @@ def save(img, key):
     path = os.path.join(OUT, key + ".png")
     Image.fromarray(a, "RGBA").save(path, optimize=True)
     return path
-
-
-def svg_png(svg, w, h):
-    import resvg_py
-    png = bytes(resvg_py.svg_to_bytes(svg_string=svg, width=w, height=h))
-    return Image.open(io.BytesIO(png)).convert("RGBA")
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -152,85 +147,148 @@ def wordmark(text="RONINDO", out_w=1024):
 
 
 # ---------------------------------------------------------------------------------------------------
-# Hand-made SVG pieces
+# The scroll (2026-11-23, the owner's pick: option C of build/options_bar_r5.png)
 # ---------------------------------------------------------------------------------------------------
+# Sources (tools/naruto/ui_src, made with ai33 image-v3 from the owner's reference pictures; the owner
+# asked for image generation for detailed art): canvas.jpg (cream canvas), seal.jpg (the Eight Trigrams
+# seal in tan on canvas, from his own reference), seigaiha.jpg (a wave border band), kanji.jpg (brush
+# kanji watermark; only six of its glyphs are clean) and roller_red.jpg (a red lacquer roller with a
+# teal band and orange stripes, after the official Naruto scroll mug).
 
-# Paper body: 128 x 96, slice centre (40, 30, 88, 66). Only straight horizontal and vertical features so
-# the 9-slice stretch never smears anything.
-PAPER_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 96">
-  <defs>
-    <linearGradient id="p" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#e3cf9f"/>
-      <stop offset="0.12" stop-color="#f3e6c4"/>
-      <stop offset="0.5" stop-color="#f7ecd0"/>
-      <stop offset="0.88" stop-color="#f1e2bd"/>
-      <stop offset="1" stop-color="#d9c08a"/>
-    </linearGradient>
-  </defs>
-  <rect x="0" y="0" width="128" height="96" fill="url(#p)"/>
-  <rect x="0" y="0" width="128" height="1.5" fill="#8a6a3a" opacity="0.55"/>
-  <rect x="0" y="94.5" width="128" height="1.5" fill="#8a6a3a" opacity="0.55"/>
-  <rect x="0" y="7" width="128" height="2" fill="#c8361f"/>
-  <rect x="0" y="11" width="128" height="0.8" fill="#c8361f" opacity="0.8"/>
-  <rect x="0" y="84.2" width="128" height="0.8" fill="#c8361f" opacity="0.8"/>
-  <rect x="0" y="87" width="128" height="2" fill="#c8361f"/>
-</svg>"""
+SRC = os.path.join(ROOT, "tools", "naruto", "ui_src")
+# the owner's reference (his picture of the seal on canvas), measured: the paper and the seal's tan
+PAPER = np.array((232, 226, 203), np.float32)
+REF_TAN = (202, 190, 144)
 
-# Roller: 40 x 160, slice centre (0, 44, 40, 116): the rod stretches, the knobs stay.
-ROLLER_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 160">
-  <defs>
-    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#3b2214"/>
-      <stop offset="0.3" stop-color="#8a5a32"/>
-      <stop offset="0.48" stop-color="#b47c48"/>
-      <stop offset="0.7" stop-color="#6e4224"/>
-      <stop offset="1" stop-color="#2a170c"/>
-    </linearGradient>
-    <linearGradient id="brass" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#7a4f12"/>
-      <stop offset="0.35" stop-color="#e8b64c"/>
-      <stop offset="0.5" stop-color="#ffe39a"/>
-      <stop offset="0.75" stop-color="#c38a2a"/>
-      <stop offset="1" stop-color="#5e3a0c"/>
-    </linearGradient>
-  </defs>
-  <!-- rod -->
-  <rect x="7" y="20" width="26" height="120" rx="3" fill="url(#wood)" stroke="#1a1210" stroke-width="1.5"/>
-  <!-- collars -->
-  <rect x="5" y="30" width="30" height="7" rx="2" fill="url(#brass)" stroke="#1a1210" stroke-width="1.2"/>
-  <rect x="5" y="123" width="30" height="7" rx="2" fill="url(#brass)" stroke="#1a1210" stroke-width="1.2"/>
-  <!-- knobs -->
-  <path d="M10 22 L30 22 L35 12 Q36 2 20 2 Q4 2 5 12 Z" fill="url(#brass)" stroke="#1a1210" stroke-width="1.5"/>
-  <path d="M10 138 L30 138 L35 148 Q36 158 20 158 Q4 158 5 148 Z" fill="url(#brass)" stroke="#1a1210" stroke-width="1.5"/>
-  <ellipse cx="20" cy="8" rx="9" ry="2.6" fill="#fff2c2" opacity="0.55"/>
-  <ellipse cx="20" cy="152" rx="9" ry="2.6" fill="#fff2c2" opacity="0.35"/>
-</svg>"""
 
-# Seal-tag (ofuda) frame lines, white (tinted in game): 64 x 80, slice centre (16, 16, 48, 64).
-CARD_FRAME_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80">
-  <rect x="1" y="1" width="62" height="78" rx="3" fill="none" stroke="#ffffff" stroke-width="2"/>
-  <rect x="5" y="5" width="54" height="70" rx="1.5" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.75"/>
-  <path d="M5 11 L11 5 M53 5 L59 11 M5 69 L11 75 M53 75 L59 69" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round"/>
-</svg>"""
+def src(name):
+    return Image.open(os.path.join(SRC, name)).convert("RGB")
 
-# Seal-tag paper, white (tinted in game): 64 x 80, slice centre (16, 16, 48, 64).
-CARD_PAPER_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="1" stop-color="#e6e6e6"/>
-    </linearGradient>
-  </defs>
-  <rect x="0" y="0" width="64" height="80" rx="4" fill="url(#g)"/>
-</svg>"""
 
-PIECES = {
-    # key: (svg, px w, px h, slice centre in px or None)
-    "scroll_paper": (PAPER_SVG, 128, 96, (40, 30, 88, 66)),
-    "scroll_roller": (ROLLER_SVG, 40, 160, (0, 44, 40, 116)),
-    "card_frame": (CARD_FRAME_SVG, 64, 80, (16, 16, 48, 64)),
-    "card_paper": (CARD_PAPER_SVG, 64, 80, (16, 16, 48, 64)),
-}
+def paper_canvas():
+    """512 px seamless canvas: a 256 px crop mirrored both ways, tinted to the reference's cream."""
+    a = np.asarray(src("canvas.jpg"), np.float32)[384:640, 384:640]
+    a = a - a.reshape(-1, 3).mean(0) + PAPER
+    a = PAPER + (a - PAPER) * 0.6  # a quiet weave (it reads as dots behind text otherwise)
+    t = Image.fromarray(a.clip(0, 255).astype(np.uint8), "RGB")
+    out = Image.new("RGB", (512, 512))
+    out.paste(t, (0, 0))
+    out.paste(t.transpose(Image.FLIP_LEFT_RIGHT), (256, 0))
+    out.paste(t.transpose(Image.FLIP_TOP_BOTTOM), (0, 256))
+    out.paste(t.transpose(Image.ROTATE_180), (256, 256))
+    return out
+
+
+BAND_H = 48       # px of the band image (shown 16 logical px tall on the bar)
+BAND_ZOOM = 2.1   # the pattern is drawn this many times the band's height and cropped: arcs readable at 1x
+
+
+def paper_band():
+    """The seigaiha border, about k repeats long (period by autocorrelation), seamless along x.
+    Returns (top band, bottom band = the top one flipped)."""
+    a = np.asarray(src("seigaiha.jpg"), np.float32)
+    sat = a.max(2) - a.min(2)
+    rows = np.where(sat.mean(1) > 40)[0]
+    band = a[rows.min() + 2:rows.max() - 1]
+    L = band.mean(2)
+    ink = (L < L.mean() - 30).astype(np.float32).sum(0)
+    ink -= ink.mean()
+    ac = np.correlate(ink, ink, "full")[len(ink) - 1:]
+    p = int(np.argmax(ac[60:200]) + 60)
+    k = (band.shape[1] - 40) // p
+    # the pattern is hand-drawn-ish (not exactly periodic): pick the tile length near k repeats whose end
+    # matches its start best, then blend a narrow strip across the join
+    x0, win = 20, 24
+    head = band[:, x0:x0 + win]
+    best = min(range(k * p - 24, min(k * p + 24, band.shape[1] - x0 - win)),
+               key=lambda e: float(np.mean((band[:, x0 + e:x0 + e + win] - head) ** 2)))
+    t = band[:, x0:x0 + best].copy()
+    ramp = np.linspace(0, 1, win, dtype=np.float32)[None, :, None]
+    t[:, :win] = head * ramp + band[:, x0 + best:x0 + best + win] * (1 - ramp)
+    tile = Image.fromarray(t.clip(0, 255).astype(np.uint8), "RGB")
+    full = round(BAND_H * BAND_ZOOM)
+    w = round(tile.size[0] * full / tile.size[1])
+    if w > 1024:  # the upload size
+        raise SystemExit("paper_band: the band image would be wider than 1024 px")
+    t = tile.resize((w, full), Image.LANCZOS).crop((0, full - BAND_H, w, full))
+    return t, t.transpose(Image.FLIP_TOP_BOTTOM)
+
+
+def ink_mask(rgb, lo=6.0, span=22.0):
+    """Tan ink on paper -> alpha (0..1)."""
+    L = np.asarray(rgb, np.float32).mean(2)
+    paper = np.percentile(L, 85)
+    return np.clip((paper - L - lo) / span, 0, 1)
+
+
+def tan_rgba(mask01, opacity=1.0):
+    a = (mask01 * opacity * 255).clip(0, 255).astype(np.uint8)
+    img = Image.new("RGBA", (a.shape[1], a.shape[0]), REF_TAN + (0,))
+    img.putalpha(Image.fromarray(a, "L"))
+    return img
+
+
+def paper_seal():
+    """The Eight Trigrams seal as the reference's tan over transparent (panels lay it on the canvas)."""
+    a = np.asarray(src("seal.jpg"), np.float32)
+    L = a.mean(2)
+    bg, tan = np.percentile(L, 60), np.percentile(L, 3)
+    m = np.clip((bg - L) / (bg - tan), 0, 1)
+    m = np.clip((m - 0.18) / 0.62, 0, 1)
+    img = Image.fromarray((m * 255).astype(np.uint8), "L").filter(ImageFilter.GaussianBlur(0.8))
+    img = img.crop(img.point(lambda v: 255 if v > 40 else 0).getbbox()).resize((512, 512), Image.LANCZOS)
+    return tan_rgba(np.asarray(img, np.float32) / 255)
+
+
+# the kanji sheet's clean glyphs (its middle is unreadable), in order: shinobi, fire, shadow, wind, leaf, scroll
+GLYPH_BOXES = [(45, 65, 270, 325), (262, 65, 500, 325), (495, 55, 750, 335),
+               (285, 355, 525, 625), (1318, 360, 1568, 645), (1305, 45, 1568, 325)]
+KANJI_H = 96      # px of the strip (shown 66 logical px tall)
+KANJI_OPACITY = 0.85
+
+
+def paper_kanji():
+    """A row of the six glyphs, evenly spaced, tiling along x (the bar's watermark)."""
+    sheet = src("kanji.jpg")
+    gh = int(KANJI_H * 0.92)
+    gap = int(KANJI_H * 0.39)
+    glyphs = []
+    for box in GLYPH_BOXES:
+        g = sheet.crop(box)
+        m = Image.fromarray((ink_mask(g) * 255).astype(np.uint8), "L").filter(ImageFilter.GaussianBlur(1.0))
+        w = round(g.size[0] * gh / g.size[1])
+        glyphs.append(m.resize((w, gh), Image.LANCZOS))
+    W = sum(g.size[0] for g in glyphs) + gap * len(glyphs)
+    strip = Image.new("L", (W, KANJI_H), 0)
+    x = gap // 2
+    for i, g in enumerate(glyphs):
+        y = (KANJI_H - gh) // 2 + (3 if i % 2 else -3)
+        strip.paste(g, (x, y), g)
+        x += g.size[0] + gap
+    return tan_rgba(np.asarray(strip, np.float32) / 255, KANJI_OPACITY)
+
+
+ROLLER_W = 48
+
+
+def scroll_roller():
+    """The red lacquer roller (teal band, orange stripes, dark wooden caps) cut out of its white ground.
+    Returns (image, slice centre): the slice is the teal band's middle, so only the band stretches."""
+    im = src("roller_red.jpg")
+    a = np.asarray(im, np.float32)
+    m = ((a.max(2) - a.min(2)) > 22) | (a.mean(2) < 200)
+    mask = Image.fromarray((m * 255).astype(np.uint8), "L").filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(1.2))
+    rgba = im.convert("RGBA")
+    rgba.putalpha(mask)
+    rgba = rgba.crop(mask.point(lambda v: 255 if v > 128 else 0).getbbox())
+    h = round(rgba.size[1] * ROLLER_W / rgba.size[0])
+    rgba = rgba.resize((ROLLER_W, h), Image.LANCZOS)
+    # the teal rows: green and blue over red along the middle column
+    c = np.asarray(rgba, np.float32)[:, ROLLER_W // 2, :3]
+    teal = np.where((c[:, 1] > c[:, 0] + 25) & (c[:, 2] > c[:, 0] + 10))[0]
+    t0, t1 = int(teal.min()), int(teal.max())
+    pad = (t1 - t0) // 4
+    return rgba, (0, t0 + pad, ROLLER_W, t1 - pad)
 
 
 def render_all():
@@ -239,22 +297,32 @@ def render_all():
     wm = wordmark()
     files["wordmark"] = save(wm, "wordmark")
     meta["wordmark"] = {"size": wm.size}
-    for key, (svg, w, h, sl) in PIECES.items():
-        img = svg_png(svg, w, h)
+    top, bottom = paper_band()
+    roller, roller_slice = scroll_roller()
+    pieces = {
+        "paper_canvas": (paper_canvas(), None),
+        "paper_band": (top, None),
+        "paper_band_bottom": (bottom, None),
+        "paper_kanji": (paper_kanji(), None),
+        "paper_seal": (paper_seal(), None),
+        "scroll_roller": (roller, roller_slice),
+    }
+    for key, (img, sl) in pieces.items():
         files[key] = save(img, key)
-        meta[key] = {"size": (w, h), "slice": sl}
+        meta[key] = {"size": img.size, "slice": sl}
     return files, meta
 
 
 def write_manifest(ids, meta):
     lines = [
         "-- GENERATED by tools/naruto/make_naruto_ui_art.py — do not edit by hand.",
-        "-- RoNindo's own UI art: the title wordmark (Ninja Naruto font, free licence) and the",
-        "-- command bar's jutsu-scroll pieces. size = { w, h } px; slice = its 9-slice centre",
+        "-- RoNindo's own UI art: the title wordmark (Ninja Naruto font, free licence) and the scroll the",
+        "-- interface is drawn on (canvas, seigaiha border, kanji and seal watermarks, the roller).",
+        "-- size = { w, h } px; slice = its 9-slice centre",
         "-- { left, top, right, bottom } px (ScaleType.Slice SliceCenter). Read through UITheme.naruto_ui().",
         "return {",
     ]
-    for key in ["wordmark"] + list(PIECES):
+    for key in meta:
         w, h = meta[key]["size"]
         sl = meta[key].get("slice")
         fields = ['image = "%s"' % ids[key], "size = { %d, %d }" % (w, h)]

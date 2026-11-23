@@ -79,7 +79,8 @@ function GameOver.new(c: any)
 	self._center = UITheme.vbox(0)
 	self._center:set_alignment(W.ALIGN_CENTER)
 	self:add_child(self._center)
-	self._kicker = UITheme.label("MATCH COMPLETE", 14, 700, UITheme.TEXT_2, 6)
+	-- (2026-11-23: the headline, its lines and the winner sit on the dimmed map: ON_MAP text)
+	self._kicker = UITheme.label("MATCH COMPLETE", 14, 700, UITheme.ON_MAP_2, 6)
 	self._kicker:set_alignment(W.ALIGN_CENTER)
 	self._center:add_child(self._kicker)
 	local title = TitleScreen.GradientText.new("GAME OVER", 110, 900)
@@ -89,7 +90,7 @@ function GameOver.new(c: any)
 	title.size_flags_horizontal = W.SHRINK_CENTER
 	self._title = title
 	self._center:add_child(title)
-	self._sub = UITheme.label("", 18, 500, UITheme.TEXT)
+	self._sub = UITheme.label("", 18, 500, UITheme.ON_MAP)
 	self._sub:set_alignment(W.ALIGN_CENTER)
 	self._center:add_child(self._sub)
 	self._center:add_child(spacer(14))
@@ -107,7 +108,7 @@ function GameOver.new(c: any)
 	wr:add_child(self._crown)
 	self._winner_sw = UITheme.swatch(UITheme.TEXT, 12.0, 3)
 	wr:add_child(self._winner_sw)
-	self._winner_name = UITheme.label("", 15, 700)
+	self._winner_name = UITheme.label("", 15, 700, UITheme.ON_MAP)
 	wr:add_child(self._winner_name)
 	self._winner:add_child(wr)
 	self._center:add_child(self._winner)
@@ -130,7 +131,7 @@ function GameOver.new(c: any)
 	self._take.size_flags_horizontal = W.SHRINK_CENTER
 	self._take:add_theme_stylebox_override(
 		"panel",
-		UITheme.flat(UITheme.rgba(0.11, 0.09, 0.055, 0.96), 18, UITheme.c(UITheme.GOLD, 0.85), 2, 22.0, 18.0)
+		UITheme.flat(UITheme.GLASS_SOLID, 18, UITheme.c(UITheme.GOLD, 0.85), 2, 22.0, 18.0)
 	)
 	local tv = UITheme.vbox(12)
 	self._take_v = tv
@@ -174,7 +175,7 @@ function GameOver.new(c: any)
 		local chip = W.Panel.new()
 		chip:set_mouse_filter(W.MOUSE_IGNORE)
 		chip.size_flags_horizontal = W.EXPAND_FILL
-		chip:add_theme_stylebox_override("panel", UITheme.flat(UITheme.rgba(1, 1, 1, 0.06), 10, UITheme.rgba(1, 1, 1, 0.1), 1, 10.0, 7.0))
+		chip:add_theme_stylebox_override("panel", UITheme.flat(UITheme.FILL, 10, UITheme.LINE, 1, 10.0, 7.0))
 		local ch = UITheme.hbox(8)
 		local ic = UITheme.icon_rect(c[2], 18.0, c[4])
 		ic.size_flags_vertical = W.SHRINK_CENTER
@@ -355,7 +356,7 @@ function GameOver.new(c: any)
 	self._x2_btn.pressed:Connect(function()
 		self.open_arsenal:Fire("stars2x", "offer")
 	end)
-	self._next = UITheme.label("", 13, 600, UITheme.TEXT_2)
+	self._next = UITheme.label("", 13, 600, UITheme.ON_MAP_2)
 	self._next:set_alignment(W.ALIGN_CENTER)
 	self._gap_next = spacer(14)
 	self._center:add_child(self._gap_next)
@@ -514,7 +515,7 @@ function GameOver.open(self, kind: string, winner: number, killer: number, stats
 		"panel",
 		if real_winner
 			then UITheme.flat(UITheme.c(UITheme.GOLD, 0.1), 999, UITheme.c(UITheme.GOLD, 0.45), 1, 16.0, 6.0)
-			else UITheme.flat(UITheme.rgba(1, 1, 1, 0.06), 999, UITheme.LINE_2, 1, 16.0, 6.0)
+			else UITheme.flat(UITheme.c(UITheme.BROWN_INK, 0.096), 999, UITheme.LINE_2, 1, 16.0, 6.0)
 	)
 	self:_set_pill(pill_id)
 	for _, ch in ipairs(self._stats:get_children()) do
@@ -737,7 +738,7 @@ function GameOver._size_take(self)
 	for _, chip in self._chip_panels do
 		chip:add_theme_stylebox_override(
 			"panel",
-			UITheme.flat(UITheme.rgba(1, 1, 1, 0.06), 10, UITheme.rgba(1, 1, 1, 0.1), 1, if compact then 8.0 else 10.0, if compact then 4.0 else 7.0)
+			UITheme.flat(UITheme.c(UITheme.BROWN_INK, 0.096), 10, UITheme.c(UITheme.BROWN_INK, 0.16), 1, if compact then 8.0 else 10.0, if compact then 4.0 else 7.0)
 		)
 	end
 	for _, value in self._chip do

@@ -43,7 +43,7 @@ local function make_ring()
 	ring.secs = 0
 	ring.urgent = false
 	ring:set_min_size(Vector2.new(54, 54))
-	ring.track = UICtx.ring(ring.canvas, Vector2.zero, 10, 4, Color3.new(1, 1, 1), 0.9)
+	ring.track = UICtx.ring(ring.canvas, Vector2.zero, 10, 4, UITheme.BROWN_INK, 0.25)
 	ring.arc = UICtx.arc(ring.canvas)
 	ring.num = UICtx.make("TextLabel", {
 		BackgroundTransparency = 1,

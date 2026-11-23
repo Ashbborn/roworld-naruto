@@ -7,11 +7,28 @@
 -- translucent tint, UITheme.GLASS_BOOST more opaque) plus the frost shader's top sheen gradient.
 -- Parts: shadow (9-slice, Assets/UIKit shadows) < tint (UICorner + inner UIStroke border)
 -- < sheen gradient < sheen line / accent stripe < content.
+--
+-- RoNindo (2026-11-23, the owner's pick): with the scroll art (Assets/NarutoUI) every panel is paper
+-- instead of glass: the cream canvas (tiled) under a brown ink border, the seigaiha wave band inside
+-- the top and bottom padding when there is room for it (not on pills or thin cards), and the tan Eight
+-- Trigrams seal behind the content of the big panels. A glass tint does not apply to paper, except a
+-- light one (alpha under 0.5), which washes over it. No sheen on paper.
 
 local UITheme = require("./UITheme")
 local W = require("./Widgets")
 
 local GlassPanel = W.class(W.Panel)
+
+--- Paper: the band's height (logical px) at most, and the padding it leaves under it; the seal shows
+--- on panels at least SEAL_MIN px on both sides, at SEAL_K of the shorter side.
+GlassPanel.BAND_MAX = 14.0
+GlassPanel.BAND_GAP = 3.0
+GlassPanel.BAND_MIN = 6.0
+GlassPanel.SEAL_MIN = 220.0
+GlassPanel.SEAL_K = 0.78
+GlassPanel.SEAL_ALPHA = 0.85
+--- The canvas tile's size (logical px).
+GlassPanel.CANVAS_TILE = 256.0
 
 -- smoothstep(0, 0.6, y) as a transparency sequence (frost shader: sheen * (1 - smoothstep(0, 0.6, UV.y)))
 local SHEEN_SEQ = NumberSequence.new({
@@ -53,8 +70,15 @@ function GlassPanel.new(pad_h: number?, pad_v: number?, r: number?, frost: boole
 		self._shadow:set(UITheme.shadow_box(self.radius, self._shadow_size, 0.5, 6.0))
 	end
 	local g = self.gui
-	local bg = Instance.new("Frame")
-	bg.Name = "Glass"
+	local art = UITheme.naruto_ui()
+	self._art = art
+	self.paper = art.paper_canvas ~= nil
+	if self.paper then
+		self.tint = UITheme.GLASS_SOLID
+		self.sheen = false
+	end
+	local bg = Instance.new(if self.paper then "ImageLabel" else "Frame")
+	bg.Name = if self.paper then "Paper" else "Glass"
 	bg.BorderSizePixel = 0
 	bg.AnchorPoint = Vector2.zero
 	bg.ZIndex = 2
@@ -63,6 +87,50 @@ function GlassPanel.new(pad_h: number?, pad_v: number?, r: number?, frost: boole
 	self._bg = bg
 	self._bg_corner = Instance.new("UICorner")
 	self._bg_corner.Parent = bg
+	if self.paper then
+		local bgi = bg :: ImageLabel
+		bgi.Image = art.paper_canvas.image
+		bgi.ScaleType = Enum.ScaleType.Tile
+		self:_part(bgi, "ImageTransparency", 1.0)
+		-- a light tint's wash, the bands and the seal (over the canvas, under the content)
+		local wash = Instance.new("Frame")
+		wash.Name = "Wash"
+		wash.BorderSizePixel = 0
+		wash.ZIndex = 2
+		wash.Active = false
+		wash.Visible = false
+		wash.Parent = g
+		local wc = Instance.new("UICorner")
+		wc.Parent = wash
+		self._wash, self._wash_corner = wash, wc
+		self._bands = {}
+		for i, key in { "paper_band", "paper_band_bottom" } do
+			local b = Instance.new("ImageLabel")
+			b.Name = if i == 1 then "BandTop" else "BandBottom"
+			b.BorderSizePixel = 0
+			b.BackgroundTransparency = 1
+			b.ZIndex = 2
+			b.Active = false
+			b.Visible = false
+			b.ScaleType = Enum.ScaleType.Tile
+			b.Image = if art[key] ~= nil then art[key].image else ""
+			b.Parent = g
+			self:_part(b, "ImageTransparency", 1.0)
+			self._bands[i] = b
+		end
+		local seal = Instance.new("ImageLabel")
+		seal.Name = "Seal"
+		seal.BorderSizePixel = 0
+		seal.BackgroundTransparency = 1
+		seal.ZIndex = 2
+		seal.Active = false
+		seal.Visible = false
+		seal.ScaleType = Enum.ScaleType.Fit
+		seal.Image = if art.paper_seal ~= nil then art.paper_seal.image else ""
+		seal.Parent = g
+		self:_part(seal, "ImageTransparency", GlassPanel.SEAL_ALPHA)
+		self._seal = seal
+	end
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	pcall(function()
@@ -153,8 +221,17 @@ function GlassPanel.restyle(self)
 	if self._frost and a < 0.97 then
 		a = math.clamp(a + UITheme.GLASS_BOOST, 0, 0.97)
 	end
-	self._bg.BackgroundColor3 = t.color
-	self:_part(self._bg, "BackgroundTransparency", a)
+	if self.paper then
+		-- paper is opaque; a light tint washes over it (a glass tint is ignored)
+		self._bg.BackgroundColor3 = UITheme.PAPER
+		self:_part(self._bg, "BackgroundTransparency", 1.0)
+		self._wash.Visible = t.alpha > 0 and t.alpha < 0.5
+		self._wash.BackgroundColor3 = t.color
+		self:_part(self._wash, "BackgroundTransparency", t.alpha)
+	else
+		self._bg.BackgroundColor3 = t.color
+		self:_part(self._bg, "BackgroundTransparency", a)
+	end
 	self:set_border(self.border_color)
 	local sheen_on = self.sheen and self._frost
 	self._sheen.Visible = sheen_on
@@ -194,6 +271,9 @@ function GlassPanel._render(self)
 	self._bg.Position = UDim2.fromOffset(0, 0)
 	self._bg_corner.CornerRadius = UDim.new(0, rpx)
 	self._stroke.Thickness = math.max(1, math.floor(s + 0.5))
+	if self.paper then
+		self:_render_paper(w, h, rpx)
+	end
 	self._sheen.Size = UDim2.fromOffset(w, h)
 	self._sheen.Position = UDim2.fromOffset(0, 0)
 	self._sheen_corner.CornerRadius = UDim.new(0, rpx)
@@ -211,6 +291,42 @@ function GlassPanel._render(self)
 		self._accent.Size = UDim2.fromOffset(math.floor(self.accent_width * s + 0.5), math.floor(ah * s + 0.5))
 	end
 	self._shadow:render()
+end
+
+--- The paper's tile, wash, bands and seal for a w x h px panel with rpx px corners.
+function GlassPanel._render_paper(self, w: number, h: number, rpx: number)
+	local s = UITheme.scale
+	local tile = math.max(16, math.floor(GlassPanel.CANVAS_TILE * s + 0.5));
+	(self._bg :: ImageLabel).TileSize = UDim2.fromOffset(tile, tile)
+	self._wash.Size = UDim2.fromOffset(w, h)
+	self._wash_corner.CornerRadius = UDim.new(0, rpx)
+	-- bands: inside the top / bottom padding, clear of the rounded corners; none on a pill
+	local pill = rpx * 2 >= h - 1
+	local _, pt, _, pb = self:_pad()
+	local inset = math.floor(rpx * 0.7 + 0.5)
+	for i, b in self._bands do
+		local room = (if i == 1 then pt else pb) - GlassPanel.BAND_GAP
+		local bh = math.min(self.band_max or GlassPanel.BAND_MAX, room)
+		local on = not pill and b.Image ~= "" and bh >= GlassPanel.BAND_MIN and w > inset * 2 + 24
+		b.Visible = on
+		if on then
+			local bpx = math.max(1, math.floor(bh * s + 0.5))
+			local ref = self._art.paper_band
+			local tw = if ref ~= nil then math.max(8, math.floor(ref.size[1] * bpx / ref.size[2] + 0.5)) else bpx * 20
+			b.TileSize = UDim2.fromOffset(tw, bpx)
+			b.Size = UDim2.fromOffset(w - inset * 2, bpx)
+			b.Position = UDim2.fromOffset(inset, if i == 1 then 0 else h - bpx)
+		end
+	end
+	-- the seal: big panels only
+	local short = math.min(w, h)
+	local seal_on = self.seal_shown ~= false and self._seal.Image ~= "" and short >= GlassPanel.SEAL_MIN * s
+	self._seal.Visible = seal_on
+	if seal_on then
+		local sz = math.floor(short * GlassPanel.SEAL_K + 0.5)
+		self._seal.Size = UDim2.fromOffset(sz, sz)
+		self._seal.Position = UDim2.fromOffset(math.floor((w - sz) / 2), math.floor((h - sz) / 2))
+	end
 end
 
 return GlassPanel
