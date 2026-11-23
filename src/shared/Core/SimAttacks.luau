@@ -774,6 +774,16 @@ function SimAttacks.install(C: any)
 		local mag_k = 1.0
 		-- (a captured Tailed Beast's buff: x1.0 for everyone else)
 		local loss_k = self.o_loss_mult[at]
+		-- (beast powers: Sand Shield / Ink hold the attack back; Coral Wall, Lava, Steam Charge)
+		local fx_slow = 1.0
+		if self.beasts_on and (next(self.bfx) ~= nil or (self.akatsuki_on and tg ~= 0 and self.o_special[tg] == Defs.SPECIAL_AKATSUKI)) then
+			local held, fl, fs = self:beast_attack_mods(at, tg)
+			if held then
+				return
+			end
+			loss_k *= fl
+			fx_slow = fs
+		end
 		if not neutral then
 			local att_of = o_tiles[at] * K_AREA
 			local def_of = math.max(o_tiles[tg] * K_AREA, 1.0)
@@ -868,6 +878,7 @@ function SimAttacks.install(C: any)
 				local c2 = if r20 < 1.0 then 1.0 elseif r20 > 50.0 then 50.0 else r20
 				tf = c1 * c2 * tc * bonus_s * trait_s
 			end
+			tf *= fx_slow
 			if tf < 1e-6 then
 				tf = 1e-6
 			end

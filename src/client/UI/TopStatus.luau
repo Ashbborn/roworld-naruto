@@ -448,7 +448,7 @@ end
 function TopStatus._refresh_akatsuki(self, s: any)
 	local a = s.akatsuki
 	local text = ""
-	if type(a) == "table" and a.state == 2 then -- Defs.AKATSUKI_ACTIVE
+	if type(a) == "table" and a.state == 2 and not self.akatsuki_widget then -- Defs.AKATSUKI_ACTIVE (UI/AkatsukiPanel shows it when hosted)
 		local A = require("./UICtx").data("Akatsuki")
 		local of = if type(s.akatsuki_sealable) == "function" then s:akatsuki_sealable() else 9
 		text = string.format(A.TEXT.hud, #(a.sealed or {}), of)

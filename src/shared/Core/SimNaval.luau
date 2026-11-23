@@ -102,6 +102,14 @@ function SimNaval.install(C)
 			self:msg(id, Defs.MSG_INFO, self:shield_text(tg))
 			return false
 		end
+		if self.beasts_on then
+			-- (a beast power: Ink on the sender, a Sand Shield on the target: Core/SimBeasts)
+			local block = self:beast_attack_block(id, tg)
+			if block ~= nil then
+				self:msg(id, Defs.MSG_INFO, block)
+				return false
+			end
+		end
 		-- (a person: kind human and no bot; a bot player's AI holds itself to the AI's limit)
 		if self.o_boats[id] >= Rules.max_boats(self.o_tiles[id], self.o_kind[id] == Defs.KIND_HUMAN and self.o_bot[id] ~= 1) then
 			self:msg(id, Defs.MSG_INFO, "Too many transports at sea")

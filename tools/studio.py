@@ -98,8 +98,13 @@ def text_of(result):
 def pick_studio(c):
     if os.environ.get("STUDIO_ID"):
         return os.environ["STUDIO_ID"]
-    res = c.call("list_roblox_studios", {})
-    txt = text_of(res)
+    import time as _time
+    for _try in range(8):  # the list is sometimes briefly empty on Windows
+        res = c.call("list_roblox_studios", {})
+        txt = text_of(res)
+        if '"studios":[]' not in txt.replace(" ", ""):
+            break
+        _time.sleep(1.5)
     try:
         data = json.loads(txt)
     except json.JSONDecodeError:
@@ -107,7 +112,7 @@ def pick_studio(c):
     studios = data.get("studios", data) if isinstance(data, dict) else data
     match = os.environ.get("STUDIO_MATCH", "naruto.rbxl")
     for s in studios:
-        name = s.get("name") or ""
+        name = s.get("name") or s.get("file") or ""
         if match and match in name:
             # Safety: never drive a published game (its name carries "(placeId: …)").
             if "placeId:" in name and not os.environ.get("STUDIO_ALLOW_PUBLISHED"):

@@ -104,8 +104,11 @@ Defs.N_SCATTER = 5
 Defs.N_SHELL = 6
 Defs.N_AIRSTRIKE = 7
 Defs.N_SLUG = 8
-Defs.NUKE_KIND_COUNT = 9
-Defs.NUKE_NAMES = { [0] = "atom", "hydrogen", "mirv", "warhead", "mega", "scatter", "shell", "airstrike", "slug" }
+-- A Tailed Beast Bomb (Core/SimBeasts): fired by a beast's holder from anywhere in its land (no silo,
+-- free, on a per-beast cooldown), or by a wild beast while it rampages; its blast grows with the tails.
+Defs.N_BIJUDAMA = 9
+Defs.NUKE_KIND_COUNT = 10
+Defs.NUKE_NAMES = { [0] = "atom", "hydrogen", "mirv", "warhead", "mega", "scatter", "shell", "airstrike", "slug", "bijudama" }
 Defs.NUKE_TITLES = {
 	[0] = "Explosion Seal",
 	"Great Explosion Seal",
@@ -116,6 +119,7 @@ Defs.NUKE_TITLES = {
 	"Kunai Volley",
 	"Hawk Strike",
 	"Chakra Shot",
+	"Tailed Beast Bomb",
 }
 
 -- Arsenal unlocks an owner holds (Sim.o_unlock bit mask; Data/Arsenal names them). Without its bit
@@ -132,7 +136,7 @@ Defs.UNLOCK = {
 Defs.UNLOCK_ALL = 127
 --- The unlock a structure kind (Defs.S_*) / a munition (Defs.N_*) needs: 0 = none.
 Defs.STRUCT_UNLOCK = { [0] = 0, 0, 0, 0, 0, 0, 8, 16, 32 }
-Defs.NUKE_UNLOCK = { [0] = 0, 0, 0, 0, 1, 2, 8, 16, 32 }
+Defs.NUKE_UNLOCK = { [0] = 0, 0, 0, 0, 1, 2, 8, 16, 32, 0 }
 
 -- Tile flags (GameState.flags / delta "flags")
 Defs.F_FALLOUT = 1

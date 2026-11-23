@@ -41,6 +41,8 @@ local RotateCard = require("./RotateCard")
 local Tooltip = require("./Tooltip")
 local RadialMenu = require("./RadialMenu")
 local HoldRing = require("./HoldRing")
+local BeastPanel = require("./BeastPanel")
+local AkatsukiPanel = require("./AkatsukiPanel")
 local Tutorial = require("./Tutorial")
 local TutorialData = UICtx.data("Tutorial")
 local StarterData = UICtx.data("Starter")
@@ -950,6 +952,16 @@ function UIRoot._build(self)
 	local hold = HoldRing.new(ctx)
 	self.hold_ring = hold
 	root:add_child(self:_host(hold.gui, "HoldRing"))
+	-- the jinchuriki's Tailed Beast Bomb and power buttons, above the command bar (UI/BeastPanel)
+	local beast_panel = BeastPanel.new(ctx, self)
+	self.beast_panel = beast_panel
+	hud:add_child(self:_host(beast_panel.gui, "BeastPanel"))
+	-- the Akatsuki objective under the top status while it is on the map (UI/AkatsukiPanel)
+	local aka_panel = AkatsukiPanel.new(ctx, self)
+	self.aka_panel = aka_panel
+	-- (the widget says it: the status pill's "Akatsuki: N/9 sealed" line steps aside)
+	self.top.akatsuki_widget = true
+	hud:add_child(self:_host(aka_panel.gui, "AkatsukiPanel"))
 	local radial = RadialMenu.new(ctx)
 	self.radial = radial
 	radial.bottom_limit = function(): number?
@@ -1211,6 +1223,7 @@ function UIRoot._build(self)
 	interact.radial = radial
 	interact.float_layer = self.float_layer
 	interact.ui = self
+	interact.beast_aim = self.beast_panel
 	self.interact = interact
 	radial.picked:Connect(function(id, t)
 		interact:on_radial(id, t)
@@ -1706,6 +1719,9 @@ function UIRoot._bind_state(self, s: any)
 	if not (ctx.session ~= nil and ctx.session.state_is_resync == true) then
 		ctx:reset_ratio()
 		ctx.troop_floor = nil -- (a new player's floor arms again in this match: UIAdvisor.check_floor)
+		if self.over ~= nil then
+			self.over:note_beast(nil) -- (a new match: no beasts held yet)
+		end
 		ctx.alive_from_tick = nil
 		if self.board.expanded then
 			self.board:close_for_match()
@@ -1836,6 +1852,10 @@ function UIRoot._bind_state(self, s: any)
 	end)
 	c("beast_holder", function(tails, holder, from)
 		adv:on_beast_holder(tails, holder, from)
+		-- (the game-over screen shows the beasts you held)
+		if holder ~= 0 and holder == ctx:me() and self.over ~= nil then
+			self.over:note_beast(tails)
+		end
 		self.top:refresh()
 	end)
 	c("akatsuki_appeared", function(id, _tile)
@@ -1849,6 +1869,15 @@ function UIRoot._bind_state(self, s: any)
 	c("akatsuki_fell", function(slayer)
 		adv:on_akatsuki_fell(slayer)
 		self.top:refresh()
+	end)
+	c("akatsuki_ritual", function(cell, tails, _tile, _end_tick, result)
+		adv:on_akatsuki_ritual(cell, tails, result)
+	end)
+	c("akatsuki_barrier", function(hq, up)
+		adv:on_akatsuki_barrier(hq, up)
+	end)
+	c("akatsuki_member", function(id, idx, _tile, alive)
+		adv:on_akatsuki_member(id, idx, alive)
 	end)
 	c("owner_spawned", function(id, tile)
 		self:_on_owner_spawned(id, tile)
@@ -2359,9 +2388,10 @@ function UIRoot._layout(self)
 	self.attacks.tray_open = bar.tray ~= nil and bar.tray.visible
 	self.attacks:apply_layout(attacks_top, (if bar.visible then bar:top_edge() else vp.Y - ctx.insets.w) - 8.0)
 	self.attacks:refresh()
-	self.notices:apply_layout_top(
-		if self._screen ~= "title" then ctx.insets.y + (if ctx.compact then 70.0 else 96.0) else ctx.insets.y + 12.0
-	)
+	local notices_y = if self._screen ~= "title" then ctx.insets.y + (if ctx.compact then 70.0 else 96.0) else ctx.insets.y + 12.0
+	-- (the toasts go under the Akatsuki objective while it is up)
+	local aka_y = if self.aka_panel ~= nil and self._screen ~= "title" then self.aka_panel:bottom_edge() else 0
+	self.notices:apply_layout_top(if aka_y > 0 then math.max(notices_y, aka_y + 6.0) else notices_y)
 	self.coach:apply_layout()
 	self.tutorial:apply_layout()
 	-- the territory notice sits top-left under the top bar, below panels reaching that corner
@@ -2436,6 +2466,11 @@ function UIRoot._layout_alert(self)
 	elseif self.spawn.visible then
 		y = self.spawn:bottom_edge() + 10.0
 	end
+	-- (under the Akatsuki objective while it is up: UI/AkatsukiPanel)
+	local aka = if self.aka_panel ~= nil then self.aka_panel:bottom_edge() else 0
+	if aka > 0 then
+		y = math.max(y, aka + 6.0)
+	end
 	self.alert:apply_layout(y)
 end
 
@@ -2501,7 +2536,7 @@ function UIRoot._process(self, delta: number)
 	local comps = self._frame_comps
 	if comps == nil then
 		comps = {}
-		for _, key in ipairs({ "bar", "top", "board", "feed", "notices", "attacks", "alert" }) do
+		for _, key in ipairs({ "bar", "top", "board", "feed", "notices", "attacks", "alert", "beast_panel", "aka_panel" }) do
 			local comp = self[key]
 			if comp ~= nil and comp.update then
 				table.insert(comps, { comp, key .. ".update" })

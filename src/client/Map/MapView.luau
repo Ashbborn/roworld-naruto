@@ -683,6 +683,10 @@ function MapView.set_aim(
 		end
 		if nk >= 0 then
 			local ri, ro = ViewRules.nuke_radii(nk)
+			if nk == Defs.N_BIJUDAMA and type(Rules.bijudama_radii) == "function" then
+				-- (a Tailed Beast Bomb's blast grows with its beast: `level` = the tails)
+				ri, ro = Rules.bijudama_radii(level or 9, false)
+			end
 			if ro > 0 then
 				inner, outer = ri, ro
 			end

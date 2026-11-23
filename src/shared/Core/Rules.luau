@@ -75,13 +75,17 @@ local BEASTS = {
 	--- (spawn-shielded owners' tiles excepted).
 	RADIUS_BASE = 8.0,
 	RADIUS_PER_TAIL = 2.0,
-	--- Troops (its base cap): the strongest player's army (humans and bot players; with none, any
-	--- owner's, beasts excluded) x (TROOPS_BASE + TROOPS_PER_TAIL x tails), never under TROOPS_FLOOR
-	--- and at least TROOPS_STEP x the previous beast's base cap.
-	TROOPS_FLOOR = 100000.0,
-	TROOPS_BASE = 0.5,
-	TROOPS_PER_TAIL = 0.12,
-	TROOPS_STEP = 1.15,
+	--- Troops (its base cap): the average army (home troops plus troops out in attacks) of the
+	--- TROOPS_TOP_N strongest players (humans and bot players; fewer: those there; none: the strongest
+	--- owner, special owners excluded) x (TROOPS_BASE + TROOPS_PER_TAIL x tails), never under
+	--- TROOPS_FLOOR (only so a beast is never ~0 on an empty test map). While it is wild the base is
+	--- recomputed every TRACK_EVERY_S, so it keeps up with players whose armies grow; when it rises,
+	--- its troops rise in proportion (a whittled-down beast stays weak).
+	TROOPS_FLOOR = 10000.0,
+	TROOPS_TOP_N = 3,
+	TROOPS_BASE = 1.0,
+	TROOPS_PER_TAIL = 0.10,
+	TRACK_EVERY_S = 10,
 	--- Its troop cap follows its land: base cap x (tiles / the most tiles it held) ^ CAP_LAND_EXP,
 	--- never under CAP_FLOOR_SHARE x the base. Every second it regenerates REGEN_PER_S of what it is
 	--- missing below the cap, or loses DRAIN_PER_S of what it holds above it.
@@ -98,12 +102,55 @@ local BEASTS = {
 	RAMPAGE_WAVE = 0.02,
 	RAMPAGE_MAX_GROWTH = 5.0,
 	RAMPAGE_MIN_TROOPS = 1000.0,
-	--- Capture buff, per beast held (stacking multiplicatively): troop cap x (1 + CAP_BONUS_BASE +
-	--- CAP_BONUS_PER_TAIL x tails), attack losses (any land) x (1 - LOSS_CUT_BASE - LOSS_CUT_PER_TAIL x tails).
-	CAP_BONUS_BASE = 0.04,
-	CAP_BONUS_PER_TAIL = 0.01,
+	--- Jinchuriki passive, per beast held (stacking multiplicatively): troop cap x (1 + CAP_BONUS_BASE +
+	--- CAP_BONUS_PER_TAIL x tails), troop regeneration x (1 + REGEN_BONUS_BASE + REGEN_BONUS_PER_TAIL x
+	--- tails), attack losses (any land) x (1 - LOSS_CUT_BASE - LOSS_CUT_PER_TAIL x tails).
+	CAP_BONUS_BASE = 0.05,
+	CAP_BONUS_PER_TAIL = 0.02,
+	REGEN_BONUS_BASE = 0.10,
+	REGEN_BONUS_PER_TAIL = 0.03,
 	LOSS_CUT_BASE = 0.03,
 	LOSS_CUT_PER_TAIL = 0.01,
+	--- Tailed Beast Bomb (Defs.N_BIJUDAMA): a holder fires it from its own land at any tile, free, every
+	--- BOMB_CD_S - BOMB_CD_PER_TAIL x tails seconds (the first BOMB_FIRST_S after the capture). Its blast:
+	--- inner BOMB_INNER_BASE + BOMB_INNER_PER_TAIL x (tails - 1) full-size tiles, outer likewise (the
+	--- One-Tail an Explosion Seal's 12 / 30, the Nine-Tails 84 / 110, past a Great Explosion Seal's
+	--- 80 / 100). Barrier Towers can't stop it. The holder's own land and army are never hurt. An army
+	--- loses what a bomb would take of it, but never more than BOMB_KILL_MAX of it (BOMB_SPECIAL_KILL_MAX
+	--- for a Tailed Beast or the Akatsuki, so one captured beast doesn't make the next capture trivial).
+	BOMB_CD_S = 120,
+	BOMB_CD_PER_TAIL = 4,
+	BOMB_FIRST_S = 15,
+	BOMB_INNER_BASE = 12.0,
+	BOMB_INNER_PER_TAIL = 9.0,
+	BOMB_OUTER_BASE = 30.0,
+	BOMB_OUTER_PER_TAIL = 10.0,
+	BOMB_KILL_MAX = 0.35,
+	BOMB_SPECIAL_KILL_MAX = 0.10,
+	--- A wild beast's own bomb while it rampages: at its strongest neighbour, the first WILD_BOMB_FIRST_S
+	--- after it emerges, then every WILD_BOMB_MIN_S..WILD_BOMB_MAX_S. WILD_BOMB_RADIUS_MULT x the radii,
+	--- at most WILD_BOMB_KILL_MAX of an army, and it takes no land from an owner it would take more than
+	--- WILD_BOMB_LAND_MAX of the land of (it hurts; it never deletes a player).
+	WILD_BOMB_FIRST_S = 5,
+	WILD_BOMB_MIN_S = 20,
+	WILD_BOMB_MAX_S = 30,
+	WILD_BOMB_RADIUS_MULT = 0.5,
+	WILD_BOMB_KILL_MAX = 0.12,
+	WILD_BOMB_LAND_MAX = 0.3,
+	--- Each beast's own power (index tails; docs/BEASTS.md): cooldown cd_s (the first POWER_FIRST_S
+	--- after the capture), duration dur_s of a timed one, and its numbers.
+	POWER_FIRST_S = 10,
+	POWERS = {
+		{ key = "sand", cd_s = 100, dur_s = 10 }, -- Shukaku: your land can't be attacked
+		{ key = "ghost_fire", cd_s = 80, kill = 0.15 }, -- Matatabi: a target army loses 15 %
+		{ key = "coral", cd_s = 100, dur_s = 30, loss = 2.0, slow = 2.0 }, -- Isobu: attacks on you cost 2x, take 2x as long
+		{ key = "lava", cd_s = 90, dur_s = 20, loss = 0.5 }, -- Son Goku: your attacks lose half the troops
+		{ key = "steam", cd_s = 90, dur_s = 20, speed = 2.0 }, -- Kokuo: your attacks advance 2x faster
+		{ key = "acid", cd_s = 90, radius = 40.0 }, -- Saiken: a target's structures within 40 tiles are destroyed
+		{ key = "flight", cd_s = 60, range = 300.0 }, -- Chomei: land an attack on any land tile within 300 tiles
+		{ key = "ink", cd_s = 90, dur_s = 15 }, -- Gyuki: a target can't launch attacks or boats
+		{ key = "chakra", cd_s = 120, dur_s = 30, cap = 1.5 }, -- Kurama: troop cap x1.5, troops filled to it
+	},
 }
 
 --- The Akatsuki (Core/SimAkatsuki, docs/AKATSUKI.md): every tunable, one table shared by all map
@@ -120,43 +167,66 @@ local AKATSUKI = {
 	--- It seizes the land within RADIUS full-size tiles, owned or not (spawn-shielded owners' and
 	--- Tailed Beasts' tiles excepted).
 	RADIUS = 14.0,
-	--- Troops (its base cap): the strongest player's army (humans and bot players; with none, any
-	--- owner's; special owners excluded) x TROOPS_SHARE, never under TROOPS_FLOOR. Every beast it
-	--- has sealed multiplies its cap and its attack waves by (1 + SEAL_GROWTH x sealed).
+	--- Troops (base caps): the top players' average army (as the beasts: Core/SimBeasts._beast_top_army)
+	--- x HQ_SHARE for its hideout and x CELL_SHARE for each of its cells, never under TROOPS_FLOOR /
+	--- CELL_TROOPS_FLOOR, recomputed every TRACK_EVERY_S (troops rise with it). Every beast it has
+	--- sealed multiplies its caps and its cells' attack waves by (1 + SEAL_GROWTH x sealed).
 	TROOPS_FLOOR = 150000.0,
-	TROOPS_SHARE = 0.9,
+	CELL_TROOPS_FLOOR = 450000.0,
+	HQ_SHARE = 0.6,
+	CELL_SHARE = 0.25,
+	TRACK_EVERY_S = 10,
 	SEAL_GROWTH = 0.15,
-	--- Its cap does not follow its land. Every second it regenerates REGEN_PER_S of what it is
-	--- missing below the cap, or loses DRAIN_PER_S of what it holds above it. No gold income.
-	REGEN_PER_S = 0.02,
+	--- Its caps do not follow its land. Every second each of its owners regenerates REGEN_PER_S of
+	--- what it is missing below its cap, or loses DRAIN_PER_S of what it holds above it. No gold income.
+	REGEN_PER_S = 0.05,
 	DRAIN_PER_S = 0.25,
-	--- Every ATTACK_EVERY_TICKS it attacks its best target on its border with ATTACK_SHARE x its home
-	--- troops (x the seal growth, at most ATTACK_SHARE_MAX; at least ATTACK_MIN_TROOPS): wild Tailed
-	--- Beasts first, then beast holders, then the weakest neighbour; with no neighbour to attack, it
-	--- takes free land with EXPAND_SHARE. Spawn-shielded owners are skipped. It raids, it doesn't rule:
-	--- past LAND_SHARE_MAX of the map's land it attacks only beasts and holders, and every second it
-	--- sheds SHED_PER_S of the land above that (at least SHED_MIN_TILES) back to unowned, the border
-	--- tiles farthest from its home disk and its live cells first (those two are never shed).
+	--- The hideout never attacks. Every ATTACK_EVERY_TICKS each cell attacks its best target on its
+	--- border with ATTACK_SHARE x its home troops (x the seal growth, at most ATTACK_SHARE_MAX; at
+	--- least ATTACK_MIN_TROOPS): wild Tailed Beasts first, then beast holders, then whoever attacks it;
+	--- with none of those it takes free land with EXPAND_SHARE. Spawn-shielded owners are skipped.
+	--- A cell raids, it doesn't rule: above CELL_LAND_SHARE_MAX of the map's land (at least its disk) it
+	--- takes no free land, and every second it sheds SHED_PER_S of the excess (at least SHED_MIN_TILES)
+	--- back to unowned, its border tiles farthest from its disk first (the disk is never shed).
 	ATTACK_EVERY_TICKS = 10,
 	ATTACK_SHARE = 0.05,
 	ATTACK_SHARE_MAX = 0.12,
 	ATTACK_MIN_TROOPS = 1000.0,
 	EXPAND_SHARE = 0.02,
-	LAND_SHARE_MAX = 0.03,
+	CELL_LAND_SHARE_MAX = 0.006,
 	SHED_PER_S = 0.03,
 	SHED_MIN_TILES = 8,
-	--- Cells: every CELL_EVERY_S it drops a disk of CELL_RADIUS full-size tiles of its land next to
-	--- its priority target it does not border yet (a wild beast awake for CELL_BEAST_AFTER_S at least,
-	--- so players get a first go at it; else a beast holder). At most
-	--- MAX_CELLS cells hold land at once: a new one withdraws the oldest (its land goes unowned).
-	--- CELL_TRIES border tiles of the target are tried for the spot; CELL_MIN_TILES must be seized.
+	--- Cells (Data/Akatsuki.MEMBERS: one owner per member pair), deployed when it appears, each as a
+	--- disk of CELL_RADIUS full-size tiles next to its target (a wild beast awake for
+	--- CELL_BEAST_AFTER_S at least, so players get a first go at it; else a beast holder; cells spread
+	--- over different targets), else around the hideout. Every CELL_EVERY_S a cell that doesn't border
+	--- its target moves next to it (a new disk; its other land goes unowned). A destroyed cell never
+	--- returns. CELL_TRIES border tiles of the target are tried for a spot; CELL_MIN_TILES must be
+	--- seized. Destroying one pays CELL_BOUNTY_GOLD.
 	CELL_EVERY_S = 25,
 	CELL_BEAST_AFTER_S = 60,
-	CELL_RADIUS = 5.0,
-	MAX_CELLS = 3,
+	CELL_RADIUS = 7.0,
 	CELL_TRIES = 80,
 	CELL_MIN_TILES = 5,
-	--- Its fall: the owner that takes its last tile gets troop cap x SLAYER_CAP_MULT for the rest of
+	CELL_BOUNTY_GOLD = 250000.0,
+	--- The sealing ritual: a cell on a wild beast's border (or on a holder's, with at least
+	--- RITUAL_HOLDER_EDGE x the holder's troops) stops attacking and seals it in RITUAL_S; it is
+	--- broken when the cell loses RITUAL_BREAK_SHARE of the land it had when it began (or is
+	--- destroyed, or the beast gets away). A holder keeps its land and loses the beast.
+	RITUAL_S = 20,
+	--- Its ninja are elite: an attack on any of its land (hideout or cell) loses DEFENSE_LOSS x the
+	--- usual troops per tile and takes DEFENSE_SLOW x as long (a small, dense cell would otherwise
+	--- crumble in a second: a defender's troops go with its tiles).
+	DEFENSE_LOSS = 1.5,
+	DEFENSE_SLOW = 1.25,
+	--- One ritual at a time, none in the first RITUAL_FIRST_S after it appears (everyone reads the
+	--- arrival first), and none for RITUAL_COOLDOWN_S after a beast is sealed.
+	RITUAL_FIRST_S = 30,
+	RITUAL_COOLDOWN_S = 45,
+	RITUAL_BREAK_SHARE = 0.35,
+	RITUAL_HOLDER_EDGE = 1.0,
+	--- Its hideout can't be attacked, landed on or hurt by bombs while any of its cells lives (the
+	--- barrier). Its fall (the hideout's last tile taken): that owner gets troop cap x SLAYER_CAP_MULT for the rest of
 	--- the match and BOUNTY_GOLD (plus what the Akatsuki took). Each beast it had sealed re-emerges
 	--- as a new wild beast: the first RELEASE_FIRST_S after the fall, then one every RELEASE_EVERY_S.
 	SLAYER_CAP_MULT = 1.10,
@@ -897,13 +967,15 @@ local function build(K_LIN: number): any
 	--- Atom 750k, hydrogen 5M, MIRV 25M (+15M per MIRV launched in the match; see nuke_cost()).
 	--- (Arsenal: mega 2.5M, scattershot 3.75M; a shell, an air strike and a railgun slug are free —
 	--- their battery, airfield or railgun is the price.)
-	Rules.NUKE_COST = zt({ 750000, 5000000, 25000000, 0, 2500000, 3750000, 0, 0, 0 })
+	Rules.NUKE_COST = zt({ 750000, 5000000, 25000000, 0, 2500000, 3750000, 0, 0, 0, 0 })
 	Rules.MIRV_COST_STEP = 15000000
 	--- nukeMagnitudes (full-size tiles): atom 12/30, hydrogen 80/100, warhead 12/18 (inner / outer).
 	--- (Arsenal: mega = twice an atom bomb's radii, four times its ground; scattershot's own crater is
 	--- an atom bomb's; a shell, an air strike and a slug have one blast disc and take no land.)
-	Rules.NUKE_INNER_FULL = f32t({ 12.0, 80.0, 0.0, 12.0, 24.0, 12.0, 0.0, 0.0, 0.0 })
-	Rules.NUKE_OUTER_FULL = f32t({ 30.0, 100.0, 0.0, 18.0, 60.0, 30.0, 1.5, 15.0, 5.0 })
+	--- (A Tailed Beast Bomb's radii depend on the beast: Rules.bijudama_radii; its entry here is the
+	--- Nine-Tails'.)
+	Rules.NUKE_INNER_FULL = f32t({ 12.0, 80.0, 0.0, 12.0, 24.0, 12.0, 0.0, 0.0, 0.0, 84.0 })
+	Rules.NUKE_OUTER_FULL = f32t({ 30.0, 100.0, 0.0, 18.0, 60.0, 30.0, 1.5, 15.0, 5.0, 110.0 })
 	--- Outer blast radius in our tiles (UI displays trunc(NUKE_RADIUS[kind])).
 	Rules.NUKE_RADIUS = f32t({
 		30.0 / K_LIN,
@@ -915,17 +987,19 @@ local function build(K_LIN: number): any
 		1.5 / K_LIN,
 		15.0 / K_LIN,
 		5.0 / K_LIN,
+		110.0 / K_LIN,
 	})
 	--- SAMs always hit what they can reach; the MIRV carrier itself can't be intercepted (nor can a
 	--- shell, an air strike or a slug).
-	Rules.NUKE_INTERCEPT_P = f32t({ 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0 })
+	--- A Tailed Beast Bomb is chakra, not a missile: Barrier Towers can't stop it.
+	Rules.NUKE_INTERCEPT_P = f32t({ 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0 })
 	--- defaultSamMissileSpeed 12 full-size tiles/tick (manhattan time to reach); a bomb or warhead can be
 	--- targeted only within defaultNukeTargetableRange (150 full-size tiles) of its target or of its launch point.
 	Rules.SAM_MISSILE_SPEED_FULL = 12.0
 	Rules.NUKE_TARGETABLE_FULL = 150.0
 	--- nukeSpeed (full-size tiles per tick): atom / hydrogen 10, MIRV 15, warhead 22.
 	--- (Arsenal: mega / scattershot 10 like the bombs; shell 6, air strike 8, slug 80.)
-	Rules.NUKE_SPEED_FULL = f32t({ 10.0, 10.0, 15.0, 22.0, 10.0, 10.0, 6.0, 8.0, 80.0 })
+	Rules.NUKE_SPEED_FULL = f32t({ 10.0, 10.0, 15.0, 22.0, 10.0, 10.0, 6.0, 8.0, 80.0, 12.0 })
 	--- MIRV: 350 warheads within 1500 full-size tiles of the aim, on the target's land.
 	Rules.MIRV_WARHEADS = 350
 	Rules.MIRV_SPREAD = trunc(1500.0 / K_LIN)
@@ -937,6 +1011,8 @@ local function build(K_LIN: number): any
 	function Rules.nuke_radii(kind: number): (number, number)
 		if kind == Defs.N_MIRV then
 			return 0.0, Rules.MIRV_SPREAD
+		elseif kind == Defs.N_BIJUDAMA then
+			return Rules.bijudama_radii(9, false)
 		end
 		if kind < 0 or kind >= Defs.NUKE_KIND_COUNT then
 			return 0.0, 0.0
@@ -947,13 +1023,23 @@ local function build(K_LIN: number): any
 	--- Gold cost of a nuke; the MIRV grows by 15M for every MIRV already launched in the match.
 	function Rules.nuke_cost(kind_name: string, mirvs_launched: number?): number
 		local k = Defs.nuke_kind_from_name(kind_name)
-		if k < 0 or k == Defs.N_WARHEAD or k == Defs.N_SHELL then
+		if k < 0 or k == Defs.N_WARHEAD or k == Defs.N_SHELL or k == Defs.N_BIJUDAMA then
 			return -1
 		end
 		if k == Defs.N_MIRV then
 			return Rules.NUKE_COST[k] + Rules.MIRV_COST_STEP * math.max(mirvs_launched or 0, 0)
 		end
 		return Rules.NUKE_COST[k]
+	end
+
+	--- (inner, outer) blast radii in OUR tiles of the Tailed Beast Bomb of beast `tails`: from an
+	--- Explosion Seal's (One-Tail) to beyond a Great Explosion Seal's (Nine-Tails); a wild beast's own
+	--- bomb is Rules.BEASTS.WILD_BOMB_RADIUS_MULT of that.
+	function Rules.bijudama_radii(tails: number, wild: boolean?): (number, number)
+		local B = Rules.BEASTS
+		local t = clampi(tails, 1, 9) - 1
+		local m = if wild then B.WILD_BOMB_RADIUS_MULT else 1.0
+		return (B.BOMB_INNER_BASE + B.BOMB_INNER_PER_TAIL * t) * m / K_LIN, (B.BOMB_OUTER_BASE + B.BOMB_OUTER_PER_TAIL * t) * m / K_LIN
 	end
 
 	--- Flight time in ticks over `dist_tiles` of OUR tiles at nukeSpeed.
@@ -1033,7 +1119,7 @@ local function build(K_LIN: number): any
 	-- ---------------------------------------------------------------------------------------------
 	--- Munitions that fly a straight line (a shell, a bomber's run, a railgun slug); the others fly
 	--- the nuke arc (nuke_arc).
-	Rules.NUKE_FLAT = zt({ false, false, false, false, false, false, true, true, true })
+	Rules.NUKE_FLAT = zt({ false, false, false, false, false, false, true, true, true, false })
 	--- The structure a munition leaves from (Defs.S_*): bombs a silo, an air strike an airfield, a slug
 	--- a railgun. (Shells are fired by the battery itself; warheads come off a MIRV or a scattershot.)
 	Rules.NUKE_LAUNCHER = zt({
@@ -1046,6 +1132,7 @@ local function build(K_LIN: number): any
 		Defs.S_ARTILLERY,
 		Defs.S_AIRFIELD,
 		Defs.S_RAILGUN,
+		-1, -- (a Tailed Beast Bomb leaves its holder's land: SimBeasts)
 	})
 	--- A structure that fires reloads for this long per shot (index Defs.S_*; 0: it doesn't fire).
 	--- SAMCooldown / SiloCooldown 90; an airfield rearms for 30 s, a railgun reloads for 25 s. A battery
@@ -1075,7 +1162,7 @@ local function build(K_LIN: number): any
 	Rules.SLUG_KILL_PER_TILE = 150.0
 	Rules.SLUG_KILL_FRAC = 0.04
 	--- Damage a munition does to each structure in its disc (index Defs.N_*).
-	Rules.STRIKE_DAMAGE = zt({ 0, 0, 0, 0, 0, 0, 150, 600, 1000 })
+	Rules.STRIKE_DAMAGE = zt({ 0, 0, 0, 0, 0, 0, 150, 600, 1000, 0 })
 	--- Health of a structure (index Defs.S_*), only ever lowered by a shell, an air strike or a slug:
 	--- at 0 it loses a level and is whole again, or is destroyed at level 1.
 	Rules.STRUCT_HP = zt({ 1000, 1000, 1000, 600, 1000, 1000, 600, 800, 1000 })

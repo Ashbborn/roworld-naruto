@@ -55,6 +55,9 @@ function UIInteract.new(c: any)
 	self.target_card = nil :: any
 	self.place_confirm = nil :: any
 	self.unit_card = nil :: any
+	--- The jinchuriki's panel (UI/BeastPanel): while it aims a Tailed Beast Bomb or a power, map hover
+	--- / clicks / Esc go to it first (its hover / click / cancel return true when they took them).
+	self.beast_aim = nil :: any
 	--- Current placement kind ("" = none): a structure, "warship" or a nuke.
 	self.aim_kind = ""
 	self.hover_tile = -1
@@ -123,6 +126,9 @@ function UIInteract.select_action(self: any, kind: string)
 		self:cancel_aim()
 		return
 	end
+	if self.beast_aim ~= nil then
+		self.beast_aim:cancel()
+	end
 	self.aim_kind = kind
 	self._confirm_tile = -1
 	self:_clear_ghost()
@@ -186,7 +192,9 @@ function UIInteract.on_hover(self: any, tile: number)
 	ctx:world_call("set_hover_owner", { own })
 	-- Placement preview (the view draws blast radii, hostile SAM cover and SAM / post range rings
 	-- from the detail; an invalid spot shows the preview greyed).
-	if self.aim_kind ~= "" then
+	if self.beast_aim ~= nil and self.beast_aim:hover(tile) then
+		-- (a Tailed Beast Bomb / power being aimed: BeastPanel drew its preview)
+	elseif self.aim_kind ~= "" then
 		if ctx.touch then
 			if self._ghost_tile < 0 then
 				ctx:set_aim("", -1, 0, false) -- touch: nothing to preview until the first tap
@@ -247,6 +255,9 @@ function UIInteract.on_click(self: any, tile: number)
 	self._last_click_msec = now
 	if self.radial.is_open then
 		self.radial:close()
+		return
+	end
+	if self.beast_aim ~= nil and self.beast_aim:click(tile) then
 		return
 	end
 	local pos = self:tap_pos(tile)
@@ -1680,6 +1691,8 @@ function UIInteract._on_key(self: any, key: Enum.KeyCode, echo: boolean): boolea
 		local idx = HOTKEY_INDEX[key]
 		if idx ~= nil and ui:screen() == "play" and self.enabled then
 			self:select_action(UIRules.ACTIONS[idx])
+		elseif self.beast_aim ~= nil and ui:screen() == "play" and self.enabled and self.beast_aim:on_key(key.Name) then
+			-- (F: a Tailed Beast Bomb; G V B N T Y U J K: the held beasts' powers, BeastPanel)
 		else
 			handled = false
 		end
@@ -1724,6 +1737,10 @@ function UIInteract.escape(self: any): boolean
 	end
 	if self.aim_kind ~= "" then
 		self:cancel_aim()
+		return true
+	end
+	if self.beast_aim ~= nil and self.beast_aim:cancel() then
+		self.ctx:sfx("close", -6.0)
 		return true
 	end
 	if ui.help.is_open then

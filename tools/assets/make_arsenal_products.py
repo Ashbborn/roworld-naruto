@@ -2,9 +2,10 @@
 """The Arsenal's developer products (Data/Arsenal, Data/Products: unlock_<key>): their icons, and the
 products themselves through Open Cloud.
 
-  icons    512 px, the item's render (assets/arsenal/renders/<key>.png, make_arsenal_renders.py;
-           its glyph without one) on a dark ground with a glow of its colour, as on the shop's
-           cards, with its name -> build/products/unlock_<key>.png
+  icons    512 px: a big version of the item's tile in the shop's list (its colour, a light behind
+           the art, its render from assets/arsenal/renders/<key>.png, make_arsenal_renders.py; its
+           glyph without one), its name across the foot -> build/products/unlock_<key>.png, and a
+           sheet of them at their sizes -> build/r2_product_icons.png
   --icons --universe <id>    send only the icons to the products that exist there (matched by
            name). Nothing else of a product is touched: its price may have been changed since on
            the Creator Dashboard, which --create would set back to Data/Products'.
@@ -35,7 +36,9 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.join(ROOT, "build", "products")
 PRODUCTS = os.path.join(ROOT, "src", "shared", "Data", "Products.luau")
 ARSENAL = os.path.join(ROOT, "src", "shared", "Data", "Arsenal.luau")
-FONT = "/System/Library/Fonts/Supplemental/Arial Black.ttf"
+# Arial Black (macOS, then Windows)
+FONT = next((f for f in ("/System/Library/Fonts/Supplemental/Arial Black.ttf", "C:/Windows/Fonts/ariblk.ttf")
+             if os.path.exists(f)), "C:/Windows/Fonts/ariblk.ttf")
 SIZE = 512
 NIGHT = (8, 12, 26)
 API = "https://apis.roblox.com/developer-products/v2/universes"
@@ -46,7 +49,7 @@ def catalogue():
     src = open(ARSENAL, encoding="utf-8").read()
     prices = dict(re.findall(r"^\s*unlock_(\w+) = \{ id = \d+, robux = (\d+)", open(PRODUCTS, encoding="utf-8").read(), re.M))
     items = []
-    for m in re.finditer(r'key = "(\w+)",\s*title = "([^"]+)",\s*kind = "\w+",\s*icon = "(\w+)",\s*tagline = "([^"]+)"', src):
+    for m in re.finditer(r'key = "(\w+)",\s*title = "([^"]+)",\s*kind = "\w+",\s*icon = "(\w+)",\s*(?:--[^\n]*\n\s*)*tagline = "([^"]+)"', src):
         key, title, icon, tagline = m.groups()
         tail = src[m.end():]
         c = re.search(r"color = \{ 0x([0-9A-Fa-f]{6}), 0x([0-9A-Fa-f]{6}) \}", tail)
@@ -58,41 +61,58 @@ def catalogue():
 
 
 def render(it):
-    # the shop card's ground (UI/Arsenal): dark, tinted with the item's colours, a glow of the
-    # colour behind the item with a hotter heart
+    """The item's icon: a big version of its tile in the shop's list (UI/Arsenal: its colour toward the
+    night, the render on it), a light behind the art, its name across the foot in white outlined in ink."""
+    import numpy as np
     mix = lambda a, b, k: tuple(a[i] + (b[i] - a[i]) * k for i in range(3))
-    top, bottom = mix(it["top"], NIGHT, 0.42), mix(it["bottom"], NIGHT, 0.8)
-    im = Image.new("RGBA", (SIZE, SIZE))
-    px = im.load()
-    for y in range(SIZE):
-        col = tuple(int(c) for c in mix(top, bottom, y / (SIZE - 1))) + (255,)
-        for x in range(SIZE):
-            px[x, y] = col
-    for box, k, alpha, blur in (([26, -30, 486, 400], 0.3, 215, 60), ([146, 70, 366, 290], 0.6, 150, 36)):
-        glow = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-        ImageDraw.Draw(glow).ellipse(box, fill=tuple(int(c) for c in mix(it["top"], (255, 255, 255), k)) + (alpha,))
-        im.alpha_composite(glow.filter(ImageFilter.GaussianBlur(blur)))
-    # the item's render (make_arsenal_renders.py) when there is one, else its glyph
+    lum = lambda c: 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    # (a bright item colour, 2x Stars' gold, would make a mustard tile under gold art: it goes deeper,
+    # to the others' brightness, so the metal stands out on it)
+    k = 0.35
+    while lum(mix(it["bottom"], NIGHT, k)) > 56 and k < 0.7:
+        k += 0.05
+    tile = np.array(mix(it["bottom"], NIGHT, k), dtype=np.float32)
+    light = np.array(mix(it["top"], (255, 255, 255), 0.18), dtype=np.float32)
+    deep = np.array(mix(it["bottom"], NIGHT, 0.72), dtype=np.float32)
+    yy, xx = np.mgrid[0:SIZE, 0:SIZE].astype(np.float32) / (SIZE - 1)
+    # a spotlight behind the art (up and to the left a little, where the art's light comes from), the
+    # tile's colour round it, darker toward the corners and the foot
+    d = np.sqrt(((xx - 0.47) / 0.62) ** 2 + ((yy - 0.36) / 0.56) ** 2)
+    k_light = np.clip(1 - d, 0, 1) ** 1.6
+    k_deep = np.clip((d - 0.75) / 0.6, 0, 1) * 0.8 + np.clip((yy - 0.62) / 0.38, 0, 1) * 0.55
+    lit = light * 0.55 + tile * 0.45
+    rgb = tile[None, None, :] * (1 - k_light[..., None]) + lit[None, None, :] * k_light[..., None]
+    rgb = rgb * (1 - np.clip(k_deep, 0, 1)[..., None]) + deep[None, None, :] * np.clip(k_deep, 0, 1)[..., None]
+    im = Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
+    # the item's render (make_arsenal_renders.py: a 256-unit square, every item at one scale)
     shot = os.path.join(ROOT, "assets", "arsenal", "renders", it["key"] + ".png")
     if os.path.exists(shot):
-        g = Image.open(shot).convert("RGBA")
-        k = min(340 / g.size[0], 340 / g.size[1])
-        g = g.resize((round(g.size[0] * k), round(g.size[1] * k)), Image.LANCZOS)
+        g = Image.open(shot).convert("RGBA").resize((392, 392), Image.LANCZOS)
     else:
         g = Image.open(os.path.join(ROOT, "assets", "arsenal", "ui", it["icon"] + ".png")).convert("RGBA").resize((300, 300), Image.LANCZOS)
-    gx, gy = (SIZE - g.size[0]) // 2, 20 + (340 - g.size[1]) // 2
+    gx, gy = (SIZE - g.size[0]) // 2, 6 + (392 - g.size[1]) // 2
     sh = Image.new("RGBA", g.size, (0, 0, 0, 0))
-    sh.putalpha(g.getchannel("A").point(lambda v: int(v * 0.45)))
-    im.alpha_composite(sh.filter(ImageFilter.GaussianBlur(6)), (gx, gy + 10))
+    sh.putalpha(g.getchannel("A").point(lambda v: int(v * 0.5)))
+    im.alpha_composite(sh.filter(ImageFilter.GaussianBlur(7)), (gx + 4, gy + 10))
     im.alpha_composite(g, (gx, gy))
     label = it["title"].upper()
-    size = 92
+    # (as big as the name fits, up to the size the mid-length names get: a short name doesn't shout)
+    size = 56
     font = ImageFont.truetype(FONT, size)
     d = ImageDraw.Draw(im)
-    while d.textlength(label, font=font) > SIZE - 56 and size > 36:
+    while d.textlength(label, font=font) > SIZE - 64 and size > 36:
         size -= 4
         font = ImageFont.truetype(FONT, size)
-    d.text((SIZE / 2, 432), label, font=font, fill=(255, 255, 255, 255), anchor="mm", stroke_width=6, stroke_fill=(0, 0, 0, 150))
+    d.text((SIZE / 2, 446), label, font=font, fill=(255, 255, 255, 255), anchor="mm", stroke_width=9,
+           stroke_fill=(27, 26, 34, 255))
+    # the tile's rim: a lighter line round the top, a darker one round the foot
+    rim = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    rd = ImageDraw.Draw(rim)
+    rd.rounded_rectangle([3, 3, SIZE - 4, SIZE - 4], radius=70, outline=tuple(int(c) for c in light) + (120,), width=5)
+    rim_mask = Image.new("L", (SIZE, SIZE), 0)
+    ImageDraw.Draw(rim_mask).rectangle([0, 0, SIZE, SIZE // 2], fill=255)
+    rim.putalpha(Image.composite(rim.getchannel("A"), Image.new("L", (SIZE, SIZE), 0), rim_mask.filter(ImageFilter.GaussianBlur(60))))
+    im.alpha_composite(rim)
     mask = Image.new("L", (SIZE, SIZE), 0)
     ImageDraw.Draw(mask).rounded_rectangle([0, 0, SIZE - 1, SIZE - 1], radius=72, fill=255)
     out = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
@@ -101,6 +121,20 @@ def render(it):
     p = os.path.join(OUT, "unlock_" + it["key"] + ".png")
     out.save(p, optimize=True)
     return p
+
+
+def sheet(icons, path):
+    """The icons big and at the purchase prompt's size, on the panel's dark ground."""
+    keys = list(icons)
+    W = 12 + len(keys) * 252
+    sh = Image.new("RGBA", (W, 12 + 240 + 16 + 110 + 12 + 48 + 12), (18, 22, 38, 255))
+    for i, k in enumerate(keys):
+        im = Image.open(icons[k]).convert("RGBA")
+        sh.alpha_composite(im.resize((240, 240), Image.LANCZOS), (12 + i * 252, 12))
+        sh.alpha_composite(im.resize((110, 110), Image.LANCZOS), (12 + i * 252 + 65, 12 + 240 + 16))
+        sh.alpha_composite(im.resize((48, 48), Image.LANCZOS), (12 + i * 252 + 96, 12 + 240 + 16 + 110 + 12))
+    sh.save(path)
+    return path
 
 
 def call(method, url, fields=None, image=None):
@@ -154,6 +188,7 @@ def main():
     icons = {it["key"]: render(it) for it in items}
     for it in items:
         print(f'icon unlock_{it["key"]} ({it["robux"]} Robux) -> {os.path.relpath(icons[it["key"]], ROOT)}')
+    print("sheet ->", os.path.relpath(sheet(icons, os.path.join(ROOT, "build", "r2_product_icons.png")), ROOT))
     if args.icons:
         if not args.universe:
             raise SystemExit("--icons needs --universe")

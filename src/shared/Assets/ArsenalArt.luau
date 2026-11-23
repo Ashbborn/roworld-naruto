@@ -3,30 +3,42 @@
 -- structures' map plates and glyphs are in Assets/MapSprites with every other structure's).
 return {
 	ui = {
-		artillery = "rbxassetid://129962050975056",
-		airfield = "rbxassetid://93161184929593",
-		railgun = "rbxassetid://80259865103214",
-		mega = "rbxassetid://129076365242890",
-		scatter = "rbxassetid://73314694929508",
-		reinforce = "rbxassetid://80150583838975",
-		airstrike = "rbxassetid://97597884564003",
-		slug = "rbxassetid://74359376650198",
-		star = "rbxassetid://123717027950196",
-		lock = "rbxassetid://115477224449087",
-		reload = "rbxassetid://98646122722253",
-		arsenal = "rbxassetid://100317438832041",
+		artillery = "rbxassetid://115727742790424",
+		airfield = "rbxassetid://95666270639660",
+		railgun = "rbxassetid://133466553178826",
+		mega = "rbxassetid://73264155912280",
+		scatter = "rbxassetid://125448876879544",
+		reinforce = "rbxassetid://136376413191603",
+		airstrike = "rbxassetid://126639698512043",
+		slug = "rbxassetid://79558984866515",
+		star = "rbxassetid://114017266160175",
+		lock = "rbxassetid://133877332494755",
+		reload = "rbxassetid://122042094466731",
+		arsenal = "rbxassetid://100350424187718",
 	},
-	--- the shop cards' item renders (Data/Arsenal item key -> image; models of military hardware
-	--- generated in Studio, photographed and cut out by tools/assets/make_arsenal_renders.py):
+	--- the shop's item renders (Data/Arsenal item key -> image; the Naruto world's items: the owner's
+	--- picks among AI candidates, or drawn as SVG; tools/assets/make_arsenal_renders.py):
 	--- { id, w, h }
 	renders = {
-		airfield = { id = "rbxassetid://110223879206367", w = 384, h = 197 },
-		artillery = { id = "rbxassetid://88796850061327", w = 359, h = 384 },
-		mega = { id = "rbxassetid://103963261810830", w = 251, h = 384 },
-		railgun = { id = "rbxassetid://130681855347677", w = 274, h = 384 },
-		reinforce = { id = "rbxassetid://94188923858941", w = 384, h = 384 },
-		reload2x = { id = "rbxassetid://119833217146965", w = 357, h = 384 },
-		scatter = { id = "rbxassetid://114113709844408", w = 168, h = 384 },
-		stars2x = { id = "rbxassetid://114358812407533", w = 384, h = 345 },
+		airfield = { id = "rbxassetid://92274860755655", w = 384, h = 384 },
+		artillery = { id = "rbxassetid://94294790166940", w = 384, h = 384 },
+		mega = { id = "rbxassetid://121576604923109", w = 384, h = 384 },
+		railgun = { id = "rbxassetid://115431710504519", w = 384, h = 384 },
+		reinforce = { id = "rbxassetid://100832038729038", w = 384, h = 384 },
+		reload2x = { id = "rbxassetid://134439736314042", w = 384, h = 384 },
+		scatter = { id = "rbxassetid://133247319231900", w = 384, h = 384 },
+		stars2x = { id = "rbxassetid://120246840559035", w = 384, h = 384 },
+	},
+	--- the same at the list's small tiles' size (drawn: a heavier outline, fewer and bigger parts;
+	--- a pick: the same picture, small): { id, w, h }
+	tiles = {
+		airfield = { id = "rbxassetid://92836974737715", w = 128, h = 128 },
+		artillery = { id = "rbxassetid://81425571885836", w = 128, h = 128 },
+		mega = { id = "rbxassetid://131300034022880", w = 128, h = 128 },
+		railgun = { id = "rbxassetid://100219240831107", w = 128, h = 128 },
+		reinforce = { id = "rbxassetid://129921090921808", w = 128, h = 128 },
+		reload2x = { id = "rbxassetid://104780073288196", w = 128, h = 128 },
+		scatter = { id = "rbxassetid://134898659066237", w = 128, h = 128 },
+		stars2x = { id = "rbxassetid://105886244311028", w = 128, h = 128 },
 	},
 }

@@ -107,11 +107,13 @@ local NUKE_COL = {
 	[Defs.N_SHELL] = COL_SHELL,
 	[Defs.N_AIRSTRIKE] = COL_SAM,
 	[Defs.N_SLUG] = COL_SHELL,
+	-- a Tailed Beast Bomb: the units sheet's "bijudama" column (Assets art map)
+	[Defs.N_BIJUDAMA] = 12,
 }
 --- Munitions drawn without a trail and a target ring (a battery's shells: there are many).
 local NUKE_PLAIN = { [Defs.N_SHELL] = true }
 --- Munitions drawn bigger than the others.
-local NUKE_SCALE = { [Defs.N_MEGA] = 1.5, [Defs.N_SHELL] = 0.75, [Defs.N_SLUG] = 1.2 }
+local NUKE_SCALE = { [Defs.N_MEGA] = 1.5, [Defs.N_SHELL] = 0.75, [Defs.N_SLUG] = 1.2, [Defs.N_BIJUDAMA] = 1.6 }
 
 type Sprite = {
 	frame: ImageLabel,
@@ -622,7 +624,10 @@ function UnitLayer.tick(self: any, _dt: number)
 		-- target: the blast ring, pulsing (red when it hits the local player)
 		local ViewRules = self.view.view_rules
 		local _, outer = 0, 12
-		if ViewRules then
+		if n.kind == Defs.N_BIJUDAMA and type(Rules.bijudama_radii) == "function" then
+			-- (a Tailed Beast Bomb's blast: its beast's)
+			_, outer = Rules.bijudama_radii(n.tails or 9, n.wild == true)
+		elseif ViewRules then
 			_, outer = ViewRules.nuke_radii(n.kind)
 		end
 		local ring = self._rings[uid]
@@ -734,7 +739,7 @@ function UnitLayer.stirring(st: any): boolean
 		end
 	end
 	local a = st.akatsuki
-	return a ~= nil and a.state == Defs.AKATSUKI_STIRRING
+	return a ~= nil and (a.state == Defs.AKATSUKI_STIRRING or (a.state == Defs.AKATSUKI_ACTIVE and next(a.rituals or {}) ~= nil))
 end
 
 --- Where a Tailed Beast stirs: a ring as wide as the land it will seize, pulsing in its colour, with
@@ -821,6 +826,93 @@ function UnitLayer._beast_rings(self: any, st: any, cam: any, rt: number, now: n
 		local lbl = ring:FindFirstChild("Count") :: TextLabel
 		if lbl ~= nil then
 			lbl.Text = tostring(math.max(0, math.ceil((a.appear_tick - rt) / 10)))
+		end
+		ring.Visible = true
+	end
+	if a == nil or a.state ~= Defs.AKATSUKI_ACTIVE then
+		return
+	end
+	local A = Rules.AKATSUKI
+	local red = Color3.fromHex(AkatsukiData.ACCENT)
+	-- its hideout's barrier while a cell lives: a steady double ring around it (key -101)
+	local up = type(st.akatsuki_barrier_up) == "function" and st:akatsuki_barrier_up()
+	if up and a.tile >= 0 then
+		local key = -101
+		local ring = self._rings[key]
+		if ring == nil then
+			ring = self:_ring(self.root, "AkatsukiBarrier", UnitLayer.Z - 3)
+			local inner = self:_ring(ring, "Inner", UnitLayer.Z - 3)
+			inner.Position = UDim2.fromScale(0.5, 0.5)
+			inner.Size = UDim2.fromScale(0.9, 0.9)
+			inner.Visible = true
+			self._rings[key] = ring
+		end
+		seen[key] = true
+		local radius = A.RADIUS / k * 1.12
+		local rx, ry = cam:tile_to_screen(a.tile)
+		local d = math.max(28, radius * 2 * cam.scale)
+		ring.Size = UDim2.fromOffset(d, d)
+		ring.Position = UDim2.fromOffset(math.round(rx), math.round(ry))
+		local barrier = Color3.fromRGB(190, 120, 255):Lerp(red, 0.25)
+		local stroke = ring:FindFirstChildOfClass("UIStroke") :: UIStroke
+		stroke.Color = barrier
+		stroke.Thickness = 3
+		stroke.Transparency = 0.15
+		ring.BackgroundColor3 = barrier
+		ring.BackgroundTransparency = 0.9
+		local inner = ring:FindFirstChild("Inner") :: Frame
+		if inner ~= nil then
+			local s2 = inner:FindFirstChildOfClass("UIStroke") :: UIStroke
+			s2.Color = barrier
+			s2.Thickness = 1.5
+			s2.Transparency = 0.45
+		end
+		ring.Visible = true
+	end
+	-- a sealing ritual: a fast-pulsing ring in the beast's colour around the cell, with the seconds
+	-- left to stop it (keys -(1000 + cell id))
+	for cell, r in a.rituals or {} do
+		if (tonumber(r.tile) or -1) < 0 then
+			continue
+		end
+		local key = -(1000 + cell)
+		local ring = self._rings[key]
+		if ring == nil then
+			ring = self:_ring(self.root, "AkatsukiRitual", UnitLayer.Z - 2)
+			local l = Instance.new("TextLabel")
+			l.Name = "Count"
+			l.BackgroundTransparency = 1
+			l.AnchorPoint = Vector2.new(0.5, 0.5)
+			l.Position = UDim2.fromScale(0.5, 0.5)
+			l.Size = UDim2.fromOffset(80, 28)
+			l.Font = Enum.Font.GothamBlack
+			l.TextSize = 22
+			l.TextColor3 = Color3.new(1, 1, 1)
+			l.TextStrokeTransparency = 0.3
+			l.ZIndex = UnitLayer.Z - 1
+			l.Parent = ring
+			self._rings[key] = ring
+		end
+		seen[key] = true
+		local left = math.max(0, (r.end_tick - rt) / 10)
+		local frac = math.clamp(left / math.max(A.RITUAL_S, 1), 0, 1)
+		-- (it closes in as the time runs out)
+		local radius = (A.CELL_RADIUS * (1.4 + 1.4 * frac)) / k
+		local rx, ry = cam:tile_to_screen(r.tile)
+		local d = math.max(30, radius * 2 * cam.scale)
+		ring.Size = UDim2.fromOffset(d, d)
+		ring.Position = UDim2.fromOffset(math.round(rx), math.round(ry))
+		local info = BeastsData.get(r.tails)
+		local c = if info ~= nil then Color3.fromHex(info.color):Lerp(red, 0.35) else red
+		local stroke = ring:FindFirstChildOfClass("UIStroke") :: UIStroke
+		stroke.Color = c
+		stroke.Thickness = 4
+		stroke.Transparency = 0.05 + 0.35 * (0.5 + 0.5 * math.sin(now * 9))
+		ring.BackgroundColor3 = c
+		ring.BackgroundTransparency = 0.75 + 0.1 * math.sin(now * 9)
+		local lbl = ring:FindFirstChild("Count") :: TextLabel
+		if lbl ~= nil then
+			lbl.Text = tostring(math.ceil(left))
 		end
 		ring.Visible = true
 	end

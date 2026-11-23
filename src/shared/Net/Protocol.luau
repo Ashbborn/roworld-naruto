@@ -133,6 +133,8 @@ Protocol.INTENT_TYPES = {
 	"donate",
 	"ally_extend", -- {target}: ask to renew the alliance with `target` (last 30 s before it expires)
 	"reinforce", -- {}: the Arsenal's Reinforcements (gold for troops; Sim.reinforce)
+	"beast", -- {kind = "bomb" | "power", uid = the beast's tails, tile?, ratio?}: a jinchuriki's Tailed
+	-- Beast Bomb or its beast's power (Sim.beast_intent)
 }
 local INTENT_INDEX: { [string]: number } = {}
 for i, name in Protocol.INTENT_TYPES do

@@ -869,8 +869,10 @@ function UIAdvisor.on_game_over(self: any, winner: number, reason: number)
 end
 
 --- Tailed Beasts (Core/SimBeasts; the toasts come as Sim messages): a centred banner in the beast's
---- colour when one awakens, and one for its captor.
-function UIAdvisor._beast_banner(self: any, tails: number, title: string, sub: string)
+--- colour when one awakens, and one when it is captured (its captor's own, and everyone else's),
+--- under its animated colour portrait (BeastSplash: "awaken" slams in with a flash, a shake and
+--- shock rings; "capture" is calmer).
+function UIAdvisor._beast_banner(self: any, tails: number, title: string, sub: string, kind: string?)
 	local ctx = self.ctx
 	local ui = self.ui
 	if not ctx:in_match() then
@@ -884,6 +886,12 @@ function UIAdvisor._beast_banner(self: any, tails: number, title: string, sub: s
 	if banner.text_area ~= nil and ui.add_hud_control ~= nil then
 		ui:add_hud_control(banner.text_area)
 	end
+	local ok, splash = pcall(function()
+		return UICtx.mod("BeastSplash").make(ctx, tails, col, kind or "awaken")
+	end)
+	if ok and splash ~= nil then
+		ui.float_layer:add_child(splash)
+	end
 end
 
 function UIAdvisor.on_beast_awakened(self: any, tails: number, _id: number)
@@ -892,48 +900,128 @@ function UIAdvisor.on_beast_awakened(self: any, tails: number, _id: number)
 	self:_beast_banner(
 		tails,
 		string.format(Beasts.TEXT.awaken_banner, string.upper(title)),
-		string.format(Beasts.TEXT.awaken_sub, Beasts.name(tails))
+		string.format(Beasts.TEXT.awaken_sub, Beasts.ident(tails)),
+		"awaken"
 	)
 	self.ctx:sfx("alarm")
 end
 
 function UIAdvisor.on_beast_holder(self: any, tails: number, holder: number, _from: number)
 	local ctx = self.ctx
-	if holder == 0 or holder ~= ctx:me() then
+	if holder == 0 then
 		return
 	end
 	local Beasts = UICtx.data("Beasts")
-	local B = Rules().BEASTS
-	local cap = math.floor((B.CAP_BONUS_BASE + B.CAP_BONUS_PER_TAIL * tails) * 100 + 0.5)
-	local cut = math.floor((B.LOSS_CUT_BASE + B.LOSS_CUT_PER_TAIL * tails) * 100 + 0.5)
+	if holder ~= ctx:me() then
+		-- (someone else's capture: its portrait over a shorter banner)
+		local s = ctx.state
+		local o = if s ~= nil then s.owners[holder] else nil
+		self:_beast_banner(
+			tails,
+			string.format(Beasts.TEXT.captured_other_banner, string.upper(Beasts.title(tails))),
+			string.format(Beasts.TEXT.captured_other_sub, if o ~= nil then o.name else "?", Beasts.title(tails)),
+			"capture"
+		)
+		return
+	end
 	self:_beast_banner(
 		tails,
 		string.format(Beasts.TEXT.captured_banner, string.upper(Beasts.title(tails))),
-		string.format(Beasts.TEXT.captured_sub, cap, cut)
+		string.format(Beasts.TEXT.captured_sub, Beasts.power_name(tails)),
+		"capture"
 	)
 	ctx:sfx("victory")
 end
 
 --- The Akatsuki (Core/SimAkatsuki; its toasts come as Sim messages): a centred banner in its red when
 --- it appears, seals a beast and falls (its slayer gets its own).
-function UIAdvisor._akatsuki_banner(self: any, title: string, sub: string)
+--- `splash`: true for its colour emblem, or {who = {a, b}, grey = bool} for two members' colour
+--- busts (BeastSplash "members").
+function UIAdvisor._akatsuki_banner(self: any, title: string, sub: string, splash: any?, secs: number?)
 	local ctx = self.ctx
 	local ui = self.ui
 	if not ctx:in_match() then
 		return
 	end
 	local A = UICtx.data("Akatsuki")
-	local banner = UICtx.mod("Banner").make(ctx, title, sub, Color3.fromHex(A.ACCENT), 2.6)
+	local col = Color3.fromHex(A.ACCENT)
+	local banner = UICtx.mod("Banner").make(ctx, title, sub, col, secs or 2.6)
 	ui.float_layer:add_child(banner)
 	if banner.text_area ~= nil and ui.add_hud_control ~= nil then
 		ui:add_hud_control(banner.text_area)
+	end
+	if splash then
+		-- (its emblem slams in above the banner, or the members' busts slide in: BeastSplash)
+		local ok, f = pcall(function()
+			if type(splash) == "table" then
+				return UICtx.mod("BeastSplash").make(ctx, 0, col, "members", splash)
+			end
+			return UICtx.mod("BeastSplash").make(ctx, 0, col, "akatsuki")
+		end)
+		if ok and f ~= nil then
+			ui.float_layer:add_child(f)
+		end
 	end
 end
 
 function UIAdvisor.on_akatsuki_appeared(self: any, _id: number)
 	local A = UICtx.data("Akatsuki")
-	self:_akatsuki_banner(A.TEXT.appear_banner, A.TEXT.appear_sub)
+	-- (a longer read: what it does and how to stop it)
+	self:_akatsuki_banner(A.TEXT.appear_banner, A.TEXT.appear_sub, true, 5.0)
 	self.ctx:sfx("alarm")
+end
+
+--- A sealing ritual began: a short banner for everyone (the widget and the map ring count down).
+function UIAdvisor.on_akatsuki_ritual(self: any, cell: number, tails: number, result: number)
+	local A = UICtx.data("Akatsuki")
+	local Beasts = UICtx.data("Beasts")
+	if result == 0 then
+		-- (the two members of the cell doing it, in colour)
+		local name, who = UICtx.mod("AkatsukiPanel").cell_who(self.ctx.state, cell)
+		self:_akatsuki_banner(
+			string.format(A.TEXT.ritual_banner, string.upper(Beasts.title(tails))),
+			string.format(A.TEXT.ritual_banner_sub, name, Beasts.title(tails)),
+			if #who > 0 then { who = who } else false,
+			3.0
+		)
+		self.ctx:sfx("alarm")
+	elseif result == 2 then
+		self:_akatsuki_banner(string.format(A.TEXT.broken_banner, string.upper(Beasts.title(tails))), "", false, 2.2)
+	end
+end
+
+--- A cell was destroyed: its members' busts greyed over "<CELL> DESTROYED" (the last one's go over
+--- the barrier banner that follows in the same delta).
+function UIAdvisor.on_akatsuki_member(self: any, id: number, _idx: number, alive: number)
+	if alive ~= 0 then
+		return
+	end
+	local A = UICtx.data("Akatsuki")
+	local s = self.ctx.state
+	local name, who = UICtx.mod("AkatsukiPanel").cell_who(s, id)
+	local left = if s ~= nil and type(s.akatsuki_cells) == "function" then s:akatsuki_cells() else 1
+	self._last_down_who = who
+	if left == 0 then
+		return
+	end
+	self:_akatsuki_banner(
+		string.format(A.TEXT.member_banner, string.upper(name)),
+		string.format(A.TEXT.member_banner_sub, left),
+		if #who > 0 then { who = who, grey = true } else false,
+		2.8
+	)
+end
+
+--- Its last cell fell: the barrier is down.
+function UIAdvisor.on_akatsuki_barrier(self: any, _hq: number, up: number)
+	if up ~= 0 then
+		return
+	end
+	local A = UICtx.data("Akatsuki")
+	local who = self._last_down_who
+	self._last_down_who = nil
+	self:_akatsuki_banner(A.TEXT.barrier_banner, A.TEXT.barrier_down, if type(who) == "table" and #who > 0 then { who = who, grey = true } else true, 3.4)
+	self.ctx:sfx("victory")
 end
 
 function UIAdvisor.on_beast_sealed(self: any, tails: number, n: number, _from: number)
@@ -959,7 +1047,8 @@ function UIAdvisor.on_akatsuki_fell(self: any, slayer: number)
 	end
 	local s = ctx.state
 	local releases = if s ~= nil and s.akatsuki ~= nil then #s.akatsuki.release // 2 else 0
-	self:_akatsuki_banner(A.TEXT.fallen, if releases > 0 then A.TEXT.fallen_sub_release else A.TEXT.fallen_sub_none)
+	-- (Pain & Konan, greyed)
+	self:_akatsuki_banner(A.TEXT.fallen, if releases > 0 then A.TEXT.fallen_sub_release else A.TEXT.fallen_sub_none, { who = A.HQ_WHO, grey = true })
 end
 
 --- Spawn phase camera. The globe turned away from an ocean-only view here; flat maps show the whole

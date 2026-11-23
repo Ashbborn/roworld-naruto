@@ -35,6 +35,7 @@ local N_MIRV = Defs.N_MIRV
 local N_WARHEAD = Defs.N_WARHEAD
 local N_SCATTER = Defs.N_SCATTER
 local N_SHELL = Defs.N_SHELL
+local N_BIJUDAMA = Defs.N_BIJUDAMA
 local F_FALLOUT = Defs.F_FALLOUT
 
 local SimNukes = {}
@@ -64,6 +65,9 @@ export type Nuke = {
 	sam_fire_tick: number,
 	sam_hit_tick: number,
 	sam_k: number,
+	--- a Tailed Beast Bomb's beast and whether a wild beast fired it (Core/SimBeasts)
+	tails: number,
+	wild: boolean,
 }
 
 local Nuke = {}
@@ -96,6 +100,8 @@ function Nuke.new(): Nuke
 		sam_fire_tick = 0,
 		sam_hit_tick = 0,
 		sam_k = 0,
+		tails = 0,
+		wild = false,
 	}
 end
 
@@ -117,7 +123,8 @@ function SimNukes.install(C)
 	-- Nuke intent. Returns true when a missile left a silo.
 	function C:launch_nuke(id: number, kind_name: string, t: number): boolean
 		local kind = Defs.nuke_kind_from_name(kind_name)
-		if kind < 0 or kind == N_WARHEAD or kind == N_SHELL or t < 0 or t >= self.N then
+		-- (a Tailed Beast Bomb is its holder's: Sim.beast_intent)
+		if kind < 0 or kind == N_WARHEAD or kind == N_SHELL or kind == N_BIJUDAMA or t < 0 or t >= self.N then
 			return false
 		end
 		-- the Arsenal's munitions need their unlock (SimArsenal)
@@ -316,6 +323,8 @@ function SimNukes.install(C)
 				n.dead = true
 				if n.kind == N_MIRV then
 					self:_split_mirv(n)
+				elseif n.kind == N_BIJUDAMA then
+					self:_bijudama_detonate(n) -- (SimBeasts)
 				elseif Rules.NUKE_FLAT[n.kind] then
 					self:_strike(n) -- (a shell, an air strike, a slug: SimArsenal)
 				else
@@ -658,6 +667,10 @@ function SimNukes.install(C)
 		end
 		local o_killer = self.o_killer
 		for _, o in order do
+			if self.akatsuki_on and self:akatsuki_barrier_up(o) then
+				-- (the Akatsuki's hideout behind its barrier: untouched, Core/SimAkatsuki)
+				continue
+			end
 			self:_nuke_troops(o, n.kind, lost[o], before[o])
 			if o_tiles[o] <= 0 then
 				o_killer[o] = n.owner
@@ -759,7 +772,13 @@ function SimNukes.install(C)
 		local out = {}
 		for _, n in self.nukes do
 			if not n.dead then
-				table.insert(out, { n.uid, n.kind, n.owner, n.from_tile, n.to_tile, n.launch_tick, n.flight })
+				local row = { n.uid, n.kind, n.owner, n.from_tile, n.to_tile, n.launch_tick, n.flight }
+				if n.kind == N_BIJUDAMA then
+					-- (a Tailed Beast Bomb: its beast and the wild flag)
+					table.insert(row, n.tails)
+					table.insert(row, if n.wild then 1 else 0)
+				end
+				table.insert(out, row)
 			end
 		end
 		return out
