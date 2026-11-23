@@ -160,7 +160,7 @@ FRAMING = {"beast": ("creature is shown full body, small enough that the whole f
 RIM = {"beast": "a dramatic rim light", "cloud": "a dramatic rim light", "member": "a crisp white rim light"}
 #: canvas per subject (portrait and icon): wide creatures on a wide canvas so nothing is cut by the frame;
 #: the cut-out is padded back to a square
-ASPECT = {"kurama": "16:9", "isobu": "3:2", "kokuo": "3:2", "gyuki": "4:3", "chomei": "4:3"}
+ASPECT = {"kurama": "16:9", "isobu": "3:2", "kokuo": "3:2", "gyuki": "4:3", "chomei": "4:3", "deidara": "4:5"}
 
 #: one style for every portrait (the set must look like one family)
 STYLE = ("Rendered in one consistent game-art style: anime key art, bold clean cel shading with two tones of shadow, a "
@@ -539,8 +539,21 @@ PICKS = {
     "hidan": ("redo", "new: the three-bladed scythe as big as his head"),
     "kakuzu": ("redo", "new: hood, mask, eye slit, thread tendrils"),
 }
-FINAL_ROWS = BEASTS + ["akatsuki", "itachi", "kisame", "deidara", "sasori_face", "hidan", "kakuzu", "pain", "konan",
-                       "tobi", "zetsu"]
+FINAL_ROWS = BEASTS + ["akatsuki", "itachi", "kisame", "deidara", "sasori_face", "sasori_hiruko", "hidan", "kakuzu",
+                       "pain", "konan", "tobi", "zetsu"]
+#: rows with portraits only: the note stands in the icon column
+PORTRAIT_ONLY = {"sasori_hiruko": "portraits of the Hiruko puppet; the icon is his face (the owner's pick, the row above)"}
+ROW_NAME = {"sasori_face": "sasori", "sasori_hiruko": "sasori: Hiruko"}
+#: anatomy checked on the 1024 raws (11-23): misses against the canon count, shown in red under the portrait
+ANATOMY = {
+    "kurama/portrait_A": "8 tails, not 9",
+    "isobu/portrait_A": "2 tails, not 3",
+    "isobu/portrait_C": "2 tails, not 3",
+    "gyuki/portrait_A": "side view: horns unclear",
+    "gyuki/portrait_B": "only one horn shows",
+    "kokuo/portrait_A": "tails overlap: 5 hard to count",
+    "kokuo/portrait_B": "tails overlap: 5 hard to count",
+}
 GREEN_OK = (110, 220, 120)
 RED_NOTE = (255, 120, 110)
 CLIP_NOTE = {"top": "touches the top", "bottom": "touches the bottom", "left": "touches the left",
@@ -567,17 +580,18 @@ def final_sheet(out=None):
                      "dark panel)", fill=TEXT, font=font(22))
     d.text((20, 44), "ICON: PICKED = the owner's choice  |  NEW A B C = redo candidates  |  A B C = not judged yet.   "
                      "Each mask at 96 px with a 32 px copy.", fill=SUB, font=font(14))
-    d.text((20, 64), "PORTRAIT: candidates A B C (not judged yet). Reference = the official image they were drawn from.",
-           fill=SUB, font=font(14))
+    d.text((20, 64), "PORTRAIT: candidates A B C (not judged yet). Reference = the official image they were drawn from. "
+                     "Red = cut by the frame, or anatomy off (tail counts, horns).", fill=SUB, font=font(14))
     y = 96
     x_icon = 20 + 150 + RW + 20
     x_por = x_icon + ICONW + 20
     for s in FINAL_ROWS:
         d.line([(20, y - 6), (W - 20, y - 6)], fill=(60, 60, 70), width=1)
-        name = "sasori" if s == "sasori_face" else s
-        d.text((20, y + 2), name, fill=GOLD, font=font(18))
+        d.text((20, y + 2), ROW_NAME.get(s, s), fill=GOLD, font=font(18))
         pick, note = PICKS.get(s, (None, "not judged yet"))
         status = "PICKED" if pick and pick != "redo" else ("REDO" if pick == "redo" else "OPEN")
+        if s in PORTRAIT_ONLY:
+            pick, note, status = None, PORTRAIT_ONLY[s], "PORTRAITS"
         d.text((20, y + 26), status, fill=GREEN_OK if status == "PICKED" else (GOLD if status == "REDO" else SUB),
                font=font(14))
         refs = [p for p in refs_of(s) if os.path.exists(p)]
@@ -587,7 +601,7 @@ def final_sheet(out=None):
             sheet.alpha_composite(r, (170, y + 4))
         # icons
         sd = os.path.join(OUT, s)
-        letters = pick if pick and pick != "redo" else "ABC"
+        letters = "" if s in PORTRAIT_ONLY else (pick if pick and pick != "redo" else "ABC")
         x = x_icon
         for L in letters:
             p = os.path.join(sd, f"mask_{L}.png")
@@ -599,7 +613,7 @@ def final_sheet(out=None):
                    font=font(14))
             x += MW + 46
         # the note under the icons, wrapped to the icon column
-        words, line, ly = note.split(), "", y + MW + 30
+        words, line, ly = note.split(), "", (y + 8 if s in PORTRAIT_ONLY else y + MW + 30)
         for wd in words:
             if d.textlength(line + " " + wd, font=font(13)) > ICONW - 10:
                 d.text((x_icon, ly), line.strip(), fill=SUB, font=font(13))
@@ -614,9 +628,10 @@ def final_sheet(out=None):
             im = Image.open(p).convert("RGBA") if os.path.exists(p) else None
             sheet.alpha_composite(tile(PANEL, im, PW), (x, y + 4))
             d.text((x + 6, y + 8), L if im else f"{L}: none", fill=TEXT, font=font(16))
-            c = clip.get(f"{s}/portrait_{L}")
-            if c:
-                d.text((x, y + PW + 8), "; ".join(CLIP_NOTE[k] for k in c), fill=RED_NOTE, font=font(13))
+            notes = [CLIP_NOTE[k] for k in clip.get(f"{s}/portrait_{L}") or []]
+            notes += [ANATOMY[f"{s}/portrait_{L}"]] if f"{s}/portrait_{L}" in ANATOMY else []
+            for i, t in enumerate(notes[:2]):
+                d.text((x, y + PW + 8 + 17 * i), t, fill=RED_NOTE, font=font(13))
             x += PW + 12
         y += RH
     sheet.save(out)
