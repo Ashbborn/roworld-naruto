@@ -85,7 +85,8 @@ the beast's own power.
   - blast inner / outer `12 + 9 (t-1)` / `30 + 10 (t-1)` full-size tiles: One-Tail 12 / 30 (an
     Explosion Seal), Kurama 84 / 110 (past a Great Explosion Seal's 80 / 100);
   - Barrier Towers can't stop it; the holder's own land, army and buildings are never hurt;
-  - an army loses at most 35 % to one bomb (a beast or the Akatsuki 10 %, and they keep their land);
+  - an army loses at most 35 % to one bomb (a beast or the Akatsuki 10 %, and they keep their land;
+    the Akatsuki's hideout behind its barrier takes nothing, `AKATSUKI.md`);
   - buildings and units in the blast are destroyed, fallout on the land taken; alliances with the
     target break as with a nuke.
 - **Powers** (intent `kind = "power"`, `Rules.BEASTS.POWERS`, names in `Data/Beasts.POWERS`; first

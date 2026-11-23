@@ -667,6 +667,10 @@ function SimNukes.install(C)
 		end
 		local o_killer = self.o_killer
 		for _, o in order do
+			if self.akatsuki_on and self:akatsuki_barrier_up(o) then
+				-- (the Akatsuki's hideout behind its barrier: untouched, Core/SimAkatsuki)
+				continue
+			end
 			self:_nuke_troops(o, n.kind, lost[o], before[o])
 			if o_tiles[o] <= 0 then
 				o_killer[o] = n.owner

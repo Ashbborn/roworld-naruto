@@ -922,24 +922,64 @@ end
 
 --- The Akatsuki (Core/SimAkatsuki; its toasts come as Sim messages): a centred banner in its red when
 --- it appears, seals a beast and falls (its slayer gets its own).
-function UIAdvisor._akatsuki_banner(self: any, title: string, sub: string)
+function UIAdvisor._akatsuki_banner(self: any, title: string, sub: string, splash: boolean?, secs: number?)
 	local ctx = self.ctx
 	local ui = self.ui
 	if not ctx:in_match() then
 		return
 	end
 	local A = UICtx.data("Akatsuki")
-	local banner = UICtx.mod("Banner").make(ctx, title, sub, Color3.fromHex(A.ACCENT), 2.6)
+	local col = Color3.fromHex(A.ACCENT)
+	local banner = UICtx.mod("Banner").make(ctx, title, sub, col, secs or 2.6)
 	ui.float_layer:add_child(banner)
 	if banner.text_area ~= nil and ui.add_hud_control ~= nil then
 		ui:add_hud_control(banner.text_area)
+	end
+	if splash then
+		-- (its cloud slams in above the banner: BeastSplash "akatsuki")
+		local ok, f = pcall(function()
+			return UICtx.mod("BeastSplash").make(ctx, 0, col, "akatsuki")
+		end)
+		if ok and f ~= nil then
+			ui.float_layer:add_child(f)
+		end
 	end
 end
 
 function UIAdvisor.on_akatsuki_appeared(self: any, _id: number)
 	local A = UICtx.data("Akatsuki")
-	self:_akatsuki_banner(A.TEXT.appear_banner, A.TEXT.appear_sub)
+	-- (a longer read: what it does and how to stop it)
+	self:_akatsuki_banner(A.TEXT.appear_banner, A.TEXT.appear_sub, true, 5.0)
 	self.ctx:sfx("alarm")
+end
+
+--- A sealing ritual began: a short banner for everyone (the widget and the map ring count down).
+function UIAdvisor.on_akatsuki_ritual(self: any, cell: number, tails: number, result: number)
+	local A = UICtx.data("Akatsuki")
+	local Beasts = UICtx.data("Beasts")
+	if result == 0 then
+		local s = self.ctx.state
+		local o = if s ~= nil then s.owners[cell] else nil
+		self:_akatsuki_banner(
+			string.format(A.TEXT.ritual_banner, string.upper(Beasts.title(tails))),
+			string.format(A.TEXT.ritual_banner_sub, if o ~= nil then o.name else "A cell"),
+			false,
+			3.0
+		)
+		self.ctx:sfx("alarm")
+	elseif result == 2 then
+		self:_akatsuki_banner(string.format(A.TEXT.broken_banner, string.upper(Beasts.title(tails))), "", false, 2.2)
+	end
+end
+
+--- Its last cell fell: the barrier is down.
+function UIAdvisor.on_akatsuki_barrier(self: any, _hq: number, up: number)
+	if up ~= 0 then
+		return
+	end
+	local A = UICtx.data("Akatsuki")
+	self:_akatsuki_banner(A.TEXT.barrier_banner, A.TEXT.barrier_down, true, 3.4)
+	self.ctx:sfx("victory")
 end
 
 function UIAdvisor.on_beast_sealed(self: any, tails: number, n: number, _from: number)

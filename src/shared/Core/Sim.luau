@@ -1170,6 +1170,10 @@ function Sim._landing_allowed(self: any, id: number, tg: number): boolean
 		-- (behind a Sand Shield: Core/SimBeasts)
 		return false
 	end
+	if self.akatsuki_on and self:akatsuki_barrier_up(tg) then
+		-- (the Akatsuki's hideout behind its barrier: Core/SimAkatsuki)
+		return false
+	end
 	if self.o_ai[id] == 0 or not self:is_human(tg) or self:attack_between(id, tg) ~= nil then
 		return true
 	end

@@ -231,6 +231,16 @@ function SimBeasts.install(C: any)
 			-- (Ink: its attacks under way stall too)
 			return true, 1.0, 1.0
 		end
+		if tg ~= 0 and self.akatsuki_on and self.o_special[tg] == SPECIAL_AKATSUKI then
+			if self:akatsuki_barrier_up(tg) then
+				-- (the Akatsuki's hideout behind its barrier)
+				return true, 1.0, 1.0
+			end
+			-- (its ninja are elite: Rules.AKATSUKI.DEFENSE_*)
+			local A = Rules.AKATSUKI
+			loss *= A.DEFENSE_LOSS
+			slow *= A.DEFENSE_SLOW
+		end
 		if tg ~= 0 then
 			if self:beast_fx(tg, FX_SAND) then
 				return true, 1.0, 1.0
@@ -258,7 +268,8 @@ function SimBeasts.install(C: any)
 		if tg > 0 and self:beast_fx(tg, FX_SAND) then
 			return string.format(T.sand_blocked, self.o_name[tg])
 		end
-		return nil
+		-- (the Akatsuki's hideout behind its barrier: Core/SimAkatsuki)
+		return self:special_attack_block(-1, tg)
 	end
 
 	--- Each tick: drops expired effects (Kurama's chakra ending lowers its user's troop cap again).
@@ -449,6 +460,10 @@ function SimBeasts.install(C: any)
 		end
 		local o_killer = self.o_killer
 		for _, o in order do
+			if self.akatsuki_on and self:akatsuki_barrier_up(o) then
+				-- (the Akatsuki's hideout behind its barrier: untouched)
+				continue
+			end
 			local kmax = if n.wild then B.WILD_BOMB_KILL_MAX
 				elseif o_special[o] ~= 0 then B.BOMB_SPECIAL_KILL_MAX
 				else B.BOMB_KILL_MAX
@@ -521,6 +536,11 @@ function SimBeasts.install(C: any)
 		end
 		if self:allied(id, tg) then
 			self:msg(id, Defs.MSG_INFO, "You can't target an ally")
+			return 0
+		end
+		local barrier = self:special_attack_block(t, tg)
+		if barrier ~= nil then
+			self:msg(id, Defs.MSG_INFO, barrier)
 			return 0
 		end
 		return tg
@@ -675,8 +695,8 @@ function SimBeasts.install(C: any)
 	--- Why tile `t` of special owner `tg` can't be attacked now, or nil (the Akatsuki's barrier:
 	--- SimAkatsuki.akatsuki_barrier_text).
 	function C.special_attack_block(self: any, t: number, tg: number): string?
-		if self.akatsuki_on and tg > 0 and self.o_special[tg] == SPECIAL_AKATSUKI then
-			return self:akatsuki_barrier_text(t)
+		if self.akatsuki_on and tg > 0 and tg == self.aka_id then
+			return self:akatsuki_barrier_text(-1)
 		end
 		return nil
 	end

@@ -81,6 +81,9 @@ local SIGNALS = {
 	"akatsuki_fell", -- (slayer) it was eliminated (slayer 0: by nobody that gets the bonus)
 	"beast_cool", -- (tails) its holder's Tailed Beast Bomb / power cooldowns changed (Ev.BEAST_COOL)
 	"beast_power", -- (tails, user, tile, target, until_tick) a beast's power was used (Ev.BEAST_POWER)
+	"akatsuki_member", -- (id, idx, tile, alive) an Akatsuki cell deployed / moved / destroyed (Ev.AKATSUKI_MEMBER)
+	"akatsuki_ritual", -- (cell_id, tails, tile, end_tick, result) a sealing ritual began (0) / sealed (1) / broke (2)
+	"akatsuki_barrier", -- (hq_id, up) the hideout's barrier went down (Ev.AKATSUKI_BARRIER)
 }
 GameState.SIGNAL_NAMES = SIGNALS
 
@@ -1011,6 +1014,16 @@ function GameState.load_snapshot(self: GameState, snap: { [string]: any })
 		a.sealed = if type(ar[5]) == "table" then table.clone(ar[5]) else {}
 		a.slayer = tonumber(ar[6]) or 0
 		a.release = if type(ar[7]) == "table" then table.clone(ar[7]) else {}
+		a.members = {}
+		a.rituals = {}
+		local mr = if type(ar[8]) == "table" then ar[8] else {}
+		for i = 1, #mr - 3, 4 do
+			a.members[mr[i]] = { idx = mr[i + 1], tile = mr[i + 2], alive = mr[i + 3] == 1 }
+		end
+		local rr = if type(ar[9]) == "table" then ar[9] else {}
+		for i = 1, #rr - 3, 4 do
+			a.rituals[rr[i]] = { tails = rr[i + 1], tile = rr[i + 2], end_tick = rr[i + 3] }
+		end
 	end
 	self.loaded = true
 	self.snapshot_loaded:Fire()
@@ -1300,6 +1313,10 @@ function GameState._new_akatsuki(): any
 		sealed = {} :: { number },
 		slayer = 0,
 		release = {} :: { number },
+		--- its cells: owner id -> {idx (Data/Akatsuki.MEMBERS), tile (its disk's centre), alive}
+		members = {} :: { [number]: any },
+		--- sealing rituals running: cell owner id -> {tails, tile, end_tick}
+		rituals = {} :: { [number]: any },
 	}
 end
 
@@ -1338,11 +1355,73 @@ HANDLERS[Ev.BEAST_SEALED] = function(self, e)
 	self.beast_sealed:Fire(e[2], tonumber(e[3]) or #a.sealed, tonumber(e[4]) or 0)
 end
 
+HANDLERS[Ev.AKATSUKI_MEMBER] = function(self, e)
+	local a = self.akatsuki
+	local id = e[2]
+	local m = a.members[id]
+	if m == nil then
+		m = { idx = e[3], tile = -1, alive = true }
+		a.members[id] = m
+	end
+	if (tonumber(e[4]) or -1) >= 0 then
+		m.tile = e[4]
+	end
+	m.alive = e[5] == 1
+	if not m.alive then
+		a.rituals[id] = nil
+	end
+	local o = self.owners[id]
+	if o ~= nil then
+		o.special = Defs.SPECIAL_AKATSUKI
+	end
+	self.akatsuki_member:Fire(id, e[3], e[4], e[5])
+end
+
+HANDLERS[Ev.AKATSUKI_RITUAL] = function(self, e)
+	local a = self.akatsuki
+	if e[6] == 0 then
+		a.rituals[e[2]] = { tails = e[3], tile = e[4], end_tick = e[5] }
+	else
+		a.rituals[e[2]] = nil
+	end
+	self.akatsuki_ritual:Fire(e[2], e[3], e[4], e[5], e[6])
+end
+
+HANDLERS[Ev.AKATSUKI_BARRIER] = function(self, e)
+	self.akatsuki_barrier:Fire(e[2], e[3])
+end
+
+--- Akatsuki cells still on the map, and how many it had.
+function GameState.akatsuki_cells(self: GameState): (number, number)
+	local alive, all = 0, 0
+	for _, m in self.akatsuki.members do
+		all += 1
+		if m.alive then
+			alive += 1
+		end
+	end
+	return alive, all
+end
+
+--- True while the Akatsuki's hideout is behind its barrier (on the map, a cell alive).
+function GameState.akatsuki_barrier_up(self: GameState): boolean
+	local a = self.akatsuki
+	if a.state ~= Defs.AKATSUKI_ACTIVE then
+		return false
+	end
+	local alive = self:akatsuki_cells()
+	return alive > 0
+end
+
 HANDLERS[Ev.AKATSUKI_FALL] = function(self, e)
 	local a = self.akatsuki
 	a.state = Defs.AKATSUKI_FALLEN
 	a.slayer = tonumber(e[2]) or 0
 	a.release = if type(e[3]) == "table" then table.clone(e[3]) else {}
+	table.clear(a.rituals)
+	for _, m in a.members do
+		m.alive = false
+	end
 	self.akatsuki_fell:Fire(a.slayer)
 end
 
@@ -1371,6 +1450,12 @@ function GameState.special_land(self: GameState): number
 		local o = self.owners[a.id]
 		if o ~= nil and o.alive then
 			n += o.tiles
+		end
+		for id in a.members do
+			local c = self.owners[id]
+			if c ~= nil and c.alive then
+				n += c.tiles
+			end
 		end
 	end
 	return n

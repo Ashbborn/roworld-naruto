@@ -1,7 +1,8 @@
 -- The Akatsuki (Core/SimAkatsuki, docs/AKATSUKI.md): the schedule (only with the `akatsuki` flag, and
--- only with beasts), the Land of Rain spawn on the World map, strength from the strongest player, the
--- attack priority, cells next to the priority target, sealing (a wild beast on its last tile, a
--- holder's beasts on elimination), the win (every beast sealed: the match ends, everyone loses), its
+-- only with beasts), the Land of Rain spawn on the World map, its hideout and four named cells,
+-- strength tracking the top players, the barrier, the hunt (targets, moves, the sealing ritual and
+-- breaking it, holders), shedding, sealing (a wild beast on its last tile, a holder's beasts on
+-- elimination), the win (every beast sealed: the match ends, everyone loses), its
 -- fall (slayer bonus, bounty, the sealed beasts re-emerging through the stir), the exclusions (victory,
 -- top_owners, Stars, alliances, takeovers, annexing, nukes), the client mirror through the protocol, a
 -- late joiner's snapshot, and determinism.
@@ -135,6 +136,20 @@ local function appear(sim: any, tile: number): number
 	return sim.aka_id
 end
 
+--- Destroys every Akatsuki cell (its tiles go unowned): its hideout's barrier drops.
+local function drop_barrier(sim: any)
+	local map_ = sim.map
+	for _, m in sim.aka_members do
+		for k = 0, map_.land_count - 1 do
+			local t = map_:land_tile(k)
+			if readi32(sim.owner, t * 4) == m.id then
+				sim:set_owner(t, 0)
+			end
+		end
+	end
+	sim:_process_eliminations()
+end
+
 --- Hands every tile of `from` to `to` and runs the tick's eliminations.
 local function take_all(sim: any, from: number, to: number)
 	local map_ = sim.map
@@ -218,8 +233,37 @@ do
 end
 
 -- ---------------------------------------------------------------------------------------------
--- The Land of Rain on the World map; troops from the strongest player
+-- The Land of Rain on the World map; strength from the top players; its cells
 -- ---------------------------------------------------------------------------------------------
+--- An unowned claimable tile touching owner `id`'s land, away from its cells (-1: none).
+local function next_to(sim: any, id: number): number
+	local W = sim.W
+	local t = sim.bhead[id]
+	while t ~= -1 do
+		for _, n in { t + 1, t - 1, t + W, t - W } do
+			if n >= 0 and n < sim.N and readi32(sim.owner, n * 4) == 0 and sim:claimable(n) then
+				local ok = true
+				for _, c in sim:_spawn_disk(n, 3) do
+					local o = readi32(sim.owner, c * 4)
+					if o ~= 0 and o ~= id then
+						ok = false
+						break
+					end
+				end
+				if ok then
+					return n
+				end
+			end
+		end
+		t = readi32(sim.bnext, t * 4)
+	end
+	return -1
+end
+
+local function members_of(sim: any): { any }
+	return sim.aka_members
+end
+
 do
 	local world = WorldMap.get("world")
 	local ame = nil
@@ -235,8 +279,12 @@ do
 	sim:_akatsuki_stir(sim.tick + 20)
 	expect(sim.aka_tile == ame.tile and sim.aka_rain, "on the World map it stirs at Amegakure (tile " .. sim.aka_tile .. ")")
 	expect(told(sim.d_ev, AkatsukiData.TEXT.stir), "everyone hears something gathers in the Land of Rain")
+	local evs = {}
 	for _ = 1, 20 do
-		sim:step()
+		local d = sim:step()
+		for _, e in d.ev do
+			table.insert(evs, e)
+		end
 	end
 	local id = sim.aka_id
 	local disk = sim:_spawn_disk(ame.tile, A.RADIUS / sim.R.K_LIN)
@@ -246,23 +294,70 @@ do
 			land += 1
 		end
 	end
-	expect(id > 0 and owned(sim, id, disk) == land and sim.o_tiles[id] == land, ("it seized its disk there (%d tiles, radius %.0f)"):format(land, A.RADIUS))
+	expect(id > 0 and owned(sim, id, disk) == land and sim.o_tiles[id] == land, ("its hideout seized its disk there (%d tiles, radius %.0f)"):format(land, A.RADIUS))
+	expect(sim.o_name[id] == AkatsukiData.NAME, "the hideout is " .. AkatsukiData.NAME)
+	-- the cells: one owner per member pair, deployed at once, flagged special on their first OWNER_ADD
+	local mem = members_of(sim)
+	local names_ok, special_ok, adds = #mem == #AkatsukiData.MEMBERS, true, 0
+	for i, m in mem do
+		if sim.o_name[m.id] ~= AkatsukiData.MEMBERS[i].name or m.idx ~= i then
+			names_ok = false
+		end
+		if sim.o_special[m.id] ~= Defs.SPECIAL_AKATSUKI or sim.o_ai[m.id] ~= 0 or sim.o_alive[m.id] ~= 1 or sim.o_tiles[m.id] <= 0 then
+			special_ok = false
+		end
+	end
+	for _, e in evs do
+		if e[1] == Ev.OWNER_ADD and e[8] == Defs.SPECIAL_AKATSUKI then
+			adds += 1
+		end
+	end
+	expect(names_ok, "four cells: Itachi & Kisame, Deidara & Sasori, Hidan & Kakuzu, Zetsu & Tobi")
+	expect(special_ok and adds == 5 and sim:is_akatsuki(mem[1].id), "each its own special owner with land, no nation AI (5 OWNER_ADDs flagged)")
+	local me = events_of(evs, Ev.AKATSUKI_MEMBER)
+	expect(#me == 4 and me[1][2] == mem[1].id and me[1][3] == 1 and me[1][5] == 1, "Ev.AKATSUKI_MEMBER (id, idx, tile, alive) per cell")
+	local total = sim.o_tiles[id]
+	for _, m in mem do
+		total += sim.o_tiles[m.id]
+	end
+	expect(sim:akatsuki_land() == total and sim:special_land() >= total, "its land (hideout and cells) is special land")
+	expect(told(evs, AkatsukiData.TEXT.appeared), "everyone hears what it does and how to stop it")
 	-- a map without Amegakure: a random spot
 	local s2 = bare(5)
 	s2:_akatsuki_stir(s2.tick + 20)
 	expect(s2.aka_tile >= 0 and not s2.aka_rain, "a map without the Land of Rain: a random spot")
-	-- strength
+	-- strength: the top three players' average army (not the 5M nation, not the 4th player)
 	local s3 = bare(6)
-	place(s3, "Nation", Defs.KIND_NATION, inland(s3, 30000), 5, 5000000)
-	local p = place(s3, "Player", Defs.KIND_HUMAN, inland(s3, 60000), 5, 2000000)
-	local p_tiles = s3.o_tiles[p]
+	place(s3, "Nation", Defs.KIND_NATION, inland(s3, 30000), 5, 20000000)
+	local p1 = place(s3, "P1", Defs.KIND_HUMAN, inland(s3, 60000), 5, 8000000)
+	local p2 = place(s3, "P2", Defs.KIND_HUMAN, inland(s3, 80000), 5, 4000000)
+	local p3 = place(s3, "P3", Defs.KIND_HUMAN, inland(s3, 100000), 5, 2400000)
+	place(s3, "P4", Defs.KIND_HUMAN, inland(s3, 120000), 5, 400000)
+	local p_tiles = s3.o_tiles[p1]
 	local aid = appear(s3, inland(s3, 2000))
-	local want = math.floor(2000000 * A.TROOPS_SHARE)
-	expect(s3.o_troops[aid] == want and s3.o_cap[aid] == want, "troops = strongest player's army x 0.9 (not the 5M nation): " .. s3.o_troops[aid])
-	expect(s3.o_tiles[p] == p_tiles, "it spared land far away")
+	local top = (8000000 + 4000000 + 2400000) / 3
+	local want = math.floor(top * A.HQ_SHARE)
+	local want_c = math.floor(top * A.CELL_SHARE)
+	expect(s3.o_troops[aid] == want and s3.o_cap[aid] == want, ("hideout troops = top-3 average x %.2f (%d), not the 20M nation nor the 4th player"):format(A.HQ_SHARE, s3.o_troops[aid]))
+	local cells_ok = #s3.aka_members == 4
+	for _, m in s3.aka_members do
+		if s3.o_troops[m.id] ~= want_c then
+			cells_ok = false
+		end
+	end
+	expect(cells_ok, ("each cell: top-3 average x %.2f (%d)"):format(A.CELL_SHARE, want_c))
+	expect(s3.o_tiles[p1] == p_tiles, "it spared land far away")
+	-- it keeps up: the players triple, the caps follow at the next TRACK_EVERY_S
+	for _, p in { p1, p2, p3 } do
+		s3.o_troops[p] *= 3
+	end
+	s3.aka_awake_tick = s3.tick - A.TRACK_EVERY_S * 10
+	s3:_akatsuki_live()
+	expect(s3.aka_base == math.floor(top * 3 * A.HQ_SHARE) and s3.aka_cell_base == math.floor(top * 3 * A.CELL_SHARE), "the caps track the top players (x3)")
+	expect(s3.o_troops[aid] >= want * 2.9, ("and its troops rise with them (%d -> %d)"):format(want, s3.o_troops[aid]))
 	local s4 = bare(7)
 	local aid4 = appear(s4, inland(s4, 2000))
-	expect(s4.o_troops[aid4] == A.TROOPS_FLOOR, "never under the floor")
+	expect(s4.o_troops[aid4] == A.TROOPS_FLOOR and s4.o_troops[s4.aka_members[1].id] == A.CELL_TROOPS_FLOOR, "never under the floors")
 	-- it seizes owned land, sparing a beast's and a shielded owner's
 	local s5 = bare(8)
 	local c = inland(s5, 9000)
@@ -271,229 +366,233 @@ do
 	local b_tiles = s5.o_tiles[bid]
 	local aid5 = appear(s5, c)
 	expect(s5.o_tiles[aid5] > 0 and s5.o_tiles[q] < 3000 and s5.o_tiles[bid] == b_tiles, "it seizes owned land but never a beast's")
-	-- regen toward the cap, which stays put whatever its land
+	-- regen toward the cap, which stays put whatever its land; the hideout never attacks
 	s5.o_troops[aid5] = s5.aka_base / 2
-	s5.aka_awake_tick = s5.tick
+	s5.aka_awake_tick = s5.tick - 1
+	s5.tick += 9
 	s5:_akatsuki_live()
-	-- (its wave left with part of them: count those too)
-	local regen = s5.o_troops[aid5] + s5:troops_in_attacks(aid5) - s5.aka_base / 2
+	local regen = s5.o_troops[aid5] - s5.aka_base / 2
 	expect(math.abs(regen - math.floor(s5.aka_base / 2 * A.REGEN_PER_S)) <= 1, "regenerates REGEN_PER_S of the missing troops per second")
-	expect(s5:akatsuki_cap() == s5.aka_base, "its cap is its base cap (no land rule)")
+	expect(s5:akatsuki_cap() == s5.aka_base and s5:troops_in_attacks(aid5) == 0, "its cap is its base cap (no land rule); the hideout sends no attack")
 end
 
 -- ---------------------------------------------------------------------------------------------
--- Attack priority: a wild beast, then a holder, then the weakest neighbour
+-- The barrier: its hideout can't be touched while a cell lives
 -- ---------------------------------------------------------------------------------------------
 do
-	local function first_target(with_beast: boolean, with_holder: boolean): (number, number, number, number)
-		local sim = bare(9)
-		local c = inland(sim, 12000)
-		local aid = appear(sim, c)
-		local r = A.RADIUS / sim.R.K_LIN
-		local weak = place(sim, "Weak", Defs.KIND_NATION, c + math.floor(r) + 3, 3, 10)
-		local strong = place(sim, "Strong", Defs.KIND_NATION, c - math.floor(r) - 3, 3, 900000)
-		local holder, beast = 0, 0
-		if with_holder then
-			holder = place(sim, "Holder", Defs.KIND_HUMAN, c + (math.floor(r) + 3) * sim.W, 3, 500000)
-			local b = sim.beasts[2]
-			b.state = Defs.BEAST_CAPTURED
-			b.holder = holder
-		end
-		if with_beast then
-			beast = wake(sim, 1, c - (math.floor(r) + 10) * sim.W)
-		end
-		sim.o_troops[aid] = 1000000
-		sim:_akatsuki_wave()
-		local tg = 0
-		for _, a in sim.attacks do
-			if not a.dead and a.attacker == aid then
-				tg = a.target
+	local sim = bare(30)
+	local c = inland(sim, 12000)
+	local aid = appear(sim, c)
+	local spot = next_to(sim, aid)
+	local p = place(sim, "Player", Defs.KIND_HUMAN, spot, 2, 3000000)
+	expect(spot >= 0 and sim:borders(p, aid), "(a player on the hideout's border)")
+	expect(sim:akatsuki_barrier_up() and sim:akatsuki_barrier_up(aid) and not sim:akatsuki_barrier_up(sim.aka_members[1].id), "the barrier is up while its cells live")
+	table.clear(sim.d_ev)
+	expect(not sim:intent_attack_troops(p, c, 100000), "no attack on the hideout")
+	expect(told(sim.d_ev, "behind a barrier", p), "it says why: " .. string.format(AkatsukiData.TEXT.barrier_block, 4))
+	expect(not sim:_landing_allowed(p, aid), "no landing on it")
+	local held = sim:beast_attack_mods(p, aid)
+	expect(held, "an attack already on it stalls")
+	expect(sim:_beast_power_target(p, c) == 0, "no beast power on it")
+	-- the cells fall one by one: news, a bounty, never back; the last drops the barrier
+	local gold0 = sim.o_gold[p]
+	local downs, barrier = 0, 0
+	for i, m in sim.aka_members do
+		table.clear(sim.d_ev)
+		sim.o_killer[m.id] = p
+		take_all(sim, m.id, p)
+		for _, e in sim.d_ev do
+			if e[1] == Ev.AKATSUKI_MEMBER and e[2] == m.id and e[5] == 0 then
+				downs += 1
+			elseif e[1] == Ev.AKATSUKI_BARRIER then
+				barrier += 1
 			end
 		end
-		return tg, beast, holder, weak
-	end
-	local tg1, beast = first_target(true, true)
-	expect(beast > 0 and tg1 == beast, "a wild beast on its border is its first target")
-	local tg2, _, holder = first_target(false, true)
-	expect(holder > 0 and tg2 == holder, "then a beast holder (a jinchuriki)")
-	local tg3, _, _, weak = first_target(false, false)
-	expect(tg3 == weak, "then the weakest neighbour")
-	-- a hunter, not a conqueror: past LAND_SHARE_MAX of the land, only beasts and holders
-	local sim = bare(9)
-	local c = inland(sim, 12000)
-	local aid = appear(sim, c)
-	local r = math.floor(A.RADIUS / sim.R.K_LIN)
-	place(sim, "Weak", Defs.KIND_NATION, c + r + 3, 3, 10)
-	local cap_tiles = math.ceil(map.land_count * A.LAND_SHARE_MAX)
-	for k = 0, map.land_count - 1 do
-		if sim.o_tiles[aid] >= cap_tiles then
-			break
-		end
-		local t = map:land_tile(k)
-		if readi32(sim.owner, t * 4) == 0 and sim:claimable(t) then
-			sim:set_owner(t, aid)
+		if i == 1 then
+			expect(told(sim.d_ev, string.format(AkatsukiData.TEXT.member_down, "Player", sim.o_name[m.id], 3), -1), "everyone hears: " .. string.format(AkatsukiData.TEXT.member_down, "Player", sim.o_name[m.id], 3))
+			expect(not told(sim.d_ev, "was eliminated"), "without the usual elimination news")
+			expect(sim:akatsuki_barrier_up(aid), "three cells left: still up")
 		end
 	end
-	sim.o_troops[aid] = 1000000
-	sim:_akatsuki_wave()
-	local any = false
-	for _, a in sim.attacks do
-		if not a.dead and a.attacker == aid then
-			any = true
-		end
-	end
-	expect(not any, ("holding %.0f%% of the land it leaves its other neighbours and free land alone"):format(A.LAND_SHARE_MAX * 100))
-end
-
--- it raids, it doesn't rule: above the land cap it sheds the excess, farthest border tiles first
-do
-	local sim = bare(10)
-	local c = inland(sim, 12000)
-	local aid = appear(sim, c)
-	local home = sim:_spawn_disk(c, A.RADIUS / sim.R.K_LIN)
-	local home_n = owned(sim, aid, home)
-	local cap_tiles = sim:_akatsuki_land_cap()
-	expect(sim:_akatsuki_shed() == 0, "at or below its land cap it sheds nothing")
-	local target = cap_tiles + 5000
-	local cell_c = -1
-	for k = 0, map.land_count - 1 do
-		if sim.o_tiles[aid] >= target then
-			break
-		end
-		local t = map:land_tile(k)
-		if readi32(sim.owner, t * 4) == 0 and sim:claimable(t) then
-			sim:set_owner(t, aid)
-		end
-	end
-	for k = 0, map.land_count - 1, 97 do
-		local t = map:land_tile(k)
-		local dx, dy = t % sim.W - c % sim.W, t // sim.W - c // sim.W
-		if readi32(sim.owner, t * 4) == aid and dx * dx + dy * dy > 200 * 200 and #sim:_akatsuki_cell_tiles(t) >= 20 then
-			cell_c = t
-			break
-		end
-	end
-	expect(cell_c >= 0, "(a far tile for a cell)")
-	sim.aka_cells = { { cell_c, sim.tick } }
-	local cell = sim:_akatsuki_cell_tiles(cell_c)
-	local cell_n = #cell
-	local W = sim.W
-	local function dist(t: number): number
-		local best = math.huge
-		for _, a in { c, cell_c } do
-			local dx, dy = t % W - a % W, t // W - a // W
-			best = math.min(best, dx * dx + dy * dy)
-		end
-		return math.floor(math.sqrt(best))
-	end
-	local border = {}
-	local t = sim.bhead[aid]
-	while t ~= -1 do
-		border[t] = true
-		t = readi32(sim.bnext, t * 4)
-	end
-	local before = sim.o_tiles[aid]
-	local excess = before - cap_tiles
-	local want = math.min(excess, math.max(A.SHED_MIN_TILES, math.ceil(excess * A.SHED_PER_S)))
-	local got = sim:_akatsuki_shed()
-	expect(got == want and sim.o_tiles[aid] == before - want, ("one second sheds %d%% of the excess (%d of %d)"):format(A.SHED_PER_S * 100, got, excess))
-	local min_out, max_kept, from_border = math.huge, -1, true
-	for b in border do
-		local d = dist(b)
-		if readi32(sim.owner, b * 4) == 0 then
-			min_out = math.min(min_out, d)
-		elseif readi32(sim.owner, b * 4) == aid and d > A.RADIUS / sim.R.K_LIN + 1 then
-			max_kept = math.max(max_kept, d)
-		end
-	end
-	expect(min_out >= max_kept, ("the farthest border tiles go first (shed from %d, kept up to %d)"):format(min_out, max_kept))
-	local seconds = 1
-	while sim.o_tiles[aid] > cap_tiles and seconds < 2000 do
-		sim:_akatsuki_shed()
-		seconds += 1
-	end
-	expect(sim.o_tiles[aid] == cap_tiles, ("it sheds down to its cap, never below (%d s)"):format(seconds))
-	expect(owned(sim, aid, home) == home_n and owned(sim, aid, cell) == cell_n, "its home disk and its live cell stay whole")
-	local free = 0
-	for k = 0, map.land_count - 1 do
-		local lt = map:land_tile(k)
-		if readi32(sim.owner, lt * 4) == 0 and sim:claimable(lt) then
-			free += 1
-		end
-	end
-	expect(free > 0, "the shed land is ordinary unowned land")
-	-- the toast once per holder kill, only when above the cap
-	local h = place(sim, "Holder", Defs.KIND_NATION, c + 300, 3, 10)
-	table.clear(sim.d_ev)
-	sim:_akatsuki_abandons(h)
-	expect(#events_of(sim.d_ev, Ev.MSG) == 0, "at its cap: no abandon toast")
-	for k = 0, map.land_count - 1 do
-		if sim.o_tiles[aid] > cap_tiles + 100 then
-			break
-		end
-		local lt = map:land_tile(k)
-		if readi32(sim.owner, lt * 4) == 0 and sim:claimable(lt) then
-			sim:set_owner(lt, aid)
-		end
-	end
-	sim:_akatsuki_abandons(h)
-	expect(told(sim.d_ev, "The Akatsuki abandons Holder's lands."), "above it: The Akatsuki abandons Holder's lands.")
-	-- through the tick: it sheds once a second while on the map
-	local t0 = sim.o_tiles[aid]
-	for _ = 1, 20 do
+	expect(downs == 4 and barrier == 1 and not sim:akatsuki_barrier_up(), "four cells down (Ev.AKATSUKI_MEMBER alive 0), one Ev.AKATSUKI_BARRIER")
+	expect(told(sim.d_ev, AkatsukiData.TEXT.barrier_down, -1), "everyone hears: " .. AkatsukiData.TEXT.barrier_down)
+	expect(sim.o_gold[p] - gold0 >= 4 * A.CELL_BOUNTY_GOLD, ("a bounty per cell (+%d)"):format(sim.o_gold[p] - gold0))
+	expect(sim:intent_attack_troops(p, c, 100000), "now the hideout can be attacked")
+	local base = sim.aka_base
+	sim.o_troops[p] = 50000000
+	sim.aka_awake_tick = sim.tick - A.TRACK_EVERY_S * 10
+	sim:_akatsuki_live()
+	expect(sim.aka_base == base, "and its strength stops tracking the players")
+	for _ = 1, 30 do
 		sim:step()
 	end
-	expect(sim.o_tiles[aid] < t0, "the tick sheds")
+	expect(sim:akatsuki_cells_alive() == 0 and #sim.aka_members == 4, "destroyed cells never return")
+	-- bombs: nothing while it is up
+	local s2 = bare(35)
+	local c2 = inland(s2, 7000)
+	local nuker = place(s2, "Nuker", Defs.KIND_HUMAN, inland(s2, 80000), 5, 100000)
+	local a2 = appear(s2, c2)
+	local tr0, ti0 = s2.o_troops[a2], s2.o_tiles[a2]
+	s2:_detonate({ uid = 1, kind = Defs.N_HYDROGEN, owner = nuker, to_tile = c2, from_tile = c2, target_owner = a2 })
+	s2:_process_eliminations()
+	expect(s2.o_troops[a2] == tr0 and s2.o_tiles[a2] == ti0, "a hydrogen bomb doesn't hurt it behind its barrier")
 end
 
 -- ---------------------------------------------------------------------------------------------
--- Cells: next to the priority target it does not border
+-- The hunt: targets, moves, the sealing ritual
 -- ---------------------------------------------------------------------------------------------
+local AHUNT = { appear_s = 14, warn_s = 2, cell_every_s = 3, ritual_s = 5 }
 do
-	local sim = bare(10)
+	local sim = bare(31, AHUNT)
 	local c = inland(sim, 3000)
 	local aid = appear(sim, c)
+	sim.aka_ritual_ready = 0
+	local W = sim.W
+	local near_home = true
+	for _, m in sim.aka_members do
+		local dx, dy = m.tile % W - c % W, m.tile // W - c // W
+		if math.sqrt(dx * dx + dy * dy) > (A.RADIUS + A.CELL_RADIUS * 1.6) / sim.R.K_LIN * 1.5 + 2 then
+			near_home = false
+		end
+	end
+	expect(near_home, "nothing to hunt: the cells guard the hideout")
 	local far = inland(sim, 70000)
 	local bid = wake(sim, 3, far)
 	local b_tiles = sim.o_tiles[bid]
-	expect(not sim:borders(aid, bid), "the beast is far away")
-	table.clear(sim.d_ev)
-	sim:_akatsuki_cell()
-	expect(#events_of(sim.d_ev, Ev.AKATSUKI_CELL) == 0, "a beast that just emerged is no cell target yet (players get a first go)")
+	local m1, m2 = sim.aka_members[1], sim.aka_members[2]
+	expect(sim:_akatsuki_cell_target(m1) == 0, "a beast that just emerged is no target yet (players get a first go)")
 	sim.beasts[3].awake_tick = sim.tick - A.CELL_BEAST_AFTER_S * 10
-	sim:_akatsuki_cell()
-	local cells = events_of(sim.d_ev, Ev.AKATSUKI_CELL)
-	expect(#cells == 1 and cells[1][3] == bid, "a cell drops next to the wild beast")
-	expect(sim:borders(aid, bid), "so it borders the beast now")
-	expect(sim.o_tiles[bid] == b_tiles, "the cell took none of the beast's land")
-	-- a holder (no wild beast left to reach): a cell on its border, and the holder is told
-	local h = place(sim, "Holder", Defs.KIND_HUMAN, inland(sim, 40000), 8, 100000)
-	local b = sim.beasts[5]
-	b.state = Defs.BEAST_CAPTURED
-	b.holder = h
-	local h_tiles = sim.o_tiles[h]
+	local home = sim:_akatsuki_cell_tiles(m1.tile, m1.id)
 	table.clear(sim.d_ev)
-	sim:_akatsuki_cell()
-	cells = events_of(sim.d_ev, Ev.AKATSUKI_CELL)
-	expect(#cells == 1 and cells[1][3] == h and sim:borders(aid, h), "with every wild beast in reach, the next cell lands on the holder's border")
-	expect(told(sim.d_ev, AkatsukiData.TEXT.cell, h), "the holder hears: " .. AkatsukiData.TEXT.cell)
-	expect(sim.o_tiles[h] == h_tiles, "the cell spared the holder's own land")
-	-- at most MAX_CELLS hold land: the next one withdraws the oldest
-	for k = 1, A.MAX_CELLS - 1 do
-		local hk = place(sim, "H" .. k, Defs.KIND_NATION, inland(sim, 80000 + k * 9000), 6, 1000)
-		local bk = sim.beasts[5 + k]
-		bk.state = Defs.BEAST_CAPTURED
-		bk.holder = hk
-		sim:_akatsuki_cell()
+	sim:_akatsuki_move(m1)
+	local cells = events_of(sim.d_ev, Ev.AKATSUKI_CELL)
+	expect(#cells == 1 and cells[1][3] == bid and sim:borders(m1.id, bid), "a cell moves next to the wild beast")
+	expect(sim.o_tiles[bid] == b_tiles and owned(sim, m1.id, home) == 0, "sparing the beast's land; its old land went unowned")
+	expect(#events_of(sim.d_ev, Ev.AKATSUKI_MEMBER) == 1 and m1.target == bid, "Ev.AKATSUKI_MEMBER with its new spot")
+	expect(sim:_akatsuki_cell_target(m2) == 0, "one cell per target: the others stay")
+	-- the ritual: no attack, a countdown for everyone
+	table.clear(sim.d_ev)
+	sim:_akatsuki_wave(m1)
+	local rit = events_of(sim.d_ev, Ev.AKATSUKI_RITUAL)
+	expect(m1.ritual ~= nil and #rit == 1 and rit[1][3] == 3 and rit[1][6] == 0, "on the beast's border it begins sealing it (Ev.AKATSUKI_RITUAL ..., 0)")
+	expect(rit[1][5] == sim.tick + AHUNT.ritual_s * 10 and sim:troops_in_attacks(m1.id) == 0, "ritual_s long, no attack meanwhile")
+	expect(told(sim.d_ev, string.format(AkatsukiData.TEXT.ritual_wild, sim.o_name[m1.id], "Three-Tails", AHUNT.ritual_s), -1), "everyone hears it, with the time to stop it")
+	expect(not sim:_akatsuki_ritual_start(m2, 3, 0), "one ritual at a time")
+	local sealed_ev, done = nil, nil
+	for _ = 1, AHUNT.ritual_s * 10 + 3 do
+		local d = sim:step()
+		for _, e in d.ev do
+			if e[1] == Ev.BEAST_SEALED then
+				sealed_ev = e
+			elseif e[1] == Ev.AKATSUKI_RITUAL and e[6] == 1 then
+				done = e
+			end
+		end
 	end
-	expect(#sim.aka_cells == A.MAX_CELLS, "never more than MAX_CELLS cells (" .. #sim.aka_cells .. ")")
-	expect(not sim:borders(aid, bid), "the oldest cell (by the beast) was withdrawn")
-	-- nothing to reach: no cell
-	local s2 = bare(11)
-	appear(s2, inland(s2, 3000))
-	table.clear(s2.d_ev)
-	s2:_akatsuki_cell()
-	expect(#events_of(s2.d_ev, Ev.AKATSUKI_CELL) == 0, "no beast and no holder: no cell")
+	expect(done ~= nil and sealed_ev ~= nil and sealed_ev[2] == 3 and sealed_ev[4] == 0, "at its end the beast is sealed (Ev.AKATSUKI_RITUAL ..., 1; BEAST_SEALED)")
+	expect(sim:beast_state(3) == Defs.BEAST_SEALED and sim.o_alive[bid] == 0 and sim.o_tiles[bid] == 0, "the beast is gone from the map")
+	expect(sim.aka_ritual_ready >= sim.tick + A.RITUAL_COOLDOWN_S * 10 - AHUNT.ritual_s * 10 - 5, "no new ritual for RITUAL_COOLDOWN_S")
+	expect(sim:akatsuki_cap() == math.floor(sim.aka_base * (1 + A.SEAL_GROWTH)), "its caps grow by SEAL_GROWTH")
+	local _ = aid
+end
+
+-- broken: taking the cell's land
+do
+	local sim = bare(32, AHUNT)
+	appear(sim, inland(sim, 3000))
+	sim.aka_ritual_ready = 0
+	local bid = wake(sim, 5, inland(sim, 70000))
+	sim.beasts[5].awake_tick = sim.tick - A.CELL_BEAST_AFTER_S * 10
+	local m = sim.aka_members[1]
+	sim:_akatsuki_move(m)
+	sim:_akatsuki_wave(m)
+	expect(m.ritual ~= nil, "(a ritual on the Five-Tails)")
+	local p = place(sim, "Breaker", Defs.KIND_HUMAN, inland(sim, 120000), 4, 100000)
+	local mine = sim:_akatsuki_owned(m.id)
+	for i = 1, math.ceil(#mine * (A.RITUAL_BREAK_SHARE + 0.05)) do
+		sim:set_owner(mine[i], p)
+	end
+	table.clear(sim.d_ev)
+	sim:_akatsuki_ritual_tick(m)
+	local rit = events_of(sim.d_ev, Ev.AKATSUKI_RITUAL)
+	expect(m.ritual == nil and #rit == 1 and rit[1][6] == 2, ("taking %d%% of its land breaks it (Ev.AKATSUKI_RITUAL ..., 2)"):format(math.floor(A.RITUAL_BREAK_SHARE * 100)))
+	expect(told(sim.d_ev, "was broken", -1) and sim:beast_state(5) == Defs.BEAST_AWAKE and sim.o_alive[bid] == 1, "everyone hears it; the beast is still wild")
+	-- destroying the cell breaks it too
+	sim:_akatsuki_wave(m)
+	local again = m.ritual ~= nil
+	table.clear(sim.d_ev)
+	take_all(sim, m.id, p)
+	expect(again and m.ritual == nil and #events_of(sim.d_ev, Ev.AKATSUKI_RITUAL) == 1, "destroying the cell ends its ritual")
+end
+
+-- a holder: attacked while stronger than the cell, its beast extracted once weaker
+do
+	local sim = bare(33, AHUNT)
+	appear(sim, inland(sim, 3000))
+	sim.aka_ritual_ready = 0
+	local m = sim.aka_members[1]
+	local hc = inland(sim, 70000)
+	local h = place(sim, "Jinchuriki", Defs.KIND_HUMAN, hc, 8, 50000000)
+	local b1 = wake(sim, 4, inland(sim, 100000))
+	take_all(sim, b1, h)
+	expect(sim:beast_holder(4) == h and sim:_akatsuki_cell_target(m) == h, "a beast holder is a target")
+	sim:_akatsuki_move(m)
+	expect(sim:borders(m.id, h), "a cell moves to its border")
+	sim.o_troops[m.id] = 1000000
+	sim:_akatsuki_wave(m)
+	expect(m.ritual == nil and sim:attack_between(m.id, h) ~= nil, "stronger than the cell: it attacks")
+	sim:end_attacks_of(m.id)
+	sim.o_troops[h] = 10000
+	sim:_akatsuki_wave(m)
+	expect(m.ritual ~= nil and m.ritual.holder == h and m.ritual.tails == 4, "weaker: it begins extracting the beast")
+	m.ritual.end_tick = sim.tick
+	m.ritual.start_tiles = sim.o_tiles[m.id]
+	table.clear(sim.d_ev)
+	sim:_akatsuki_ritual_tick(m)
+	local se = events_of(sim.d_ev, Ev.BEAST_SEALED)
+	expect(#se == 1 and se[1][2] == 4 and se[1][4] == h, "sealed from its holder (BEAST_SEALED ..., holder)")
+	expect(sim.o_alive[h] == 1 and #sim:beasts_of(h) == 0 and sim.o_cap_mult[h] == 1.0, "the holder lives on without it (buff gone)")
+end
+
+-- whoever attacks a cell is fought back; a cell never rules much land
+do
+	local sim = bare(34, AHUNT)
+	local c = inland(sim, 3000)
+	appear(sim, c)
+	local m = sim.aka_members[1]
+	local spot = next_to(sim, m.id)
+	local p = place(sim, "Raider", Defs.KIND_HUMAN, spot, 2, 1000000)
+	sim:intent_attack_troops(p, m.tile, 200000)
+	sim.o_troops[m.id] = 1000000
+	local a_in = sim:attack_between(p, m.id)
+	local in0 = if a_in ~= nil then a_in.troops else 0
+	sim:_akatsuki_wave(m)
+	local a_now = sim:attack_between(p, m.id)
+	local in1 = if a_now ~= nil and not a_now.dead then a_now.troops else 0
+	expect(in0 > 0 and (sim:attack_between(m.id, p) ~= nil or in1 < in0) and sim.o_troops[m.id] < 1000000, "a cell hits back at its attacker")
+	local cap = sim:_akatsuki_land_cap()
+	expect(sim:_akatsuki_shed(m.id) == 0, "at or below its land cap it sheds nothing")
+	local disk = sim:_akatsuki_cell_tiles(m.tile, m.id)
+	local n0 = #disk
+	for k = 0, map.land_count - 1 do
+		if sim.o_tiles[m.id] >= cap + 400 then
+			break
+		end
+		local t = map:land_tile(k)
+		if readi32(sim.owner, t * 4) == 0 and sim:claimable(t) then
+			sim:set_owner(t, m.id)
+		end
+	end
+	local before = sim.o_tiles[m.id]
+	local excess = before - cap
+	local want = math.min(excess, math.max(A.SHED_MIN_TILES, math.ceil(excess * A.SHED_PER_S)))
+	expect(sim:_akatsuki_shed(m.id) == want, ("above it, a second sheds %d%% of the excess (%d)"):format(math.floor(A.SHED_PER_S * 100), want))
+	local s = 0
+	while sim.o_tiles[m.id] > cap and s < 3000 do
+		sim:_akatsuki_shed(m.id)
+		s += 1
+	end
+	expect(sim.o_tiles[m.id] == cap and #sim:_akatsuki_cell_tiles(m.tile, m.id) == n0, "down to its cap, its disk whole")
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -731,6 +830,7 @@ do
 	local c = inland(s4, 3000)
 	local p = place(s4, "Player", Defs.KIND_HUMAN, c, 17, 5000000)
 	local a4 = appear(s4, c + 30)
+	drop_barrier(s4)
 	for _, t in s4:_spawn_disk(c + 30, 20) do
 		if readi32(s4.owner, t * 4) == a4 and (t % s4.W) > (c + 30) % s4.W - 10 then
 			s4:set_owner(t, 0)
@@ -756,10 +856,11 @@ do
 	local cc = inland(s6, 7000)
 	local nuker = place(s6, "Nuker", Defs.KIND_HUMAN, inland(s6, 80000), 5, 100000)
 	local a6 = appear(s6, cc)
+	drop_barrier(s6)
 	local tiles0, troops0 = s6.o_tiles[a6], s6.o_troops[a6]
 	s6:_detonate({ uid = 1, kind = Defs.N_HYDROGEN, owner = nuker, to_tile = cc, from_tile = cc, target_owner = a6 })
 	s6:_process_eliminations()
-	expect(s6.o_alive[a6] == 1 and s6.o_tiles[a6] == tiles0, "a hydrogen bomb leaves its land")
+	expect(s6.o_alive[a6] == 1 and s6.o_tiles[a6] == tiles0, "its barrier down, a hydrogen bomb leaves its land")
 	expect(s6.o_troops[a6] < troops0, ("but its troops take the blast (%d -> %d)"):format(troops0, math.floor(s6.o_troops[a6])))
 end
 
@@ -806,6 +907,15 @@ local function run_match(seed: number, ticks: number, mirror: boolean): (any, an
 				late._at_tick = sim.tick
 				late._aka_id = sim.aka_id
 				late._sealed = #sim.aka_sealed
+				late._cells_alive = sim:akatsuki_cells_alive()
+				local rok = true
+				for _, m in sim.aka_members do
+					local lr = late.akatsuki.rituals[m.id]
+					if (lr ~= nil) ~= (m.ritual ~= nil) or (lr ~= nil and (lr.tails ~= m.ritual.tails or lr.end_tick ~= m.ritual.end_tick)) then
+						rok = false
+					end
+				end
+				late._rituals_ok = rok
 			end
 		end
 		if sim.phase == Defs.PHASE_OVER then
@@ -870,6 +980,20 @@ do
 		end
 	end
 	expect(a.state == sim.aka_state and a.id == sim.aka_id and sealed_ok, "mirror Akatsuki: state, owner, sealed")
+	local mem_ok = #sim.aka_members == 4
+	for _, m in sim.aka_members do
+		local mm = a.members[m.id]
+		local live = sim.o_alive[m.id] == 1 and sim.aka_state == Defs.AKATSUKI_ACTIVE
+		if mm == nil or mm.idx ~= m.idx or mm.alive ~= live or (live and mm.tile ~= m.tile) then
+			mem_ok = false
+		end
+		if (a.rituals[m.id] ~= nil) ~= (live and m.ritual ~= nil) then
+			mem_ok = false
+		end
+	end
+	expect(mem_ok, "mirror cells: index, spot, alive, rituals")
+	local alive_n = gs:akatsuki_cells()
+	expect(alive_n == sim:akatsuki_cells_alive() and gs:akatsuki_barrier_up() == sim:akatsuki_barrier_up(), "mirror cells alive and the barrier")
 	local beasts_ok = true
 	for t = 1, 9 do
 		local sb, mb = sim.beasts[t], gs.beasts[t]
@@ -887,6 +1011,8 @@ do
 		local la = late.akatsuki
 		expect(la.state == Defs.AKATSUKI_ACTIVE and la.id == late._aka_id and #la.sealed == late._sealed, "its snapshot carries the Akatsuki (state, owner, sealed)")
 		expect(late.owners[late._aka_id] ~= nil and late.owners[late._aka_id].special == Defs.SPECIAL_AKATSUKI, "and its owner flagged special")
+		local n_alive, n_all = late:akatsuki_cells()
+		expect(n_all == 4 and n_alive == late._cells_alive and late._rituals_ok, ("and its cells (%d/%d alive) and running rituals"):format(n_alive, n_all))
 	end
 	-- determinism
 	local sim2 = run_match(21, ticks, false)

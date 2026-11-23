@@ -42,6 +42,7 @@ local Tooltip = require("./Tooltip")
 local RadialMenu = require("./RadialMenu")
 local HoldRing = require("./HoldRing")
 local BeastPanel = require("./BeastPanel")
+local AkatsukiPanel = require("./AkatsukiPanel")
 local Tutorial = require("./Tutorial")
 local TutorialData = UICtx.data("Tutorial")
 local StarterData = UICtx.data("Starter")
@@ -955,6 +956,10 @@ function UIRoot._build(self)
 	local beast_panel = BeastPanel.new(ctx, self)
 	self.beast_panel = beast_panel
 	hud:add_child(self:_host(beast_panel.gui, "BeastPanel"))
+	-- the Akatsuki objective under the top status while it is on the map (UI/AkatsukiPanel)
+	local aka_panel = AkatsukiPanel.new(ctx, self)
+	self.aka_panel = aka_panel
+	hud:add_child(self:_host(aka_panel.gui, "AkatsukiPanel"))
 	local radial = RadialMenu.new(ctx)
 	self.radial = radial
 	radial.bottom_limit = function(): number?
@@ -1856,6 +1861,12 @@ function UIRoot._bind_state(self, s: any)
 		adv:on_akatsuki_fell(slayer)
 		self.top:refresh()
 	end)
+	c("akatsuki_ritual", function(cell, tails, _tile, _end_tick, result)
+		adv:on_akatsuki_ritual(cell, tails, result)
+	end)
+	c("akatsuki_barrier", function(hq, up)
+		adv:on_akatsuki_barrier(hq, up)
+	end)
 	c("owner_spawned", function(id, tile)
 		self:_on_owner_spawned(id, tile)
 	end)
@@ -2507,7 +2518,7 @@ function UIRoot._process(self, delta: number)
 	local comps = self._frame_comps
 	if comps == nil then
 		comps = {}
-		for _, key in ipairs({ "bar", "top", "board", "feed", "notices", "attacks", "alert", "beast_panel" }) do
+		for _, key in ipairs({ "bar", "top", "board", "feed", "notices", "attacks", "alert", "beast_panel", "aka_panel" }) do
 			local comp = self[key]
 			if comp ~= nil and comp.update then
 				table.insert(comps, { comp, key .. ".update" })

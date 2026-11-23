@@ -4,8 +4,17 @@
 -- live in Rules.AKATSUKI; the mechanics in Core/SimAkatsuki (docs/AKATSUKI.md).
 local Akatsuki = {}
 
---- Its owner name on the map.
-Akatsuki.NAME = "Akatsuki"
+--- Its hideout's owner name on the map (Pain & Konan guard it).
+Akatsuki.NAME = "Akatsuki: Pain & Konan"
+--- Its cells, one owner per member pair, in deploy order (key: Assets/BeastArt.members, the HUD's
+--- pictures).
+Akatsuki.MEMBERS = {
+	{ key = "itachi_kisame", name = "Itachi & Kisame" },
+	{ key = "deidara_sasori", name = "Deidara & Sasori" },
+	{ key = "hidan_kakuzu", name = "Hidan & Kakuzu" },
+	{ key = "zetsu_tobi", name = "Zetsu & Tobi" },
+}
+Akatsuki.HQ_KEY = "pain_konan"
 --- Its territory colour: a very dark red-black. (Near-black reads badly: the map's border is the
 --- fill's HSL lightness - 0.125, so a black fill would get a black border on a black tint. This one
 --- keeps a visible, darker border.)
@@ -19,11 +28,36 @@ Akatsuki.TEXT = {
 	stir = "Something gathers in the Land of Rain...",
 	stir_elsewhere = "Something gathers in the shadows...",
 	-- (toast for everyone when it appears; banner)
-	appeared = "The Akatsuki has appeared! It hunts the Tailed Beasts",
+	appeared = "The Akatsuki hunts the Tailed Beasts. If they seal all nine, everyone loses. Destroy the cells to break the barrier on their hideout",
 	appear_banner = "THE AKATSUKI HAS APPEARED",
-	appear_sub = "It hunts the Tailed Beasts. If it seals all nine, everyone loses",
-	-- (toast for the owner it landed next to)
-	cell = "An Akatsuki cell landed on your border!",
+	appear_sub = "The Akatsuki hunts the Tailed Beasts. If they seal all nine, everyone loses. Destroy the cells to break the barrier on their hideout.",
+	-- (toast for the owner a cell landed next to: the cell's name)
+	cell = "%s landed on your border!",
+	-- (a sealing ritual began: cell, beast title, [holder,] seconds)
+	ritual_wild = "%s began sealing the %s! Take their land within %d s to stop it",
+	ritual_holder = "%s began extracting the %s from %s! Take their land within %d s to stop it",
+	-- (beast title, cell)
+	ritual_broken = "The sealing of the %s was broken! (%s)",
+	-- (killer, cell, cells left)
+	member_down = "%s destroyed %s! Akatsuki cells left: %d",
+	member_gone = "%s fell! Akatsuki cells left: %d",
+	barrier_down = "The barrier on the Akatsuki hideout is down! Take Pain & Konan's land",
+	-- (cells left) why its hideout can't be attacked
+	barrier_block = "The Akatsuki hideout is behind a barrier: destroy its %d cells first",
+	-- the objective widget
+	widget_title = "AKATSUKI",
+	widget_cells = "Cells %d/%d",
+	widget_barrier_up = "Hideout barrier up",
+	widget_barrier_down = "Barrier down: take the hideout",
+	-- (beast title, seconds) while a cell performs a sealing ritual
+	widget_ritual = "Sealing the %s: %d s. Take the cell's land!",
+	-- (sealed, of)
+	hud_short = "%d/%d sealed",
+	-- banners: a ritual began (BEAST TITLE; cell), was broken (BEAST TITLE); the barrier dropped
+	ritual_banner = "THE AKATSUKI IS SEALING THE %s",
+	ritual_banner_sub = "%s is performing the ritual. Take their land to break it",
+	broken_banner = "SEALING OF THE %s BROKEN",
+	barrier_banner = "THE BARRIER IS DOWN",
 	-- (the eliminated beast holder's name) when it is above its land cap and will shed their land
 	abandons = "The Akatsuki abandons %s's lands.",
 	-- (beast title, sealed count, beasts that can still be sealed)

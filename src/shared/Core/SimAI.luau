@@ -84,6 +84,9 @@ SimAI.MOPUP_GAP = 200
 SimAI.INVASION_AGE = 12000
 SimAI.INVASION_GAP = 150
 SimAI.LATE_WAR_FROM = 12000
+--- War score x this against the Akatsuki's cells (and its hideout once its barrier is down).
+SimAI.AKATSUKI_HUNT = 1.5
+SimAI.AKATSUKI_RITUAL_HUNT = 3.0
 SimAI.LATE_WAR_SPAN = 9000
 
 local NATION_THINK = SimAI.NATION_THINK
@@ -509,6 +512,10 @@ function SimAI:_consider_war(sim, id: number, fill: number, age: number): boolea
 		if sc_count[p] < 2 * L or sim:allied(id, p) then
 			continue
 		end
+		if sim.akatsuki_on and sim:akatsuki_barrier_up(p) then
+			-- (the Akatsuki's hideout behind its barrier: its cells first)
+			continue
+		end
 		local pk = sim.o_kind[p]
 		local at_war = sim:attack_between(id, p) ~= nil
 		if
@@ -538,6 +545,11 @@ function SimAI:_consider_war(sim, id: number, fill: number, age: number): boolea
 		end
 		if _great_powers(my_share, sim:land_share(p)) then
 			s *= 1.5
+		end
+		if sim.akatsuki_on and sim.o_special[p] == Defs.SPECIAL_AKATSUKI then
+			-- (the Akatsuki hunting the beasts: a common enemy; a cell sealing a beast, an urgent one)
+			local m = sim:_akatsuki_member(p)
+			s *= if m ~= nil and m.ritual ~= nil then SimAI.AKATSUKI_RITUAL_HUNT else SimAI.AKATSUKI_HUNT
 		end
 		s *= self.aggression[id] * (0.8 + 0.2 * math.min(sc_count[p] / (20.0 * L), 1.0))
 		if s > best_s then
@@ -935,7 +947,9 @@ function SimAI:_beast_foe(sim, id: number, age: number): number
 			continue
 		end
 		local tr = 3
-		if sim.o_special[o] == Defs.SPECIAL_AKATSUKI then
+		if sim.akatsuki_on and sim:akatsuki_barrier_up(o) then
+			continue
+		elseif sim.o_special[o] == Defs.SPECIAL_AKATSUKI then
 			tr = 1
 		elseif sim.o_special[o] ~= 0 then
 			tr = 4

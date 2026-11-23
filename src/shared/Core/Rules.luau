@@ -167,43 +167,66 @@ local AKATSUKI = {
 	--- It seizes the land within RADIUS full-size tiles, owned or not (spawn-shielded owners' and
 	--- Tailed Beasts' tiles excepted).
 	RADIUS = 14.0,
-	--- Troops (its base cap): the strongest player's army (humans and bot players; with none, any
-	--- owner's; special owners excluded) x TROOPS_SHARE, never under TROOPS_FLOOR. Every beast it
-	--- has sealed multiplies its cap and its attack waves by (1 + SEAL_GROWTH x sealed).
+	--- Troops (base caps): the top players' average army (as the beasts: Core/SimBeasts._beast_top_army)
+	--- x HQ_SHARE for its hideout and x CELL_SHARE for each of its cells, never under TROOPS_FLOOR /
+	--- CELL_TROOPS_FLOOR, recomputed every TRACK_EVERY_S (troops rise with it). Every beast it has
+	--- sealed multiplies its caps and its cells' attack waves by (1 + SEAL_GROWTH x sealed).
 	TROOPS_FLOOR = 150000.0,
-	TROOPS_SHARE = 0.9,
+	CELL_TROOPS_FLOOR = 450000.0,
+	HQ_SHARE = 0.6,
+	CELL_SHARE = 0.25,
+	TRACK_EVERY_S = 10,
 	SEAL_GROWTH = 0.15,
-	--- Its cap does not follow its land. Every second it regenerates REGEN_PER_S of what it is
-	--- missing below the cap, or loses DRAIN_PER_S of what it holds above it. No gold income.
-	REGEN_PER_S = 0.02,
+	--- Its caps do not follow its land. Every second each of its owners regenerates REGEN_PER_S of
+	--- what it is missing below its cap, or loses DRAIN_PER_S of what it holds above it. No gold income.
+	REGEN_PER_S = 0.05,
 	DRAIN_PER_S = 0.25,
-	--- Every ATTACK_EVERY_TICKS it attacks its best target on its border with ATTACK_SHARE x its home
-	--- troops (x the seal growth, at most ATTACK_SHARE_MAX; at least ATTACK_MIN_TROOPS): wild Tailed
-	--- Beasts first, then beast holders, then the weakest neighbour; with no neighbour to attack, it
-	--- takes free land with EXPAND_SHARE. Spawn-shielded owners are skipped. It raids, it doesn't rule:
-	--- past LAND_SHARE_MAX of the map's land it attacks only beasts and holders, and every second it
-	--- sheds SHED_PER_S of the land above that (at least SHED_MIN_TILES) back to unowned, the border
-	--- tiles farthest from its home disk and its live cells first (those two are never shed).
+	--- The hideout never attacks. Every ATTACK_EVERY_TICKS each cell attacks its best target on its
+	--- border with ATTACK_SHARE x its home troops (x the seal growth, at most ATTACK_SHARE_MAX; at
+	--- least ATTACK_MIN_TROOPS): wild Tailed Beasts first, then beast holders, then whoever attacks it;
+	--- with none of those it takes free land with EXPAND_SHARE. Spawn-shielded owners are skipped.
+	--- A cell raids, it doesn't rule: above CELL_LAND_SHARE_MAX of the map's land (at least its disk) it
+	--- takes no free land, and every second it sheds SHED_PER_S of the excess (at least SHED_MIN_TILES)
+	--- back to unowned, its border tiles farthest from its disk first (the disk is never shed).
 	ATTACK_EVERY_TICKS = 10,
 	ATTACK_SHARE = 0.05,
 	ATTACK_SHARE_MAX = 0.12,
 	ATTACK_MIN_TROOPS = 1000.0,
 	EXPAND_SHARE = 0.02,
-	LAND_SHARE_MAX = 0.03,
+	CELL_LAND_SHARE_MAX = 0.006,
 	SHED_PER_S = 0.03,
 	SHED_MIN_TILES = 8,
-	--- Cells: every CELL_EVERY_S it drops a disk of CELL_RADIUS full-size tiles of its land next to
-	--- its priority target it does not border yet (a wild beast awake for CELL_BEAST_AFTER_S at least,
-	--- so players get a first go at it; else a beast holder). At most
-	--- MAX_CELLS cells hold land at once: a new one withdraws the oldest (its land goes unowned).
-	--- CELL_TRIES border tiles of the target are tried for the spot; CELL_MIN_TILES must be seized.
+	--- Cells (Data/Akatsuki.MEMBERS: one owner per member pair), deployed when it appears, each as a
+	--- disk of CELL_RADIUS full-size tiles next to its target (a wild beast awake for
+	--- CELL_BEAST_AFTER_S at least, so players get a first go at it; else a beast holder; cells spread
+	--- over different targets), else around the hideout. Every CELL_EVERY_S a cell that doesn't border
+	--- its target moves next to it (a new disk; its other land goes unowned). A destroyed cell never
+	--- returns. CELL_TRIES border tiles of the target are tried for a spot; CELL_MIN_TILES must be
+	--- seized. Destroying one pays CELL_BOUNTY_GOLD.
 	CELL_EVERY_S = 25,
 	CELL_BEAST_AFTER_S = 60,
-	CELL_RADIUS = 5.0,
-	MAX_CELLS = 3,
+	CELL_RADIUS = 7.0,
 	CELL_TRIES = 80,
 	CELL_MIN_TILES = 5,
-	--- Its fall: the owner that takes its last tile gets troop cap x SLAYER_CAP_MULT for the rest of
+	CELL_BOUNTY_GOLD = 250000.0,
+	--- The sealing ritual: a cell on a wild beast's border (or on a holder's, with at least
+	--- RITUAL_HOLDER_EDGE x the holder's troops) stops attacking and seals it in RITUAL_S; it is
+	--- broken when the cell loses RITUAL_BREAK_SHARE of the land it had when it began (or is
+	--- destroyed, or the beast gets away). A holder keeps its land and loses the beast.
+	RITUAL_S = 20,
+	--- Its ninja are elite: an attack on any of its land (hideout or cell) loses DEFENSE_LOSS x the
+	--- usual troops per tile and takes DEFENSE_SLOW x as long (a small, dense cell would otherwise
+	--- crumble in a second: a defender's troops go with its tiles).
+	DEFENSE_LOSS = 1.5,
+	DEFENSE_SLOW = 1.25,
+	--- One ritual at a time, none in the first RITUAL_FIRST_S after it appears (everyone reads the
+	--- arrival first), and none for RITUAL_COOLDOWN_S after a beast is sealed.
+	RITUAL_FIRST_S = 30,
+	RITUAL_COOLDOWN_S = 45,
+	RITUAL_BREAK_SHARE = 0.35,
+	RITUAL_HOLDER_EDGE = 1.0,
+	--- Its hideout can't be attacked, landed on or hurt by bombs while any of its cells lives (the
+	--- barrier). Its fall (the hideout's last tile taken): that owner gets troop cap x SLAYER_CAP_MULT for the rest of
 	--- the match and BOUNTY_GOLD (plus what the Akatsuki took). Each beast it had sealed re-emerges
 	--- as a new wild beast: the first RELEASE_FIRST_S after the fall, then one every RELEASE_EVERY_S.
 	SLAYER_CAP_MULT = 1.10,

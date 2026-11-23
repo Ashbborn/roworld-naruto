@@ -59,7 +59,12 @@ Ev.BEAST_COOL = 43 -- tails, bomb_ready_tick, power_ready_tick  (its holder's Ta
 Ev.BEAST_POWER = 44 -- tails, user, tile, target, until_tick  (a beast's power was used: at tile (-1: on the user), on owner
 --   target (0: none); a timed one lasts until until_tick (0: instant))
 
+Ev.AKATSUKI_MEMBER = 45 -- id, idx, tile, alive  (an Akatsuki cell: Data/Akatsuki.MEMBERS[idx], its disk's centre;
+--   deployed / moved (alive 1) or destroyed (alive 0); Core/SimAkatsuki)
+Ev.AKATSUKI_RITUAL = 46 -- cell_id, tails, tile, end_tick, result  (a sealing ritual: begun (0), sealed (1), broken (2))
+Ev.AKATSUKI_BARRIER = 47 -- hq_id, up  (the hideout's barrier: down (0) when its last cell fell)
+
 --- Number of event ids (ids are 0..COUNT-1).
-Ev.COUNT = 45
+Ev.COUNT = 48
 
 return Ev

@@ -776,7 +776,7 @@ function SimAttacks.install(C: any)
 		local loss_k = self.o_loss_mult[at]
 		-- (beast powers: Sand Shield / Ink hold the attack back; Coral Wall, Lava, Steam Charge)
 		local fx_slow = 1.0
-		if self.beasts_on and next(self.bfx) ~= nil then
+		if self.beasts_on and (next(self.bfx) ~= nil or (self.akatsuki_on and tg ~= 0 and self.o_special[tg] == Defs.SPECIAL_AKATSUKI)) then
 			local held, fl, fs = self:beast_attack_mods(at, tg)
 			if held then
 				return
