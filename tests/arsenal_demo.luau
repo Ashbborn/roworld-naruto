@@ -153,6 +153,22 @@ do
 	d:destroy()
 end
 
+-- Hawk Strike: the hawk carries its bundle of tags until it lets the last one go, then beats on without
+-- it (its flipbook's second row)
+do
+	local d = ArsenalDemo.new(Instance.new("Frame"), Catalog.item("airfield"), Vector2.new(470, 228), 1, 0)
+	local hawk = d.parts.jet
+	d:step(0.6)
+	local before = hawk.ImageRectOffset.Y
+	d:step(1.0)
+	local after = hawk.ImageRectOffset.Y
+	check(
+		hawk.Visible and before == 0 and after == Fx.hawk.cell,
+		("the hawk drops its whole bundle (flipbook row at %d px, then %d px)"):format(before, after)
+	)
+	d:destroy()
+end
+
 if failures > 0 then
 	print(("%d FAILED"):format(failures))
 	error("arsenal_demo failed")
