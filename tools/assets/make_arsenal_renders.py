@@ -19,11 +19,12 @@ the game shows every item at the same scale in the same box:
   assets/arsenal/tiles/<key>.png    TILE_PX square, the tile level of detail (arsenal_core.set_lod: a
                                     heavier outline, fewer and bigger parts) for the list's small tiles
 
-The owner's picks (2026-11-23, build/ai_pick_arsenal.png): where he chose an AI candidate over the hand-made
-render, the candidate is kept as assets/arsenal/picks/<key>.png (tools/assets/ai33_img.py take-picks) and both
-the render and the tile are made from it in the hand-made one's place: scaled so what is drawn solid spans what
-the hand-made render spans at that size (the cards' layouts were set to it), centred, its faint glow kept inside
-the square. The hand-made SVG is still drawn for the others (and for comparing: render_svg).
+The owner's picks (2026-11-23, build/ai_pick_arsenal.png; Shadow Clones from build/ai_pick_shadowclones.png):
+where he chose an AI candidate over the hand-made render (all eight items now), the candidate is kept as
+assets/arsenal/picks/<key>.png (tools/assets/ai33_img.py take-picks) and both the render and the tile are made
+from it in the hand-made one's place: scaled so what is drawn solid spans what the hand-made render spans at
+that size (the cards' layouts were set to it), centred, its faint glow kept inside the square. The hand-made
+SVG stays (render_svg): it is drawn for an item without a pick, and for comparing.
 
 Contact sheet: build/arsenal_renders_sheet.png (tools/assets/arsenal_review.py renders: each big, as the
 sticker over its scene's map, in the starter offer, and as the list's tile at five scales). Upload with

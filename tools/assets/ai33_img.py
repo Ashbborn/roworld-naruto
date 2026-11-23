@@ -84,10 +84,12 @@ TITLES = {"mega": "Grand Explosion Seal", "scatter": "Scatter Seal", "reinforce"
           "artillery": "Kunai Battery", "airfield": "Hawk Strike", "railgun": "Chakra Cannon",
           "stars2x": "2x Stars", "reload2x": "Quick Seals"}
 
-#: the owner's picks among the candidates (build/ai_pick_arsenal.png; "a"/"b": the AI candidates), wired as the
-#: shop renders by make_arsenal_renders.py through assets/arsenal/picks/<key>.png
-PICKS = {"mega": "a", "scatter": "b", "artillery": "b", "airfield": "b", "railgun": "b", "stars2x": "b",
-         "reload2x": "a"}
+#: the owner's picks among the candidates (build/ai_pick_arsenal.png, and build/ai_pick_shadowclones.png for
+#: Shadow Clones): each one's cut-out under build/ai33, wired as the shop renders by make_arsenal_renders.py
+#: through assets/arsenal/picks/<key>.png
+PICKS = {"mega": "arsenal/mega_a.png", "scatter": "arsenal/scatter_b.png", "artillery": "arsenal/artillery_b.png",
+         "airfield": "arsenal/airfield_b.png", "railgun": "arsenal/railgun_b.png", "stars2x": "arsenal/stars2x_b.png",
+         "reload2x": "arsenal/reload2x_a.png", "reinforce": "clones/a.png"}
 #: a pick's size in assets/arsenal/picks (twice the render's 384)
 PICK_PX = 768
 
@@ -441,8 +443,8 @@ def take_picks():
     dst = os.path.join(ROOT, "assets", "arsenal", "picks")
     os.makedirs(dst, exist_ok=True)
     out = []
-    for key, c in PICKS.items():
-        im = Image.open(os.path.join(OUT, f"{key}_{c}.png")).convert("RGBA")
+    for key, src in PICKS.items():
+        im = Image.open(os.path.join(ROOT, "build", "ai33", src)).convert("RGBA")
         if max(im.size) > PICK_PX:
             k = PICK_PX / max(im.size)
             im = im.resize((round(im.size[0] * k), round(im.size[1] * k)), Image.LANCZOS)
@@ -562,9 +564,9 @@ def clones_sheet():
     d.text((pad, y), "YOUR PICKS FOR THE OTHER ITEMS", font=_font(13), fill=(150, 156, 180, 255))
     y += 26
     cell_w = strip_px + 52
-    for i, (key, c) in enumerate(PICKS.items()):
+    for i, (key, src) in enumerate((k, v) for k, v in PICKS.items() if k != "reinforce"):
         x = pad + i * (cell_w + 8)
-        p = os.path.join(OUT, f"{key}_{c}.png")
+        p = os.path.join(ROOT, "build", "ai33", src)
         if os.path.exists(p):
             cell = Image.new("RGBA", (cell_w, strip_px), (0, 0, 0, 0))
             full, (cx, cy) = _placed(Image.open(p).convert("RGBA"), strip_px)
