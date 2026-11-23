@@ -692,6 +692,16 @@ def final_sheet(out=None):
 
 #: the round-3 icon sheet: the redos (4 candidates), Kakuzu's candidates, and every accepted icon as a family
 R3_REDO = [("isobu", "ABCD"), ("son_goku", "ABCD"), ("kakuzu", "ABC")]
+#: checked on the raws and at 48 / 32 / 24 px (11-23): misses against the brief, in red beside the letter
+ICON_NOTES = {
+    "isobu/icon_A": "the eye is lost at 32 px",
+    "isobu/icon_B": "2 tails read, not 3",
+    "isobu/icon_C": "the eye is lost at 32 px",
+    "son_goku/icon_A": "goes spidery at 24 px",
+    "son_goku/icon_B": "goes spidery at 24 px",
+    "son_goku/icon_C": "horn and mouth lost at 32 px",
+    "son_goku/icon_D": "horn and mouth lost at 32 px",
+}
 FAMILY = ["shukaku", "matatabi", "kokuo", "saiken", "chomei", "gyuki", "kurama", "akatsuki", "itachi", "kisame",
           "deidara", "sasori_face", "hidan", "pain", "konan", "tobi", "zetsu"]
 
@@ -807,9 +817,10 @@ def r3_sheet(out=None):
             sheet.alpha_composite(terr_tile(im, 32, tc), (x + 224, y + 64))
             d.text((x, y + 100), (f"NEW {L}" if s != "kakuzu" else L) if im else f"{L}: missing", fill=TEXT,
                    font=font(15))
-            c = clip.get(f"{s}/icon_{L}")
-            if c:
-                d.text((x + 60, y + 101), "cut by the frame: " + ", ".join(c), fill=RED_NOTE, font=font(13))
+            notes = (["cut by the frame: " + ", ".join(clip[f"{s}/icon_{L}"])] if f"{s}/icon_{L}" in clip else []) + \
+                ([ICON_NOTES[f"{s}/icon_{L}"]] if f"{s}/icon_{L}" in ICON_NOTES else [])
+            if notes:
+                d.text((x + 64, y + 102), "; ".join(notes), fill=RED_NOTE, font=font(13))
             x += 256 + 24
         d.text((170, y + 124), note, fill=SUB, font=font(13))
         y += RH
