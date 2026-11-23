@@ -1,110 +1,71 @@
 #!/usr/bin/env python3
 """Renders for the Arsenal's shop (the list's tiles, the preview's sticker, the starter offer, the
 title's shop slot), drawn by hand as SVG (tools/assets/arsenal_svg.py RENDERS; 2026-11-23: the
-Naruto world's items in place of RoWorld's photographed military models: a rocket, a missile, a tank,
-a jet, a railgun, soldiers, an ammo crate and wings):
+Naruto world's items in place of RoWorld's photographed military models; round 2 the same day, after
+the owner's notes: one light, one outline, metal that reads as metal, warm paper):
 
-  mega       Grand Explosion Seal: a huge explosive tag bound with a sacred rope, burning at the top
-  scatter    Scatter Seal: five tags fanning out of one knot
-  reinforce  Shadow Clones: three identical ninja stepping out of smoke
-  artillery  Kunai Battery: a wooden emplacement loaded with big kunai
-  airfield   Hawk Strike: a messenger hawk with a paper bomb in its talons
-  railgun    Chakra Cannon: a stone cannon gathering a chakra orb
-  stars2x    2x Stars: two gold stars on a vermilion seal
-  reload2x   Quick Seals: two hands forming a seal
+  mega       Grand Explosion Seal: a giant explosive tag bound with a gold cord, chakra fire behind it
+  scatter    Scatter Seal: five burning tags fanned out of a paper knot (three at the tile's size)
+  reinforce  Shadow Clones: identical ninja out of the smoke
+  artillery  Kunai Battery: a launcher loaded with kunai
+  airfield   Hawk Strike: a hawk, wings spread, a bundle of paper bombs in its talons
+  railgun    Chakra Cannon: a sealing emplacement gathering a chakra orb
+  stars2x    2x Stars: two of the Stars currency's stars in gold
+  reload2x   Quick Seals: hands forming a seal, fast
 
-Each is saved as assets/arsenal/renders/<key>.png, RENDER_PX on its long side. Contact sheet:
-build/arsenal_renders_sheet.png (each big on the panel's dark ground, then at the list's tile size on
-its tile colour, at 1x and zoomed 3x). Upload with tools/assets/make_arsenal_art.py --upload.
+Every render is drawn on the same 256-unit square (one outline weight everywhere) and saved whole, so
+the game shows every item at the same scale in the same box:
+  assets/arsenal/renders/<key>.png  RENDER_PX square (the sticker, the starter offer, the shop slot)
+  assets/arsenal/tiles/<key>.png    TILE_PX square, the tile level of detail (arsenal_core.set_lod: a
+                                    heavier outline, fewer and bigger parts) for the list's small tiles
+Contact sheet: build/arsenal_renders_sheet.png (tools/assets/arsenal_review.py renders: each big, as the
+sticker over its scene's map, in the starter offer, and as the list's tile at five scales). Upload with
+tools/assets/make_arsenal_art.py --upload.
 
 Usage: python tools/assets/make_arsenal_renders.py [--only key,key]
 """
 import argparse
 import os
-import re
 import sys
 
-from PIL import Image, ImageDraw
-
 sys.path.insert(0, os.path.dirname(__file__))
+import arsenal_core as K  # noqa: E402
 import arsenal_svg as A  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.join(ROOT, "assets", "arsenal", "renders")
+OUT_TILES = os.path.join(ROOT, "assets", "arsenal", "tiles")
 RENDER_PX = 384
-# the list's row (UI/Arsenal ROW_H 46: a tile 36 px, the render 86 % of it) and the panel's ground
-TILE = 36
-NIGHT = (8, 12, 26)
-PANEL = (18, 22, 38)
+TILE_PX = 128
 
 
-def tile_colours():
-    src = open(os.path.join(ROOT, "src", "shared", "Data", "Arsenal.luau"), encoding="utf-8").read()
-    out = {}
-    for m in re.finditer(r'key = "(\w+)".*?color = \{ 0x([0-9A-Fa-f]{6}), 0x([0-9A-Fa-f]{6}) \}', src, re.S):
-        h = m.group(3)
-        c = tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
-        out[m.group(1)] = tuple(round(c[i] + (NIGHT[i] - c[i]) * 0.35) for i in range(3))
-    return out
+def render(key, lod="big"):
+    """The render, square (the canvas is), at the level of detail `lod`."""
+    K.set_lod(lod)
+    try:
+        return A.RENDERS[key]().png(RENDER_PX if lod == "big" else TILE_PX)
+    finally:
+        K.set_lod("big")
 
 
-def render(key):
-    art = A.RENDERS[key]()
-    if art.w >= art.h:
-        return art.png(px_w=RENDER_PX)
-    return art.png(px_h=RENDER_PX)
-
-
-def fit(im, box):
-    k = min(box / im.size[0], box / im.size[1])
-    return im.resize((max(1, round(im.size[0] * k)), max(1, round(im.size[1] * k))), Image.LANCZOS)
-
-
-def sheet(images):
-    keys = list(images)
-    cols = 4
-    big = 300
-    rows = (len(keys) + cols - 1) // cols
-    tiles_h = 3 * TILE + 3 * TILE * 3 + 40
-    sh = Image.new("RGBA", (cols * (big + 20), rows * (big + 20) + tiles_h), PANEL + (255,))
-    for i, k in enumerate(keys):
-        im = fit(images[k], big)
-        x = (i % cols) * (big + 20) + 10 + (big - im.size[0]) // 2
-        y = (i // cols) * (big + 20) + 10 + (big - im.size[1]) // 2
-        sh.alpha_composite(im, (x, y))
-    # the list's tiles: 1x, then 3x
-    cols_c = tile_colours()
-    y0 = rows * (big + 20) + 10
-    strip = Image.new("RGBA", (len(keys) * (TILE + 12), TILE), PANEL + (255,))
-    for i, k in enumerate(keys):
-        t = Image.new("RGBA", (TILE, TILE), (0, 0, 0, 0))
-        ImageDraw.Draw(t).rounded_rectangle([0, 0, TILE - 1, TILE - 1], 8, fill=cols_c.get(k, (60, 60, 80)) + (255,))
-        im = fit(images[k], round(TILE * 0.86))
-        t.alpha_composite(im, ((TILE - im.size[0]) // 2, (TILE - im.size[1]) // 2))
-        strip.alpha_composite(t, (i * (TILE + 12), 0))
-    sh.alpha_composite(strip, (10, y0))
-    z = strip.resize((strip.size[0] * 3, strip.size[1] * 3), Image.NEAREST)
-    sh.alpha_composite(z, (10, y0 + TILE + 20))
+def sheet(keys):
+    import arsenal_review
     path = os.path.join(ROOT, "build", "arsenal_renders_sheet.png")
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    sh.save(path)
-    return path
+    return arsenal_review.renders_sheet(keys, path)
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--style", default="A", choices=["A", "B"], help="arsenal_svg style (the owner picks)")
     ap.add_argument("--only", default="")
     args = ap.parse_args()
-    A.use_style(args.style)
     keys = [k for k in A.RENDERS if not args.only or k in args.only.split(",")]
     os.makedirs(OUT, exist_ok=True)
-    images = {}
+    os.makedirs(OUT_TILES, exist_ok=True)
     for k in keys:
-        im = render(k)
-        im.save(os.path.join(OUT, k + ".png"))
-        images[k] = im
-    print("rendered", ", ".join(keys), "->", sheet(images))
+        render(k).save(os.path.join(OUT, k + ".png"))
+        render(k, "tile").save(os.path.join(OUT_TILES, k + ".png"))
+    print("rendered", ", ".join(keys), "->", sheet(keys))
 
 
 if __name__ == "__main__":

@@ -22,8 +22,20 @@ local function check(cond: boolean, what: string)
 end
 
 -- the Naruto world's sprites are all in the manifest, and none of RoWorld's military ones
-for _, k in { "bloom", "hawk", "hands", "tag", "kunai", "scroll", "poof", "ninja", "ninja_run", "sealring", "orb", "shrine", "roost", "village" } do
+for _, k in { "bloom", "hawk", "hands", "megatag", "tag", "kunai", "scroll", "poof", "ninja", "ninja_run", "sealring", "orb", "shrine", "roost", "village", "battery", "cannon", "star" } do
 	check(type(Fx[k]) == "table" and type(Fx[k].id) == "string" and string.find(Fx[k].id, "rbxassetid://", 1, true) == 1, "ArsenalFx." .. k)
+end
+-- the emplacements say where their mouths are (what they fire leaves from there)
+for _, k in { "battery", "cannon" } do
+	local m = Fx[k] and Fx[k].mouth
+	check(m ~= nil and m.X > 0 and m.X < 1 and m.Y > 0 and m.Y < 1, "ArsenalFx." .. k .. ".mouth is a point of the image")
+end
+-- every item has its render and its small tile (the list draws the tile)
+local Art = require("../src/shared/Assets/ArsenalArt")
+for _, it in Catalog.ITEMS do
+	local r, tl = Art.renders and Art.renders[it.key], Art.tiles and Art.tiles[it.key]
+	check(r ~= nil and r.w == r.h, "ArsenalArt.renders." .. it.key .. " (square: every item at one scale)")
+	check(tl ~= nil and tl.w == tl.h and tl.id ~= r.id, "ArsenalArt.tiles." .. it.key)
 end
 for _, k in { "mushroom", "warhead", "bomb", "tracer", "chute", "reticle" } do
 	check(Fx[k] == nil, "no ArsenalFx." .. k)
@@ -92,6 +104,52 @@ do
 	local x0 = m.Position.X.Offset
 	d:step(2.0)
 	check(m.Image == Fx.ninja_run.id and m.Position.X.Offset > x0, "then runs right, for the border")
+	d:destroy()
+end
+
+--- How far apart two scene points are, px.
+local function gap(d: any, a: Vector2, g: GuiObject): number
+	return math.sqrt((a.X * d.W - g.Position.X.Offset) ^ 2 + (a.Y * d.H - g.Position.Y.Offset) ^ 2)
+end
+
+-- the Kunai Battery: its own sprite; it winds back before a volley and kicks forward as it looses it;
+-- the kunai leave from its mouth
+do
+	local d = ArsenalDemo.new(Instance.new("Frame"), Catalog.item("artillery"), Vector2.new(470, 228), 1, 0)
+	local p = d.parts
+	check(p.battery.Image == Fx.battery.id, "the battery is the Kunai Battery's sprite")
+	d:step(0.36)
+	local wind = p.battery.Rotation
+	d:step(0.43)
+	local kick = p.battery.Rotation
+	check(wind > 1 and kick < -1, ("it winds back (%.1f deg) and kicks forward (%.1f deg)"):format(wind, kick))
+	d:step(0.402)
+	local mouth = d:_anchor(p.battery, "battery", "mouth", 0)
+	local k = p.shells[1]
+	check(k.Visible and gap(d, mouth, k) < 0.06 * 228, ("a kunai leaves from its mouth (%.1f px off)"):format(gap(d, mouth, k)))
+	d:destroy()
+end
+
+-- the Chakra Cannon: its own sprite; the orb gathers at its mouth; it kicks back when it fires
+do
+	local d = ArsenalDemo.new(Instance.new("Frame"), Catalog.item("railgun"), Vector2.new(470, 228), 1, 0)
+	local p = d.parts
+	check(p.gun.Image == Fx.cannon.id, "the cannon is the Chakra Cannon's sprite")
+	d:step(0.9)
+	local mouth = d:_anchor(p.gun, "cannon", "mouth")
+	-- (offsets are whole pixels)
+	check(p.orb.Visible and gap(d, mouth, p.orb) < 2, "the orb gathers at its mouth")
+	local x0 = p.gun.Position.X.Offset
+	d:step(1.35)
+	check(p.gun.Position.X.Offset < x0 - 2, "it kicks back when it fires")
+	d:destroy()
+end
+
+-- the Grand Explosion Seal flies as the tag alone (the shop's render has fire behind it)
+do
+	local d = ArsenalDemo.new(Instance.new("Frame"), Catalog.item("mega"), Vector2.new(470, 228), 1, 0)
+	d:step(0.9)
+	check(d.parts.missile.Visible and d.parts.missile.Image == Fx.megatag.id, "the giant tag flies")
 	d:destroy()
 end
 
