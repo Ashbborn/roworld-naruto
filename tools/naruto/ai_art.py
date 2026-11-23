@@ -625,8 +625,8 @@ PICKS = {
     "isobu": ("B", "owner's pick (round 3 B; two tails show). A redraw with three tails is in isobu/r3_b_3tails "
                    "(build/ai_isobu_b_compare.png): a different, lower drawing whose eye fades at 24 px"),
     "son_goku": ("A", "owner's pick (round 3 A: upright, horn, four tails, open mouth)"),
-    "kakuzu": ("redo", "redo 2 (build/ai_pick_kakuzu.png): the Takigakure plate, green-on-red eyes, pointed mask, "
-                       "threads; not picked yet"),
+    "kakuzu": ("B", "owner's pick (redo 2, build/ai_pick_kakuzu.png: the Takigakure plate, green-on-red eyes, "
+                    "pointed mask, thread tendrils)"),
 }
 FINAL_ROWS = BEASTS + ["akatsuki", "itachi", "kisame", "deidara", "sasori_face", "sasori_hiruko", "hidan", "kakuzu",
                        "pain", "konan", "tobi", "zetsu"]
@@ -943,11 +943,13 @@ WIRED = {
     "kokuo": ("A", "A"), "saiken": ("B", "A"), "chomei": ("C", "A"), "gyuki": ("A", "A"), "kurama": ("A", "B"),
     "akatsuki": ("B", "A"),
     "itachi": ("B", "C"), "kisame": ("A", "A"), "deidara": ("A", "B"), "sasori_face": ("A", "B"),
-    "hidan": ("B", "C"), "pain": ("C", "B"), "konan": ("B", "C"), "tobi": ("A", "A"), "zetsu": ("A", "C"),
+    "hidan": ("B", "C"), "kakuzu": ("B", "A"), "pain": ("C", "B"), "konan": ("B", "C"), "tobi": ("A", "A"),
+    "zetsu": ("A", "C"),
 }
 MEMBER_KEYS = ["itachi", "kisame", "deidara", "sasori", "hidan", "kakuzu", "pain", "konan", "tobi", "zetsu"]
-#: members whose art waits for a pick: they keep the asset they have in game (Kakuzu: the redo of 11-23)
-KEEP_MEMBER = {"kakuzu": "rbxassetid://82883615691976"}
+#: members whose art waits for a pick keep the asset they have in game: {key: "rbxassetid://..."} (none since
+#: the owner picked Kakuzu's redo, 11-23)
+KEEP_MEMBER = {}
 ART = os.path.join(ROOT, "assets", "beast_art")
 BEASTART = os.path.join(ROOT, "src", "shared", "Assets", "BeastArt.luau")
 
