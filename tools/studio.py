@@ -107,7 +107,7 @@ def pick_studio(c):
     studios = data.get("studios", data) if isinstance(data, dict) else data
     match = os.environ.get("STUDIO_MATCH", "naruto.rbxl")
     for s in studios:
-        name = s.get("name") or ""
+        name = s.get("name") or s.get("file") or ""
         if match and match in name:
             # Safety: never drive a published game (its name carries "(placeId: …)").
             if "placeId:" in name and not os.environ.get("STUDIO_ALLOW_PUBLISHED"):
