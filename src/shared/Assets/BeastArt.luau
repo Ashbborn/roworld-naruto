@@ -48,7 +48,7 @@ return {
 	members_color = {
 		itachi = "rbxassetid://77165612467433",
 		kisame = "rbxassetid://98532529900682",
-		deidara = "rbxassetid://76056094269288",
+		deidara = "rbxassetid://120584264020999",
 		sasori = "rbxassetid://135897655272954",
 		hidan = "rbxassetid://127420040402439",
 		kakuzu = "rbxassetid://122390499126677",
