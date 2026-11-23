@@ -11,7 +11,7 @@
   plates_one.png  both rows in ONE image (the fill white to grey, the rim grey RIM_GREY = BORDER_V /
                   FILL_V of Map/StructureLayer): one tint gives both.
   glyphs.png      the white glyphs that sit on the plates, GLYPH px cells, same columns: pagoda, junk
-                  sail, anvil, watchtower, barrier dome, torii, three kunai, hawk, chakra orb; a soft
+                  sail, anvil, watchtower, barrier lantern, torii, three kunai, hawk, chakra orb; a soft
                   shadow under each.
   units.png       unit sprites, UNIT px pixel art drawn below pixel by pixel (a sprite pixel is a map
                   tile), 13 columns (Transport, Merchant ship, Warship, Explosion Seal, Great Explosion
@@ -74,7 +74,7 @@ FILL_BOTTOM = 0.84
 UI_PX = 128
 UI_BOX = 0.86
 #: wide drawings (ships seen from the side) take the whole width, or they read small on the bar
-UI_BOX_WIDE = {"warship": 1.0, "boat": 1.0}
+UI_BOX_WIDE = {"warship": 0.92, "boat": 0.92}
 UI_KINDS = ["city", "port", "factory", "defense", "sam", "silo", "artillery", "airfield", "railgun"]
 UI_UNITS = ["warship", "atom", "hydrogen", "mirv", "boat"]
 
@@ -232,33 +232,45 @@ GLYPH_DY = [0.04, 0.0, 0.0, -0.04, 0.04, 0.02, 0.0, 0.0, 0.0]
 SHADOW_DY, SHADOW_BLUR, SHADOW_A = 0.035, 1.2, 0.45
 
 
-def make_glyphs():
-    pics = [drawn(fn(), 64) for fn in G.STRUCTURES]
+def glyph_cell(body, k):
+    """One glyph cell (GLYPH px: the white drawing over its soft shadow) of the drawing `body`, for
+    structure column k (GLYPH_BOX / GLYPH_DY)."""
+    rgb, alpha = drawn(body, 64)
     big = GLYPH * 4
+    g = fit(rgb, alpha, GLYPH_BOX[k] * big, big, GLYPH_DY[k]).resize((GLYPH, GLYPH), Image.LANCZOS)
+    a = np.asarray(g.getchannel("A")).astype(np.float64) / 255
+    sh = Image.fromarray((a * 255).astype(np.uint8), "L").filter(ImageFilter.GaussianBlur(SHADOW_BLUR))
+    sh = np.asarray(sh).astype(np.float64) / 255 * SHADOW_A
+    dy = round(SHADOW_DY * GLYPH)
+    sh = np.vstack([np.zeros((dy, GLYPH)), sh[:GLYPH - dy]])
+    # white over its shadow, straight alpha
+    out_a = a + sh * (1 - a)
+    level = np.where(out_a > 0, a / np.maximum(out_a, 1e-6), 0)
+    return rgba(level, out_a)
+
+
+def make_glyphs():
     atlas = Image.new("RGBA", (GLYPH * len(KINDS), GLYPH), (0, 0, 0, 0))
-    for k, (rgb, alpha) in enumerate(pics):
-        g = fit(rgb, alpha, GLYPH_BOX[k] * big, big, GLYPH_DY[k]).resize((GLYPH, GLYPH), Image.LANCZOS)
-        a = np.asarray(g.getchannel("A")).astype(np.float64) / 255
-        sh = Image.fromarray((a * 255).astype(np.uint8), "L").filter(ImageFilter.GaussianBlur(SHADOW_BLUR))
-        sh = np.asarray(sh).astype(np.float64) / 255 * SHADOW_A
-        dy = round(SHADOW_DY * GLYPH)
-        sh = np.vstack([np.zeros((dy, GLYPH)), sh[:GLYPH - dy]])
-        # white over its shadow, straight alpha
-        out_a = a + sh * (1 - a)
-        level = np.where(out_a > 0, a / np.maximum(out_a, 1e-6), 0)
-        atlas.paste(rgba(level, out_a), (k * GLYPH, 0))
+    for k, fn in enumerate(G.STRUCTURES):
+        atlas.paste(glyph_cell(fn(), k), (k * GLYPH, 0))
     atlas.save(os.path.join(OUT, "glyphs.png"))
     return atlas
+
+
+def ui_mask(body, key):
+    """The interface mask (UI_PX px, white) of the drawing `body` for the key `key`."""
+    rgb, alpha = drawn(body, 64)
+    big = UI_PX * 4
+    return fit(rgb, alpha, UI_BOX_WIDE.get(key, UI_BOX) * big, big).resize((UI_PX, UI_PX), Image.LANCZOS)
 
 
 def make_ui():
     """White masks for the interface: the structures' glyphs and the units' (no shadow: they are tinted)."""
     os.makedirs(os.path.join(OUT, "ui"), exist_ok=True)
-    pics = [(k, drawn(fn(), 64)) for k, fn in zip(UI_KINDS, G.STRUCTURES)]
-    pics += [(k, drawn(G.UNITS_UI[k](), 64)) for k in UI_UNITS]
-    for key, (rgb, alpha) in pics:
-        big = UI_PX * 4
-        fit(rgb, alpha, UI_BOX_WIDE.get(key, UI_BOX) * big, big).resize((UI_PX, UI_PX), Image.LANCZOS).save(os.path.join(OUT, "ui", key + ".png"))
+    pics = [(k, fn()) for k, fn in zip(UI_KINDS, G.STRUCTURES)]
+    pics += [(k, G.UNITS_UI[k]()) for k in UI_UNITS]
+    for key, body in pics:
+        ui_mask(body, key).save(os.path.join(OUT, "ui", key + ".png"))
     return [k for k, _ in pics]
 
 
@@ -268,117 +280,145 @@ def make_ui():
 # every direction.
 # ---------------------------------------------------------------------------------------------------
 
+#: Round 2 (2026-11-23): the ships are drawn in a three-quarter view (hull below, sails above, both
+#: ends raised, so they read the same whichever way they go) and told apart by silhouette: a small
+#: sailboat, a one-sail merchant junk with a stern cabin, a two-sail war junk with pennants. Contrast comes from the shape: border pixels are only a shade darker than the fill, so
+#: the details are few and bold. UNITS_TOPDOWN keeps the flat plan-view ships (A/B on the sheet; to make
+#: them the live ones: UNITS.update(UNITS_TOPDOWN) after both are defined).
 UNITS = {
-    # Transport: a sampan, a little arched cabin amidships
+    # Transport: a small boat, one sail, a pennant
     "transport": [
-        "...#####...",
-        "..#ooooo#..",
-        ".#oo###oo#.",
-        "..#ooooo#..",
+        ".....#o....",
+        ".....#.....",
+        ".....#o....",
+        ".....#oo...",
+        ".....#ooo..",
+        ".....#oooo.",
+        "#....#....#",
+        "###########",
+        ".#########.",
         "...#####...",
     ],
-    # Merchant ship: a junk's hull, its batten sail spread across it
+    # Merchant ship: a junk, one big sail with a batten, a cabin at the stern
     "trade": [
-        "......#......",
-        "...###o###...",
-        "..#oo#o#oo#..",
-        ".#ooo#o#ooo#.",
-        "..#oo#o#oo#..",
-        "...###o###...",
-        "......#......",
+        "....#oo......",
+        "....#oooo....",
+        "....#oooo....",
+        "....#ooooo...",
+        "....######...",
+        "....#ooooo...",
+        "....#ooooo###",
+        "....######oo#",
+        "#############",
+        "#############",
+        ".###########.",
     ],
-    # Warship: a war junk, pointed at both ends, two sails across it and a shield row between
+    # Warship: a war junk, two stepped batten sails, two pennants, a long hull
     "warship": [
-        "...#.....#...",
-        "..##o###o##..",
-        ".#oo#ooo#oo#.",
-        "#ooo#o#o#ooo#",
-        ".#oo#ooo#oo#.",
-        "..##o###o##..",
-        "...#.....#...",
+        ".........#oo.",
+        "........oooo.",
+        ".......ooooo.",
+        "...#oo.ooooo.",
+        "..oooo.#####.",
+        ".ooooo.ooooo.",
+        ".#####.ooooo.",
+        ".ooooo.#####.",
+        "######.ooooo#",
+        "#############",
+        "#############",
+        ".###########.",
+        "...#######...",
     ],
-    # Explosion Seal: a paper tag, its ink strokes, the fuse sparking at its head
+    # Explosion Seal: a paper tag, one ink stroke, the fuse sparking at its head
     "atom": [
-        "#.#.#",
+        "..#..",
         ".#o#.",
-        "#####",
+        ".###.",
         "#ooo#",
-        "##o##",
-        "#ooo#",
+        "#o#o#",
+        "#o#o#",
         "#o#o#",
         "#ooo#",
         "#####",
     ],
-    # Great Explosion Seal: a bigger tag, a seal ring on it, a bigger spark
+    # Great Explosion Seal: a bigger tag, a seal on it, a bigger spark
     "hydrogen": [
         "#..#..#",
         ".#.o.#.",
         "..#o#..",
-        "#######",
+        ".#####.",
         "#ooooo#",
         "#o###o#",
         "#o#o#o#",
         "#o###o#",
         "#ooooo#",
         "#oo#oo#",
-        "#o#o#o#",
+        "#oo#oo#",
         "#ooooo#",
         "#######",
     ],
-    # Paper Bomb Storm: three tags flying together
+    # Paper Bomb Storm: three tags fanned out, a spark on each
     "mirv": [
-        "...#####...",
-        "...#ooo#...",
-        "...#o#o#...",
-        "####ooo####",
+        "...#.#.#...",
+        "....###....",
+        ".#..#o#..#.",
+        "#o#.#o#.#o#",
+        "#oo##o##oo#",
         "#ooo#o#ooo#",
-        "#o#o###o#o#",
-        "#ooo#.#ooo#",
-        "#o#o#.#o#o#",
-        "#ooo#.#ooo#",
-        "#####.#####",
+        ".#oo#o#oo#.",
+        ".#oo#o#oo#.",
+        "..#o#o#o#..",
+        "...#####...",
     ],
-    # Barrier interceptor: a small chakra orb
+    # Barrier interceptor: a swirling chakra orb
     "sam": [
-        ".###.",
-        "#ooo#",
-        "#o#o#",
-        "#ooo#",
-        ".###.",
+        "..###..",
+        ".#ooo#.",
+        "#oo#oo#",
+        "#o#o#o#",
+        "#oo##o#",
+        ".#ooo#.",
+        "..###..",
     ],
-    # Kunai Volley: a kunai, point up
+    # Kunai Volley: a kunai, point up, its ring at the end
     "shell": [
-        ".#.",
-        "#o#",
-        "#o#",
-        ".#.",
-        "#o#",
-    ],
-    # Paper Bomb: one small tag
-    "warhead": [
-        "###",
-        "#o#",
-        "#o#",
-        "###",
-    ],
-    # Supply Cart: a hand cart, its wheels at the corners
-    "train": [
-        "##.##",
-        "#ooo#",
+        "..#..",
+        ".#o#.",
         ".#o#.",
         "#ooo#",
-        "##.##",
+        ".#o#.",
+        "..#..",
+        "..#..",
+        "..#..",
+        ".#.#.",
+        "..#..",
     ],
-    # an empty cart, and one loaded with goods
-    "carriage": [
+    # Paper Bomb: one small tag, sparking
+    "warhead": [
+        ".#.",
         "###",
         "#o#",
+        "#o#",
+        "###",
+    ],
+    # Supply Cart: a covered wagon on its wheels
+    "train": [
+        "..###..",
+        ".#ooo#.",
+        "#ooooo#",
+        "#######",
+        ".#.#.#.",
+    ],
+    # an empty cart (a hollow crate), and one loaded with goods (a full one)
+    "carriage": [
+        "###",
+        "#.#",
         "###",
     ],
     "carriage_loaded": [
-        "ooo",
-        "o#o",
-        "ooo",
+        "###",
+        "#o#",
+        "###",
     ],
     # Bijudama: a dark chakra orb (border pixels), a glint and a rim of light (territory pixels)
     "bijudama": [
@@ -395,16 +435,47 @@ UNITS = {
         "...ooooo...",
     ],
 }
+#: The A/B alternative for the three ships (not drawn by the generator, only by make_r2_icons_sheet.py):
+#: plan view, pointed lens hulls, cross yards, symmetric both ways. They read as pills and barrels.
+UNITS_TOPDOWN = {
+    "transport": [
+        "...#####...",
+        ".##ooooo##.",
+        "#oo#ooo#oo#",
+        ".##ooooo##.",
+        "...#####...",
+    ],
+    "trade": [
+        "....#####....",
+        "..##ooooo##..",
+        ".#ooo###ooo#.",
+        "#oooo#o#oooo#",
+        ".#ooo###ooo#.",
+        "..##ooooo##..",
+        "....#####....",
+    ],
+    "warship": [
+        "...#..#..#...",
+        "..#########..",
+        ".#o#oo#oo#o#.",
+        "#oo#oo#oo#oo#",
+        "##o#oo#oo#o##",
+        "#oo#oo#oo#oo#",
+        ".#o#oo#oo#o#.",
+        "..#########..",
+        "...#..#..#...",
+    ],
+}
 #: column order of the units sheets (the map code indexes columns by it; "bijudama" is column 12,
 #: zero-based). Append only.
 UNIT_ORDER = ["transport", "trade", "warship", "atom", "hydrogen", "mirv", "sam", "shell", "warhead",
               "train", "carriage", "carriage_loaded", "bijudama"]
 
 
-def unit_grid(name):
-    rows = UNITS[name]
+def unit_grid_rows(rows):
+    """A sprite's ASCII rows centred on the UNIT x UNIT grid."""
     w = len(rows[0])
-    assert all(len(r) == w for r in rows), name
+    assert all(len(r) == w for r in rows), rows
     h = len(rows)
     grid = [["."] * UNIT for _ in range(UNIT)]
     y0, x0 = (UNIT - h) // 2, (UNIT - w) // 2
@@ -412,6 +483,10 @@ def unit_grid(name):
         for x, ch in enumerate(r):
             grid[y0 + y][x0 + x] = ch
     return grid
+
+
+def unit_grid(name):
+    return unit_grid_rows(UNITS[name])
 
 
 def make_units():

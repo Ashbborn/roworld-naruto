@@ -7,10 +7,11 @@ Three sources, later ones win:
      help, info, eye, users, leaderboard...) rasterised long ago from AIRFRONT's SVGs
      (~/games/airfront/assets/{icons/ui,ui,icons/hud}/*.svg + assets/icons_src), kept as they are;
      with --airfront and those sources present they are rasterised again.
-  2. NARUTO: the game's concepts drawn by hand as SVG (tools/assets/naruto_glyphs.py CONCEPTS):
-     troops (hooded shinobi), gold (a ryo coin), attack (a thrown kunai), globe/hud_globe (a map
-     scroll), crown (a Kage's hat), alliance (linked rope rings), betray (a slashed forehead
-     protector), target (a practice target with a kunai), donate (a hand and a ryo), pops (a village).
+  2. NARUTO: the game's concepts drawn by hand as SVG (tools/assets/naruto_glyphs.py CONCEPTS), bold
+     and minimalist (art round 2): troops (hooded shinobi), gold (a stack of ryo), attack (two kunai
+     crossed), globe/hud_globe (a world), crown (a Kage's hat), alliance (linked rope rings), betray
+     (a slashed forehead protector), target (a practice target with a kunai), donate (a hand under a
+     stack of ryo), pops (a village).
   3. MAP: the structures' and units' keys (city, port, factory, defense, sam, silo, warship, atom,
      hydrogen, mirv, boat) take the very images of Assets/MapSprites.ui (make_map_sprites.py), so the
      menus show what the map shows (the same bytes: the upload cache returns the same ids).
