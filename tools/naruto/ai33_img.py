@@ -147,7 +147,9 @@ def generate(job, prompt, refs, n, out_paths, resolution="1K", retries=1, max_s=
             log(f"| {stamp} | {job} | {tid} | {used} | hung > {max_s} s, dropped |")
             continue
         except Exception as e:
-            log(f"| {stamp} | {job} | {tid} | {used} | failed: {str(e)[:120]} |")
+            # a task that ends in error is not charged (11-23: four failed tasks, the balance did not move)
+            spent -= used or 0
+            log(f"| {stamp} | {job} | {tid} | 0 | failed, not charged: {str(e)[:120]} |")
             continue
         urls = result_urls(task)
         done = []

@@ -937,7 +937,10 @@ def subject_sheet(s, title, out=None):
 
 #: the owner's picks (11-23): subject -> (icon letter, portrait letter). Isobu's icon B is the one the owner
 #: picked (two tails show): the redraws of its brief that showed three changed the drawing and lost the eye
-#: at 24 px (isobu/r3_b_3tails, build/ai_isobu_b_compare.png), so they wait for the owner's word
+#: at 24 px (isobu/r3_b_3tails, build/ai_isobu_b_compare.png), so they wait for the owner's word. Deidara's
+#: portrait B is the owner's B completed past its old frame (ponytail tip, the locks sweeping right, the
+#: shoulder) by the image model from B shrunk onto a wider canvas; the cut B is in deidara/b_cut_original
+#: (build/ai_deidara_b_compare.png)
 WIRED = {
     "shukaku": ("C", "C"), "matatabi": ("A", "A"), "isobu": ("B", "B"), "son_goku": ("A", "A"),
     "kokuo": ("A", "A"), "saiken": ("B", "A"), "chomei": ("C", "A"), "gyuki": ("A", "A"), "kurama": ("A", "B"),
