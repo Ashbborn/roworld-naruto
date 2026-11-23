@@ -98,12 +98,6 @@ NINJA = ("a generic young Hidden Leaf ninja drawn as a stylized cartoon game cha
          "a normal-sized head, a simple anime-style face with bold eyes and a determined look, short dark brown hair, "
          "a metal forehead protector with the leaf symbol on a blue headband, a green flak jacket over a navy "
          "long-sleeved outfit, bandaged forearms")
-#: (A's first try came out as the rejected candidate A again, half-realistic busts in a row: the second asks for
-#: the chunky cartoon build of a mobile game's unit art, mid-jump, with two of his picks as style references)
-NINJA_TOON = ("a generic young Hidden Leaf ninja drawn as a chunky stylized cartoon hero, like a unit in a mobile "
-              "strategy game: sturdy heroic proportions, big hands and sandals, a simple bold face with big "
-              "determined eyes and thick eyebrows, short dark brown hair, a metal forehead protector with the leaf "
-              "symbol on a blue headband, a green flak jacket over a navy long-sleeved outfit, bandaged forearms")
 #: the Shadow Clone Jutsu's sign, said out (the model's own idea of a hand seal is two palms pressed flat)
 SIGN = ("the Shadow Clone Jutsu hand sign: both hands up in front of the chest, the index and middle fingers of each "
         "hand held straight out together, the two pairs crossed over each other in a plus-shaped cross, the other "
@@ -116,9 +110,13 @@ STYLE_REFS = ("Take only the drawing style from the attached pictures: their thi
 #: each idea: its prompt, and its reference pictures (a pick's or a first try's download, on its magenta ground).
 #: c1 is C's first try: its design kept, its hands redrawn (they came out gold, from the shared look's gold).
 CLONES = {
-    "a": (f"Shadow clones popping into being: {NINJA_TOON}, in the middle, making {SIGN}; to each side of him an "
-          "identical copy of him leaping out of a bursting puff of white smoke, mid-jump, arms flung out, the puffs "
-          f"exploding outward with a few short speed lines; {SMOKE}. " + STYLE_REFS,
+    # (A's first try, NINJA alone, came out as the rejected candidate A again: half-realistic busts in a row;
+    # its second, a chunky cartoon build, came out chibi, two and a half heads tall: kept as a1* and a2*. The
+    # third says the proportions out, with two of his picks as style references.)
+    "a": (f"Shadow clones popping into being: {NINJA}, full body, about five heads tall, in the middle, making "
+          f"{SIGN}; to each side of him an identical copy of him with the same proportions, leaping out of a bursting "
+          "puff of white smoke, mid-jump, arms flung out, the puffs exploding outward with a few short speed lines; "
+          f"{SMOKE}. " + STYLE_REFS,
           ["arsenal/mega_a_raw.png", "arsenal/airfield_b_raw.png"]),
     "b": (f"A row of shadow clones: {NINJA}, striding forward in front, and three identical copies of him stepping out "
           "of him one after another in a diagonal row behind, each copy further back a little smaller and painted in "
@@ -534,9 +532,9 @@ def clones_sheet():
     d = ImageDraw.Draw(sh)
     d.text((pad, 14), "Shadow Clones: three new ideas. Pick one (or none).", font=_font(22),
            fill=(255, 226, 150, 255))
-    d.text((pad, 44), "ai33 image-v3, in the look of your picks for the other items (below); A drawn with two of them "
-           "as style references. Each big, at the preview's sticker size and at 48 px.",
-           font=_font(13), fill=(150, 156, 180, 255))
+    sub = ("ai33 image-v3, in the look of your picks below (A with two of them as style references; C redrawn from "
+           "its first try). Each big, at the preview's sticker size and at 48 px.")
+    d.text((pad, 44), sub, font=_font(13), fill=(150, 156, 180, 255))
     for i, c in enumerate("abc"):
         x, y = pad + i * (cw + pad), head
         d.rounded_rectangle([x, y, x + cw, y + rh], 14, fill=cell_bg)
