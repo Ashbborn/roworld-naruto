@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""RoNindo's own UI art (2026-11-23, the Naruto fork's UI identity): the title wordmark, the title seal,
-and the jutsu-scroll pieces of the command bar. Re-runnable and deterministic (the upload cache is
+"""RoNindo's own UI art (2026-11-23, the Naruto fork's UI identity): the title wordmark and the
+jutsu-scroll pieces of the command bar. Re-runnable and deterministic (the upload cache is
 content-hashed: unchanged renders are not uploaded again).
 
-  wordmark      "RONINDO" set in Shojumaru (Astigmatic, SIL Open Font License 1.1; the .ttf and its
-                licence are in tools/naruto/fonts/Shojumaru/), vermilion fill, gold inline, ink outline
-                and a soft ink shadow; 1024 px wide at most. Roblox does not let a game upload its own
-                font files (create.roblox.com/docs/projects/assets: "You cannot import fonts"), so the
-                name is an image.
-  seal          the round vermilion seal over the wordmark (title screen, rotate card): hand-made SVG.
+  wordmark      "RONINDO" set in Ninja Naruto (sk89q / The Risen Realm, 2004: free for personal and
+                commercial use, redistributed unmodified and free; the .ttf and its readme with the
+                licence are in tools/naruto/fonts/NinjaNaruto/), Naruto-logo orange, a cream edge, an ink
+                outline and a soft shadow (the owner's pick, 2026-11-23); 1024 px wide at most. Roblox
+                does not let a game upload its own font files (create.roblox.com/docs/projects/assets:
+                "You cannot import fonts"), so the name is an image.
   scroll_paper  9-slice paper body of the command bar (straight cut, aged top and bottom bands, a thin
                 vermilion rule along both long edges).
   scroll_roller 9-slice wooden roller with brass end knobs (stretches along the rod).
@@ -34,13 +34,9 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(ROOT, "assets", "naruto_ui")
 MANIFEST = os.path.join(ROOT, "src", "shared", "Assets", "NarutoUI.luau")
-FONT = os.path.join(ROOT, "tools", "naruto", "fonts", "Shojumaru", "Shojumaru-Regular.ttf")
+FONT = os.path.join(ROOT, "tools", "naruto", "fonts", "NinjaNaruto", "njnaruto.ttf")
 
 INK = (26, 18, 16)
-VERMILION = (226, 69, 38)
-VERMILION_DEEP = (170, 30, 20)
-GOLD = (246, 196, 83)
-GOLD_DEEP = (196, 136, 40)
 
 
 def bleed_edges(rgba8, iterations=24):
@@ -94,47 +90,59 @@ def dilate(mask, r):
     return m.point(lambda v: 255 if v > 96 else int(v * 255 / 96))
 
 
+def vgrad(w, h, stops):
+    """RGB image with a vertical gradient through `stops` [(t, (r, g, b)), ...]."""
+    y = np.linspace(0, 1, h)
+    out = np.zeros((h, 3))
+    for i in range(len(stops) - 1):
+        t0, c0 = stops[i]
+        t1, c1 = stops[i + 1]
+        sel = (y >= t0) & (y <= t1)
+        k = ((y[sel] - t0) / max(t1 - t0, 1e-6))[:, None]
+        out[sel] = np.array(c0) * (1 - k) + np.array(c1) * k
+    return Image.fromarray(np.repeat(out[:, None, :], w, 1).astype(np.uint8), "RGB")
+
+
+# 2026-11-23: the owner's pick, option A of build/options_wordmark.png: Naruto-logo orange, a cream edge
+# and an ink outline, over a soft shadow.
+ORANGE = [(0, (255, 186, 60)), (0.55, (247, 128, 22)), (1, (214, 74, 10))]
+CREAM = (255, 236, 200)
+
+
 def wordmark(text="RONINDO", out_w=1024):
     ss = 2  # supersampling
     size = 300 * ss
     font = ImageFont.truetype(FONT, size)
-    l, t, r, b = font.getbbox(text)
-    pad = 60 * ss
-    W, H = r - l + 2 * pad, b - t + 2 * pad
+    widths = [font.getlength(c) for c in text]
+    spacing = 12 * ss
+    asc, desc = font.getmetrics()
+    pad = 120 * ss
+    W = int(sum(widths) + spacing * (len(text) - 1) + 2 * pad)
+    H = int(asc + desc + 2 * pad)
     mask = Image.new("L", (W, H), 0)
-    ImageDraw.Draw(mask).text((pad - l, pad - t), text, font=font, fill=255)
-    ink_r, gold_r = 22 * ss, 9 * ss
-    ink = dilate(mask, ink_r)
-    gold = dilate(mask, gold_r)
-    # soft shadow under everything (reads over the bright parts of the animated map)
-    shadow = ink.filter(ImageFilter.GaussianBlur(14 * ss))
-    shadow = Image.fromarray((np.asarray(shadow, np.float32) * 0.75).astype(np.uint8), "L")
+    d = ImageDraw.Draw(mask)
+    x = pad
+    for c, w in zip(text, widths):
+        d.text((x, pad), c, font=font, fill=255)
+        x += w + spacing
     canvas = Image.new("RGBA", (W, H), INK + (0,))
 
-    def layer(m, rgb_img, dy=0):
-        rgba = rgb_img.convert("RGBA")
+    def layer(m, src):
+        rgba = (src if isinstance(src, Image.Image) else Image.new("RGB", (W, H), src)).convert("RGBA")
         rgba.putalpha(m)
-        canvas.alpha_composite(rgba, (0, dy))
+        canvas.alpha_composite(rgba)
 
-    layer(shadow, Image.new("RGB", (W, H), (8, 4, 4)), dy=10 * ss)
-    layer(ink, Image.new("RGB", (W, H), INK))
-    # gold inline: lighter on top, deeper below
-    y = np.linspace(0, 1, H)[:, None, None]
-    ys = np.clip((y - (pad / H)) / ((H - 2 * pad) / H), 0, 1)
-    g = (np.array(GOLD) * (1 - ys) + np.array(GOLD_DEEP) * ys).repeat(W, 1).astype(np.uint8)
-    layer(gold, Image.fromarray(g, "RGB"))
-    # vermilion fill: a warm top, deep bottom, with a brush-like lighter band across the upper third
-    top = np.array((246, 104, 50), np.float32)
-    mid = np.array(VERMILION, np.float32)
-    bot = np.array(VERMILION_DEEP, np.float32)
-    f = np.where(ys < 0.45, top * (1 - ys / 0.45) + mid * (ys / 0.45), mid * (1 - (ys - 0.45) / 0.55) + bot * ((ys - 0.45) / 0.55))
-    f = f.repeat(W, 1).astype(np.uint8)
-    layer(mask, Image.fromarray(f, "RGB"))
-    # a thin highlight along each glyph's top edge (mask minus itself shifted down)
-    hi = np.clip(np.asarray(mask, np.int16) - np.roll(np.asarray(mask, np.int16), 6 * ss, 0), 0, 255).astype(np.uint8)
-    hi_img = Image.fromarray(hi, "L").filter(ImageFilter.GaussianBlur(1.2 * ss))
-    hi_img = Image.fromarray((np.asarray(hi_img, np.float32) * 0.55).astype(np.uint8), "L")
-    layer(hi_img, Image.new("RGB", (W, H), (255, 214, 150)))
+    ink = dilate(mask, 32 * ss)
+    shadow = ink.filter(ImageFilter.GaussianBlur(16 * ss))
+    shadow = Image.fromarray(np.roll(np.asarray(shadow), 16 * ss, 0))
+    layer(shadow, (0, 0, 0))
+    layer(ink, INK)
+    layer(dilate(mask, 16 * ss), CREAM)
+    # the fill's gradient runs over the letters' own height
+    top, bot = mask.getbbox()[1], mask.getbbox()[3]
+    fill = Image.new("RGB", (W, H), ORANGE[-1][1])
+    fill.paste(vgrad(W, bot - top, ORANGE), (0, top))
+    layer(mask, fill)
     # trim to the visible pixels, then scale to out_w
     bbox = canvas.getchannel("A").point(lambda v: 255 if v > 6 else 0).getbbox()
     canvas = canvas.crop(bbox)
@@ -146,29 +154,6 @@ def wordmark(text="RONINDO", out_w=1024):
 # ---------------------------------------------------------------------------------------------------
 # Hand-made SVG pieces
 # ---------------------------------------------------------------------------------------------------
-
-SEAL_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <defs>
-    <radialGradient id="body" cx="45%" cy="38%" r="70%">
-      <stop offset="0" stop-color="#f0603a"/>
-      <stop offset="0.7" stop-color="#c82a1c"/>
-      <stop offset="1" stop-color="#9c1c14"/>
-    </radialGradient>
-  </defs>
-  <circle cx="128" cy="128" r="118" fill="#1a1210"/>
-  <circle cx="128" cy="128" r="110" fill="#f6c453"/>
-  <circle cx="128" cy="128" r="102" fill="url(#body)"/>
-  <circle cx="128" cy="128" r="88" fill="none" stroke="#f6c453" stroke-width="5" stroke-dasharray="14 9"/>
-  <!-- the swirl: one brush line winding in to the centre -->
-  <path d="M128 128 m0 -6 a6 6 0 1 1 -6 6 a12 12 0 0 1 12 -12 a18 18 0 0 1 18 18
-           a24 24 0 0 1 -24 24 a30 30 0 0 1 -30 -30 a36 36 0 0 1 36 -36 a42 42 0 0 1 42 42
-           a48 48 0 0 1 -30 44"
-        fill="none" stroke="#fff1d0" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- three tomoe-like ink dots -->
-  <circle cx="128" cy="40" r="7" fill="#1a1210"/>
-  <circle cx="204" cy="172" r="7" fill="#1a1210"/>
-  <circle cx="52" cy="172" r="7" fill="#1a1210"/>
-</svg>"""
 
 # Paper body: 128 x 96, slice centre (40, 30, 88, 66). Only straight horizontal and vertical features so
 # the 9-slice stretch never smears anything.
@@ -241,7 +226,6 @@ CARD_PAPER_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80">
 
 PIECES = {
     # key: (svg, px w, px h, slice centre in px or None)
-    "seal": (SEAL_SVG, 256, 256, None),
     "scroll_paper": (PAPER_SVG, 128, 96, (40, 30, 88, 66)),
     "scroll_roller": (ROLLER_SVG, 40, 160, (0, 44, 40, 116)),
     "card_frame": (CARD_FRAME_SVG, 64, 80, (16, 16, 48, 64)),
@@ -265,7 +249,7 @@ def render_all():
 def write_manifest(ids, meta):
     lines = [
         "-- GENERATED by tools/naruto/make_naruto_ui_art.py — do not edit by hand.",
-        "-- RoNindo's own UI art: the title wordmark (Shojumaru, SIL OFL 1.1), the title seal and the",
+        "-- RoNindo's own UI art: the title wordmark (Ninja Naruto font, free licence) and the",
         "-- command bar's jutsu-scroll pieces. size = { w, h } px; slice = its 9-slice centre",
         "-- { left, top, right, bottom } px (ScaleType.Slice SliceCenter). Read through UITheme.naruto_ui().",
         "return {",

@@ -9,9 +9,34 @@ instance names ("Airfront", "RofrontMap"...), DataStore keys, product ids, analy
 
 | Old | New | Where |
 |---|---|---|
-| RoWorld / ROWORLD | Shinobi World / SHINOBI WORLD | `Data/Brand.luau` (`Brand.NAME`, the one place to rename it): title wordmark, RotateCard, General button, General window, `Subscription.NAME` |
-| RoWorld General | Shinobi World General | GeneralOffer title, `Subscription.NAME` |
+| RoWorld / ROWORLD | RoNindo / RONINDO (2026-11-23; it was "Shinobi World" for a day, now the map's name only) | `Data/Brand.luau` (`Brand.NAME`, the one place to rename it): RotateCard text, General button, General window, `Subscription.NAME`, credits |
+| RoWorld General | RoNindo General | GeneralOffer title, `Subscription.NAME` |
 | CONQUER THE REAL WORLD | CONQUER THE SHINOBI WORLD | title tagline |
+| ROWORLD wordmark (letter-spaced Rubik text) | RONINDO wordmark image | TitleScreen (`WordImage`), RotateCard; `Assets/NarutoUI.wordmark`, made by `tools/naruto/make_naruto_ui_art.py` |
+
+The wordmark is an image because Roblox games cannot upload their own font files (Creator docs, Assets:
+"You cannot import fonts"). Its typeface is **Ninja Naruto** by sk89q (© 2004 The Risen Realm and Keiichi
+Anime Forever): free for personal and commercial use, redistributable unmodified and free of charge. The
+.ttf and its readme (the licence) are in `tools/naruto/fonts/NinjaNaruto/`; the credit is in HelpOverlay
+`LEGAL`. The owner picked it from an option sheet on 2026-11-23 (orange fill, cream edge, ink outline).
+Note: the face imitates the Naruto anime logo lettering (Shueisha's), so it is a fan-game look, not a
+licensed one.
+
+## Wording
+
+| Old | New | Where |
+|---|---|---|
+| Welcome, Commander X | Welcome back, X (subscribers: "Welcome back, General X") | TitleScreen greeting |
+| commander(s) | shinobi | lobby status ("N shinobi · in progress"), waiting room, spawn overlay ("N / M shinobi placed", "SHINOBI ARE GATHERING"), game over |
+| DEPLOYING… / Deploying a new world… | GATHERING… / Preparing a new world… | solo START, PLAY AGAIN, busy chip |
+| DEPLOYING IN N | STARTING IN N | spawn overlay |
+
+## Maps
+
+Only the Naruto map ("Shinobi World", id `world`) is listed (`tools/maps/make_maps.py` `LISTED`); the
+real-world maps' rows are in `MapList.retired` and their modules stay in `src/server/MapData`. With one
+map the title has no map button, the map picker no tabs, and the public free-for-all card is titled with
+the map (no "Next:"); World's own public-match card is folded into it.
 
 The credits keep every OpenFront and RoWorld notice; the Shinobi World notices are added after them
 (HelpOverlay `LEGAL`). The help window's Source button points at `Ashbborn/roworld-naruto`.

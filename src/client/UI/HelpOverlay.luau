@@ -270,6 +270,8 @@ HelpOverlay.LEGAL = {
 		.. " is free software under the same licence (GNU AGPL v3), with ABSOLUTELY NO WARRANTY.",
 	"World map based on Narutopedia's Naruto World Map (CC BY-SA 3.0).",
 	"Naruto © Masashi Kishimoto / Shueisha. " .. Brand.NAME .. " is an unofficial fan game.",
+	-- (2026-11-23: the title wordmark's typeface, as its licence asks)
+	"Title lettering: Ninja Naruto font by sk89q, © 2004 The Risen Realm and Keiichi Anime Forever, free for personal and commercial use.",
 }
 --- Where the source lives, under the credits: plain text with the GitHub mark, since Roblox games
 --- can't link off-platform (2026-10-25: "Source <github logo> <repo>" at the bottom; the public repo is
