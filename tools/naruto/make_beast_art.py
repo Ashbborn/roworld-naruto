@@ -10,11 +10,16 @@ twice, as the white mask the game tints and as a full-colour, cel-shaded portrai
   members            128 px bust masks (shadow figures with glowing eyes): tools/naruto/members/<name>.py
   members_color      256 px colour busts
 
-Out: assets/beast_art/*.png and, with --upload (tools/upload.py -> Open Cloud on Windows,
-content-hash cached), src/shared/Assets/BeastArt.luau. --sheet writes the review sheets
+RETIRED 11-23: the game's art is now generated from the official references and picked by the owner
+(tools/naruto/ai_art.py; its `wire` command writes assets/beast_art/ and src/shared/Assets/BeastArt.luau).
+This script renders into build/beast_art_svg/ so it cannot overwrite that art, and --upload (which would
+replace BeastArt.luau with these drawings) is refused unless --replace-ai-art is given too.
+
+Out: build/beast_art_svg/*.png and, with --upload --replace-ai-art (tools/upload.py -> Open Cloud on
+Windows, content-hash cached), src/shared/Assets/BeastArt.luau. --sheet writes the review sheets
 (tools/naruto/make_r2_sheets.py).
 
-Usage: python tools/naruto/make_beast_art.py [--sheet] [--upload]
+Usage: python tools/naruto/make_beast_art.py [--sheet] [--upload --replace-ai-art]
 """
 import argparse
 import importlib.util
@@ -27,7 +32,7 @@ import akatsuki_cloud  # noqa: E402
 import beastkit as bk  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(HERE))
-OUT = os.path.join(ROOT, "assets", "beast_art")
+OUT = os.path.join(ROOT, "build", "beast_art_svg")  # retired: the game's art is assets/beast_art (ai_art.py)
 MANIFEST = os.path.join(ROOT, "src", "shared", "Assets", "BeastArt.luau")
 BEAST_PX = 256
 PORTRAIT_PX = 512
@@ -140,7 +145,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sheet", action="store_true")
     ap.add_argument("--upload", action="store_true")
+    ap.add_argument("--replace-ai-art", action="store_true",
+                    help="with --upload: replace the picked AI art in BeastArt.luau with these drawings")
     args = ap.parse_args()
+    if args.upload and not args.replace_ai_art:
+        ap.error("BeastArt.luau holds the owner's picked AI art (tools/naruto/ai_art.py wire); "
+                 "--upload would replace it: add --replace-ai-art if that is really wanted")
     out = render_all()
     print("wrote", len(out), "->", os.path.relpath(OUT, ROOT))
     if args.sheet:

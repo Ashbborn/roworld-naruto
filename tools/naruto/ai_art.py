@@ -121,9 +121,12 @@ SUBJECTS = {
               "clouds worn open on his bare chest, a silver circle pendant with a triangle inside, a large red "
               "three-bladed scythe over his shoulder", "eyes, the scythe blades, the pendant", GREEN),
     "kakuzu": ("member", "kakuzu", [2], "character",
-               "A menacing masked man: a dark hood over his head, a forehead protector with a scratched metal plate "
-               "over the hood, a dark cloth mask over his nose and mouth, green irises on red sclera, a black "
-               "high-collared cloak with red clouds and a red collar lining",
+               "A menacing masked man with a stitched-together body: a pale grey cowl wrapping the sides of his head "
+               "and his neck, a dark grey hood-cap over the top of his head, across his brow the Takigakure forehead "
+               "protector, a wide dark band with a scratched metal plate showing the village's waterfall symbol, a "
+               "dark grey cloth mask over his nose and mouth ending in a point at the chin, intense green irises on "
+               "blood-red sclera, a few black threads with stitches writhing from the edge of his collar, the black "
+               "high-collared Akatsuki cloak with red clouds and a red collar lining",
                "eyes, the mask, the forehead-protector plate", MAGENTA),
     "pain": ("member", "pain", [1], "character",
              "A stern young man with spiky orange hair, pale purple eyes patterned with concentric rings, black "
@@ -239,11 +242,19 @@ ICON_REDO = {
               "Head and shoulders: his hair slicked straight back from the forehead, the cloak's high collar, and "
               "his huge three-bladed scythe held upright beside him, its three long curved blades fanned out big "
               "and clear above his shoulder; the scythe is as large and readable as his head.", "1:1"),
-    "kakuzu": ([2], "the eye slit, a few stitch marks",
-               "Head and shoulders of a hooded man: a hood with a softly peaked top, a cloth mask covering his nose "
-               "and mouth as part of the same solid head shape, his eyes showing through one narrow slit between the "
-               "hood and the mask, a clear neck and the cloak's high collar on broad shoulders, and a few thin "
-               "thread tendrils writhing out from his shoulders.", "1:1"),
+    # round 1 and redo 1 read as a generic hooded figure (the owner, 11-23: "all options are bad"). Redo 2: the
+    # forehead protector at the brow, the eyes, the pointed mask, the stitched threads; its first draw put the
+    # Leaf village's mark on the plate (kept in kakuzu/redo2_leaf_mark), so the plate itself goes along as
+    # reference 3 (a crop of 2.png) and the mark is spelt out
+    "kakuzu": ([2, 3], "the eyes, the forehead-protector band and its plate mark, the mask's edge, a few stitch marks",
+               "Head and shoulders, front view: the rounded hood over his head; across his brow the forehead-protector "
+               "band, wide and bold, outlined in black, its metal plate carrying the Hidden Waterfall village's mark "
+               "exactly as engraved on the plate in @img2: two short vertical strokes, each ending in a small "
+               "downward hook, crossed by one long horizontal scratch, as thin black cut-out lines; his two eyes as "
+               "bright cut-outs in the narrow gap between the band and the cloth mask; the mask covering his nose and "
+               "mouth as one solid shape ending in a point at the chin, its edge marked by a thin black line; the "
+               "cloak's tall collar on broad shoulders; two or three thin thread tendrils with small stitch marks "
+               "writhing out from his shoulders.", "1:1"),
 }
 ICON_REDO_T = ("A minimalist flat icon of the {noun} in {tags}: a single solid white silhouette on a pure black "
                "background, bold simple shapes, only a few negative-space cut-outs for the key features ({features}), "
@@ -325,6 +336,31 @@ def gen(subjects, kinds, n, redo=False, variant=None):
 # post: key the portraits out, clean the icons into masks
 # ---------------------------------------------------------------------------------------------------
 
+def _hsv(a):
+    """Hue (degrees), saturation and value (0..255) of an (..., 3) float RGB array."""
+    mx = a.max(axis=-1)
+    c = mx - a.min(axis=-1)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        h = np.where(mx == r, (g - b) / c, np.where(mx == g, 2 + (b - r) / c, 4 + (r - g) / c))
+    return np.nan_to_num(h * 60) % 360, np.where(mx > 0, c / np.maximum(mx, 1e-6), 0), mx
+
+
+def key_shades(a, key, outside, window=12, erode=2):
+    """The background the model shaded darker: in narrow gaps (Chomei A: a strip between a wing and its vein)
+    and along outlines and bubble rims. Regions of the key's own hue (within `window` degrees, saturated),
+    touching the background and thick somewhere (they survive `erode` erosions), are background too; thin
+    ones are an outline's anti-aliasing, which the unmixing in key_out handles. A hue test over the whole
+    picture also ate dark reds and bubble colours, so it is confined to these regions."""
+    h, sat, v = _hsv(a)
+    kh, _, kv = _hsv(key[None, None, :].astype(np.float64))
+    dh = np.abs((h - kh[0, 0] + 180) % 360 - 180)
+    shade = (dh < window) & (sat > 0.45) & (v > 0.25 * kv[0, 0]) & ~outside
+    touching = ndimage.binary_propagation(ndimage.binary_dilation(outside) & shade, mask=shade)
+    seed = touching & ndimage.binary_erosion(shade, iterations=erode)
+    return ndimage.binary_propagation(seed, mask=shade)
+
+
 def key_out(im, hexc):
     """Flat-colour background -> alpha, with the key colour removed from the edge pixels."""
     a = np.asarray(im.convert("RGB")).astype(np.float64)
@@ -340,6 +376,7 @@ def key_out(im, hexc):
     # every key-coloured region is background, the enclosed pockets too (gaps between tails, holes in sucker
     # rings): the key colours were chosen to be absent from each subject
     outside = d < 60
+    outside |= key_shades(a, key, outside)
     near = ndimage.binary_dilation(outside, iterations=3)
     alpha = np.where(outside, 0.0, np.where(near, alpha, 1.0))
     # unmix: remove the key colour from the semi-transparent edge pixels
@@ -585,10 +622,11 @@ PICKS = {
     "konan": ("B", "owner's pick"),
     "tobi": ("A", "owner's pick"),
     "zetsu": ("A", "owner's pick"),
-    "isobu": ("redo", "round 3: front three-quarter, the shell's spikes as a crown, one eye, three spiked tails "
-                      "(B D: head and eye drawn bigger so the eye survives at 32 px)"),
-    "son_goku": ("redo", "round 3: the gorilla with its horn, four tails, open mouth (A B upright, C D knuckle-walking)"),
-    "kakuzu": ("redo", "redo candidates, not judged yet: hood, mask, eye slit, thread tendrils"),
+    "isobu": ("B", "owner's pick (round 3 B), redrawn from the same brief until it showed three tails; the "
+                   "two-tail draw is in isobu/r3_b_2tails (build/ai_isobu_b_compare.png)"),
+    "son_goku": ("A", "owner's pick (round 3 A: upright, horn, four tails, open mouth)"),
+    "kakuzu": ("redo", "redo 2 (build/ai_pick_kakuzu.png): the Takigakure plate, green-on-red eyes, pointed mask, "
+                       "threads; not picked yet"),
 }
 FINAL_ROWS = BEASTS + ["akatsuki", "itachi", "kisame", "deidara", "sasori_face", "sasori_hiruko", "hidan", "kakuzu",
                        "pain", "konan", "tobi", "zetsu"]
@@ -695,7 +733,7 @@ R3_REDO = [("isobu", "ABCD"), ("son_goku", "ABCD"), ("kakuzu", "ABC")]
 #: checked on the raws and at 48 / 32 / 24 px (11-23): misses against the brief, in red beside the letter
 ICON_NOTES = {
     "isobu/icon_A": "the eye is lost at 32 px",
-    "isobu/icon_B": "2 tails read, not 3",
+    "isobu/icon_B": "3 tails (the redraw); the eye is faint at 24 px",
     "isobu/icon_C": "the eye is lost at 32 px",
     "son_goku/icon_A": "goes spidery at 24 px",
     "son_goku/icon_B": "goes spidery at 24 px",
@@ -843,6 +881,212 @@ def r3_sheet(out=None):
     return out
 
 
+def subject_sheet(s, title, out=None):
+    """build/ai_pick_<subject>.png: one subject's redo, icons (96 / 48 / 32 / 24 px and 32 px on a territory
+    tile) and colour portraits (cut out, on the dark panel), with the references they were drawn from."""
+    out = out or os.path.join(BUILD, f"ai_pick_{s}.png")
+    try:
+        with open(os.path.join(OUT, "clipped.json"), encoding="utf-8") as fh:
+            clip = json.load(fh)
+    except OSError:
+        clip = {}
+    PW = 300
+    W, H = 20 + 3 * (PW + 30) + 300, 620
+    sheet = Image.new("RGBA", (W, H), BG + (255,))
+    d = ImageDraw.Draw(sheet)
+    d.text((20, 12), title, fill=TEXT, font=font(22))
+    d.text((20, 44), "ICONS: 96 px, then 48 / 32 / 24 px at real size, then 32 px on a territory tile.   "
+                     "PORTRAITS: cut out, on the game's dark panel.   Pick by letter.", fill=SUB, font=font(14))
+    x, y = 20, 80
+    refs = sorted({*ICON_REDO[s][0], *SUBJECTS[s][2]}) if s in ICON_REDO else SUBJECTS[s][2]
+    for i in refs:
+        rp = os.path.join(REFS, SUBJECTS[s][1], f"{i}.png")
+        if os.path.exists(rp):
+            r = Image.open(rp).convert("RGBA")
+            r.thumbnail((260, 150))
+            sheet.alpha_composite(r, (x, y))
+            y += r.height + 8
+    d.text((20, y), "references", fill=SUB, font=font(13))
+    tc = territory_colours(5)[2]
+    x0 = 320
+    for k, L in enumerate("ABC"):
+        x = x0 + k * (PW + 30)
+        p = os.path.join(OUT, s, f"mask_{L}.png")
+        im = Image.open(p).convert("RGBA") if os.path.exists(p) else None
+        sheet.alpha_composite(tile(DARK, im, 96), (x, 80))
+        sheet.alpha_composite(tile(DARK, im, 48), (x + 102, 128))
+        sheet.alpha_composite(tile(DARK, im, 32), (x + 156, 144))
+        sheet.alpha_composite(tile(DARK, im, 24), (x + 194, 152))
+        sheet.alpha_composite(terr_tile(im, 32, tc), (x + 224, 144))
+        d.text((x, 182), f"ICON {L}" if im else f"{L}: missing", fill=TEXT, font=font(15))
+        p = os.path.join(OUT, s, f"portrait_{L}_cut.png")
+        im = Image.open(p).convert("RGBA") if os.path.exists(p) else None
+        sheet.alpha_composite(tile(PANEL, im, PW), (x, 220))
+        d.text((x + 8, 226), f"PORTRAIT {L}", fill=TEXT, font=font(15))
+        c = clip.get(f"{s}/portrait_{L}")
+        if c:
+            d.text((x, 220 + PW + 6), "; ".join(CLIP_NOTE[q] for q in c), fill=RED_NOTE, font=font(13))
+    sheet.save(out)
+    print(out, sheet.size)
+    return out
+
+
+# ---------------------------------------------------------------------------------------------------
+# wire: the owner's picks -> assets/beast_art/ -> Roblox (tools/upload.py) -> src/shared/Assets/BeastArt.luau
+# ---------------------------------------------------------------------------------------------------
+
+#: the owner's picks (11-23): subject -> (icon letter, portrait letter). Isobu's icon B is the third draw of
+#: its round-3 B design (three tails; the two-tail B is in isobu/r3_b_2tails)
+WIRED = {
+    "shukaku": ("C", "C"), "matatabi": ("A", "A"), "isobu": ("B", "B"), "son_goku": ("A", "A"),
+    "kokuo": ("A", "A"), "saiken": ("B", "A"), "chomei": ("C", "A"), "gyuki": ("A", "A"), "kurama": ("A", "B"),
+    "akatsuki": ("B", "A"),
+    "itachi": ("B", "C"), "kisame": ("A", "A"), "deidara": ("A", "B"), "sasori_face": ("A", "B"),
+    "hidan": ("B", "C"), "pain": ("C", "B"), "konan": ("B", "C"), "tobi": ("A", "A"), "zetsu": ("A", "C"),
+}
+MEMBER_KEYS = ["itachi", "kisame", "deidara", "sasori", "hidan", "kakuzu", "pain", "konan", "tobi", "zetsu"]
+#: members whose art waits for a pick: they keep the asset they have in game (Kakuzu: the redo of 11-23)
+KEEP_MEMBER = {"kakuzu": "rbxassetid://82883615691976"}
+ART = os.path.join(ROOT, "assets", "beast_art")
+BEASTART = os.path.join(ROOT, "src", "shared", "Assets", "BeastArt.luau")
+
+
+def _member_key(s):
+    return "sasori" if s == "sasori_face" else s
+
+
+def for_roblox(im, mask):
+    """The colour under the transparent pixels, which Roblox filters with straight alpha: black there (what
+    fit_square leaves) leaks into the edges as a dark rim when an image is drawn smaller than its size. A mask
+    is white everywhere (only its alpha matters, the game tints it); a colour cut-out's transparent pixels
+    take the colour of the nearest solid pixel."""
+    a = np.asarray(im.convert("RGBA")).copy()
+    if mask:
+        a[..., :3] = 255
+        return Image.fromarray(a, "RGBA")
+    solid = a[..., 3] >= 128
+    if solid.any():
+        iy, ix = ndimage.distance_transform_edt(~solid, return_distances=False, return_indices=True)
+        clear = a[..., 3] == 0
+        a[..., :3][clear] = a[iy[clear], ix[clear], :3]
+    return Image.fromarray(a, "RGBA")
+
+
+def wire_files():
+    """The picked images under their game names in assets/beast_art/: {key: path}. Masks: beasts and the
+    cloud 256 px, members 128 px; colour cut-outs: beasts and the cloud 512 px, members 256 px."""
+    os.makedirs(ART, exist_ok=True)
+    out = {}
+    off = [s for s in WIRED if s in PICKS and PICKS[s][0] != WIRED[s][0]]
+    assert not off, f"PICKS and WIRED disagree on the icon of {off}"
+
+    def put(key, src, fname, px):
+        im = Image.open(os.path.join(OUT, *src)).convert("RGBA")
+        assert im.size == (px, px), (src, im.size, px)
+        dst = os.path.join(ART, fname)
+        for_roblox(im, src[-1].startswith("mask_")).save(dst, optimize=True)
+        out[key] = dst
+
+    for s in BEASTS:
+        i, po = WIRED[s]
+        put("beast_" + s, (s, f"mask_{i}.png"), f"beast_{s}.png", 256)
+        put("portrait_" + s, (s, f"portrait_{po}_cut.png"), f"portrait_{s}.png", 512)
+    i, po = WIRED["akatsuki"]
+    put("akatsuki", ("akatsuki", f"mask_{i}.png"), "akatsuki.png", 256)
+    put("akatsuki_color", ("akatsuki", f"portrait_{po}_cut.png"), "akatsuki_color.png", 512)
+    for s, (i, po) in WIRED.items():
+        if SUBJECTS[s][0] != "member":
+            continue
+        k = _member_key(s)
+        put("member_" + k, (s, f"mask_{i}.png"), f"member_{k}.png", 128)
+        put("member_color_" + k, (s, f"portrait_{po}_cut.png"), f"member_color_{k}.png", 256)
+    return out
+
+
+def write_beastart(ids):
+    L = [
+        "-- GENERATED by tools/naruto/ai_art.py wire: do not edit by hand.",
+        "-- Generated with ai33 image-v3 from the official references, one style; the owner picked every image",
+        "-- (11-23). Masks are white: tint them with ImageColor3. The *_color / portraits images are full colour",
+        "-- cut-outs (transparent): do not tint them.",
+        "return {",
+        "\t--- the nine tailed beasts, index = tail count, 256 px white masks: " + ", ".join(BEASTS),
+        "\tbeasts = {",
+    ]
+    L += [f'\t\t"{ids["beast_" + s]}", -- {i} {s}' for i, s in enumerate(BEASTS, 1)]
+    L += ["\t},", "\t--- the same beasts as full-colour portraits, 512 px cut-outs", "\tportraits = {"]
+    L += [f'\t\t"{ids["portrait_" + s]}", -- {i} {s}' for i, s in enumerate(BEASTS, 1)]
+    L += [
+        "\t},",
+        "\t--- the Akatsuki cloud emblem, 256 px white mask (the game tints it red)",
+        f'\takatsuki = "{ids["akatsuki"]}",',
+        "\t--- the emblem in its own colours (red, white border and curls), 512 px cut-out",
+        f'\takatsuki_color = "{ids["akatsuki_color"]}",',
+        "\t--- the Akatsuki members' busts, 128 px white masks",
+        "\tmembers = {",
+    ]
+    for k in MEMBER_KEYS:
+        if k in KEEP_MEMBER:
+            L.append(f'\t\t{k} = "{KEEP_MEMBER[k]}", -- the round-1 mask until the redo is picked')
+        else:
+            L.append(f'\t\t{k} = "{ids["member_" + k]}",')
+    L += ["\t},", "\t--- the same busts in colour, 256 px cut-outs (a member without one is left out)",
+          "\tmembers_color = {"]
+    for k in MEMBER_KEYS:
+        if k in KEEP_MEMBER:
+            L.append(f"\t\t-- {k}: none until the redo is picked")
+        else:
+            L.append(f'\t\t{k} = "{ids["member_color_" + k]}",')
+    L += ["\t},", "}"]
+    with open(BEASTART, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write("\n".join(L) + "\n")
+    return BEASTART
+
+
+def wire():
+    """assets/beast_art/ from the picks, uploaded (content-hash cached: unchanged bytes are not uploaded
+    again), BeastArt.luau written; build/ai_wired.json records key -> file -> asset id."""
+    files = wire_files()
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import upload as up  # Open Cloud on Windows (tools/naruto/upload_oc.py)
+    res = up.upload_images(list(files.values()))
+    ids = {k: res[p] for k, p in files.items()}
+    write_beastart(ids)
+    rec = {k: {"file": os.path.relpath(files[k], ROOT).replace("\\", "/"), "id": ids[k]} for k in files}
+    with open(os.path.join(BUILD, "ai_wired.json"), "w", encoding="utf-8") as fh:
+        json.dump({"picks": WIRED, "keep": KEEP_MEMBER, "assets": rec}, fh, indent=1)
+    print(f"wired {len(ids)} images -> {os.path.relpath(BEASTART, ROOT)}")
+    return ids
+
+
+def moderation(ids=None):
+    """Each wired asset's moderation state (Open Cloud GET assets/v1/assets/{id}): an image renders blank in
+    game until it is Approved."""
+    import urllib.request
+    sys.path.insert(0, HERE)
+    import upload_oc
+    if ids is None:
+        with open(os.path.join(BUILD, "ai_wired.json"), encoding="utf-8") as fh:
+            ids = {k: v["id"] for k, v in json.load(fh)["assets"].items()}
+    cfg = upload_oc._env()
+    states = {}
+    for k, uri in ids.items():
+        aid = uri.rsplit("/", 1)[-1]
+        req = urllib.request.Request(f"{upload_oc.API}/assets/{aid}",
+                                     headers={"x-api-key": cfg["ROBLOX_API_KEY"]})
+        try:
+            r = json.loads(urllib.request.urlopen(req, timeout=30).read())
+            states[k] = (r.get("moderationResult") or {}).get("moderationState", "?")
+        except Exception as e:  # noqa: BLE001 - reported per asset
+            states[k] = f"error {str(e)[:60]}"
+    tally = {}
+    for k, st in states.items():
+        tally.setdefault(st, []).append(k)
+    for st, ks in sorted(tally.items()):
+        print(f"{st}: {len(ks)}" + ("" if st == "Approved" else "  " + ", ".join(sorted(ks))))
+    return states
+
+
 #: the game's colours (main: src/shared/Data/Beasts.luau, src/client/UI/AkatsukiPanel.luau)
 BEAST_COL = ["#c9a66b", "#3a6fd8", "#2a9d9a", "#c8312b", "#eceae4", "#9fc79a", "#9be02f", "#7b4fb0", "#f08a1c"]
 GAME_BG = (8, 10, 20)  # Color3.new(0.03, 0.04, 0.08)
@@ -913,7 +1157,8 @@ def tint_check(out=None):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["gen", "post", "sheets", "prompts", "tints", "final", "r3"])
+    ap.add_argument("cmd", choices=["gen", "post", "sheets", "prompts", "tints", "final", "r3", "one", "wire",
+                                    "moderation"])
     ap.add_argument("--only")
     ap.add_argument("--kinds", default="portrait,icon")
     ap.add_argument("--n", type=int, default=3)
@@ -933,6 +1178,13 @@ def main():
         final_sheet()
     elif a.cmd == "r3":
         r3_sheet()
+    elif a.cmd == "wire":  # the picks -> assets/beast_art -> upload -> BeastArt.luau
+        wire()
+    elif a.cmd == "moderation":
+        moderation()
+    elif a.cmd == "one":  # build/ai_pick_<subject>.png for each --only subject
+        for s in subjects:
+            subject_sheet(s, f"{s}: redo, icons and colour portraits (pick by letter)")
     else:
         for s in subjects:
             redo = a.redo and s in ICON_REDO

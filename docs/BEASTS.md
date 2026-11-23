@@ -117,6 +117,14 @@ Names, colours and every player-visible string are in `src/shared/Data/Beasts.lu
   - `UnitLayer._beast_rings`: stir marker and countdown
   - `TopStatus._refresh_beasts`: the "Beasts: ..." line under your share
   - toasts arrive as ordinary Sim messages
+- Art: `src/shared/Assets/BeastArt.luau`, written by `tools/naruto/ai_art.py wire` from the owner's
+  picks (ai33 image-v3, drawn from official references, one style). The files are in
+  `assets/beast_art/`.
+  - `beasts[tails]`: 256 px white masks that the game tints (`BeastIcon.beast`).
+  - `portraits[tails]`: 512 px full-colour cut-outs for the awakening and capture banners. Nothing
+    reads them yet.
+  - An image renders blank until Roblox moderation approves it. `ai_art.py moderation` lists each
+    image's state.
 
 ### API (for Akatsuki)
 
