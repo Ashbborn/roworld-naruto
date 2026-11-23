@@ -2248,6 +2248,7 @@ function Label._redraw(self)
 			end
 			g.TextColor3 = c3
 			self:_part(g, "TextTransparency", a)
+			self:_edge_inst(g)
 			g.Visible = true
 		end
 		for i = #chars + 1, #self._glyphs do
@@ -2289,7 +2290,28 @@ function Label._redraw(self)
 	tl.Position = UDim2.fromOffset(0, y0)
 	tl.TextColor3 = c3
 	self:_part(tl, "TextTransparency", a)
+	self:_edge_inst(tl)
 	self:_render_shadows(sh, ts, font)
+end
+
+--- An outlined label (2026-11-23, RoNindo: `label.edge = color` for the Ryo number on the cream bar):
+--- a 1 px UIStroke on each text instance, made once and kept (no per-frame churn while digits roll).
+function Label._edge_inst(self, inst: TextLabel)
+	local st = inst:FindFirstChild("Edge")
+	if self.edge ~= nil then
+		if st == nil then
+			st = Instance.new("UIStroke")
+			st.Name = "Edge"
+			st.LineJoinMode = Enum.LineJoinMode.Round
+			st.Parent = inst
+		end
+		st.Color = UITheme.color3(self.edge)
+		st.Thickness = math.max(1, math.floor(UITheme.scale + 0.5))
+		self:_part(st, "Transparency", UITheme.alpha(self.edge))
+	elseif st ~= nil then
+		self:_drop_part(st)
+		st:Destroy()
+	end
 end
 
 function Label._render_shadows(self, sh, ts: number, font)

@@ -1414,7 +1414,9 @@ function UITheme.scroll(): any
 		RED = Color3.fromRGB(196, 30, 36),
 		ORANGE = Color3.fromRGB(184, 82, 14),
 		VIOLET = Color3.fromRGB(96, 62, 150),
-		GOLD = Color3.fromRGB(168, 116, 16), -- #A87410: Ryo and costs, a plain gold that reads on the cream
+		GOLD = Color3.fromRGB(168, 116, 16), -- #A87410: affordable costs, a dark gold that reads on the cream
+		RYO = Color3.fromRGB(232, 176, 32), -- #E8B020: the Ryo number and icon, bright plain gold
+		RYO_EDGE = Color3.fromRGB(128, 84, 6), -- its 1 px darker-gold outline (the cream is light)
 		INK = UITheme.CREAM,
 	}
 	function P.label(text: string, size: number?, weight: number?, color: any?, spacing: number?): any
