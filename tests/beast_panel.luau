@@ -110,13 +110,19 @@ expect(BeastIcon.source("akatsuki") == "colour" and img(emb).Image == Art.akatsu
 local bi = BeastIcon.bust(nil, "itachi", 64, red)
 expect(img(bi).Image == Art.members_color.itachi and img(bi).Name == "Colour", "a member's colour bust")
 local bk = BeastIcon.bust(nil, "kakuzu", 64, red)
-expect(BeastIcon.source("member", "kakuzu") == "mask" and img(bk).Image == Art.members.kakuzu and img(bk).ImageColor3 == red, "Kakuzu (no colour bust yet): his tinted mask")
+expect(img(bk).Image == Art.members_color.kakuzu and img(bk).Name == "Colour", "Kakuzu's colour bust")
+-- a member without a colour bust falls back to his tinted mask
+local saved = Art.members_color.kakuzu
+Art.members_color.kakuzu = nil
+local bkm = BeastIcon.bust(nil, "kakuzu", 64, red)
+expect(BeastIcon.source("member", "kakuzu") == "mask" and img(bkm).Image == Art.members.kakuzu and img(bkm).ImageColor3 == red, "no colour bust: the tinted mask")
 local bg = BeastIcon.bust(nil, "pain", 64, red, nil, true)
 expect(img(bg).Name == "Colour" and img(bg).ImageColor3 ~= Color3.new(1, 1, 1) and img(bg).ImageTransparency > 0, "a fallen member's bust: greyed")
 BeastIcon.tint(bg, red, 0)
 expect(img(bg).ImageColor3 ~= red and img(bg).ImageColor3 ~= Color3.new(1, 1, 1), "and it stays grey through tint()")
 local bkg = BeastIcon.bust(nil, "kakuzu", 64, red, nil, true)
 expect(img(bkg).ImageColor3 ~= red, "a greyed mask is grey, not red")
+Art.members_color.kakuzu = saved
 -- the panel's card picture
 local card = Instance.new("Frame")
 local cp = BeastPanel.card_picture(card, 4, 46, 58, red)

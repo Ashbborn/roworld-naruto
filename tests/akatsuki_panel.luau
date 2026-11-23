@@ -188,14 +188,14 @@ end
 step(2)
 s = AkatsukiPanel.summary(gs, gs.tick)
 expect(s ~= nil and s.cells_alive == 0 and not s.barrier_up, "cells 0/4, barrier down")
--- a destroyed cell's banner: its busts greyed (Kakuzu has no colour bust yet: his mask, grey)
+-- a destroyed cell's banner: its busts greyed
 local dname, dwho = AkatsukiPanel.cell_who(gs, sim.aka_members[3].id)
 expect(gs.akatsuki.members[sim.aka_members[3].id].alive == false and dname == "Hidan & Kakuzu", "(the third cell is down: Hidan & Kakuzu)")
 local ds = BeastSplash.make({ vp = Vector2.new(640, 360), compact = true, fit_canvas = function() end }, 0, Color3.new(1, 0, 0), "members", { who = dwho, grey = true })
 local h = ds._pics[1]:FindFirstChildOfClass("ImageLabel")
 local k = ds._pics[2]:FindFirstChildOfClass("ImageLabel")
 expect(h.Name == "Colour" and h.ImageColor3 ~= Color3.new(1, 1, 1), "Hidan's colour bust, greyed")
-expect(k.Name == "Art" and k.Image == Art.members.kakuzu and k.ImageColor3 ~= Color3.new(1, 0, 0), "Kakuzu's mask, grey (no colour bust yet)")
+expect(k.Name == "Colour" and k.Image == Art.members_color.kakuzu and k.ImageColor3 ~= Color3.new(1, 1, 1), "Kakuzu's colour bust, greyed")
 expect(string.format(AkatsukiData.TEXT.member_banner, string.upper(dname)) == "HIDAN & KAKUZU DESTROYED", "titled HIDAN & KAKUZU DESTROYED")
 expect(string.find(AkatsukiPanel.status_text(s), AkatsukiData.TEXT.widget_barrier_down, 1, true) ~= nil, "status: " .. AkatsukiPanel.status_text(s))
 
