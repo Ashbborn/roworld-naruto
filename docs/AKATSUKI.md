@@ -207,6 +207,11 @@ Its name, colours and every player-visible string are in `src/shared/Data/Akatsu
     `UIRoot` lays the alert and the toasts out under it (`AkatsukiPanel.bottom_edge`)
   - `GameOver._copy`: the end screen
   - toasts arrive as ordinary Sim messages
+- Art: `src/shared/Assets/BeastArt.luau` (see docs/BEASTS.md).
+  - `akatsuki`: the cloud as a 256 px white mask, tinted red. `akatsuki_color`: the cloud in its own
+    colours, 512 px.
+  - `members[key]`: 128 px white bust masks (`BeastIcon.member_image`). `members_color[key]`: 256 px
+    colour busts. All ten members have both. Nothing reads `members_color` yet.
 
 ### API
 

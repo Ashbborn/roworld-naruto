@@ -38,7 +38,7 @@ return {
 		deidara = "rbxassetid://129908288254752",
 		sasori = "rbxassetid://136293969672644",
 		hidan = "rbxassetid://101881240975555",
-		kakuzu = "rbxassetid://82883615691976", -- the round-1 mask until the redo is picked
+		kakuzu = "rbxassetid://109710191164417",
 		pain = "rbxassetid://138427767881095",
 		konan = "rbxassetid://110290720899593",
 		tobi = "rbxassetid://80430895821055",
@@ -48,10 +48,10 @@ return {
 	members_color = {
 		itachi = "rbxassetid://77165612467433",
 		kisame = "rbxassetid://98532529900682",
-		deidara = "rbxassetid://76056094269288",
+		deidara = "rbxassetid://120584264020999",
 		sasori = "rbxassetid://135897655272954",
 		hidan = "rbxassetid://127420040402439",
-		-- kakuzu: none until the redo is picked
+		kakuzu = "rbxassetid://122390499126677",
 		pain = "rbxassetid://71190120347320",
 		konan = "rbxassetid://115582154300778",
 		tobi = "rbxassetid://138750667341241",
