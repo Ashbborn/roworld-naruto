@@ -65,7 +65,13 @@ def render(it):
     night, the render on it), a light behind the art, its name across the foot in white outlined in ink."""
     import numpy as np
     mix = lambda a, b, k: tuple(a[i] + (b[i] - a[i]) * k for i in range(3))
-    tile = np.array(mix(it["bottom"], NIGHT, 0.35), dtype=np.float32)
+    lum = lambda c: 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    # (a bright item colour, 2x Stars' gold, would make a mustard tile under gold art: it goes deeper,
+    # to the others' brightness, so the metal stands out on it)
+    k = 0.35
+    while lum(mix(it["bottom"], NIGHT, k)) > 56 and k < 0.7:
+        k += 0.05
+    tile = np.array(mix(it["bottom"], NIGHT, k), dtype=np.float32)
     light = np.array(mix(it["top"], (255, 255, 255), 0.18), dtype=np.float32)
     deep = np.array(mix(it["bottom"], NIGHT, 0.72), dtype=np.float32)
     yy, xx = np.mgrid[0:SIZE, 0:SIZE].astype(np.float32) / (SIZE - 1)
@@ -90,7 +96,8 @@ def render(it):
     im.alpha_composite(sh.filter(ImageFilter.GaussianBlur(7)), (gx + 4, gy + 10))
     im.alpha_composite(g, (gx, gy))
     label = it["title"].upper()
-    size = 84
+    # (as big as the name fits, up to the size the mid-length names get: a short name doesn't shout)
+    size = 56
     font = ImageFont.truetype(FONT, size)
     d = ImageDraw.Draw(im)
     while d.textlength(label, font=font) > SIZE - 64 and size > 36:

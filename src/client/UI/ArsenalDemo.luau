@@ -1022,7 +1022,9 @@ function ArsenalDemo._step_reinforce(self, t: number)
 				local y = REIN_GROUND + off.Y - 0.14 + bob
 				local hh = mh * pop * (1 + off.Y) * stretch
 				local ww = self:_fx_w(if run > 0 then "ninja_run" else "ninja", mh * pop * (1 + off.Y)) / stretch
-				self:_show(m, x, y, ww, hh, ramp(t, 2.1, 2.4))
+				-- (held by its feet, which are its image's foot: it stretches up out of the smoke, its feet stay put)
+				local feet = y + mh * (1 + off.Y) / 2 / H
+				self:_show(m, x, feet - hh / 2 / H, ww, hh, ramp(t, 2.1, 2.4))
 				local want = FX[if run > 0 then "ninja_run" else "ninja"]
 				if want ~= nil and m.Image ~= want.id then
 					m.Image = want.id
