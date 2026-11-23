@@ -98,8 +98,13 @@ def text_of(result):
 def pick_studio(c):
     if os.environ.get("STUDIO_ID"):
         return os.environ["STUDIO_ID"]
-    res = c.call("list_roblox_studios", {})
-    txt = text_of(res)
+    import time as _time
+    for _try in range(8):  # the list is sometimes briefly empty on Windows
+        res = c.call("list_roblox_studios", {})
+        txt = text_of(res)
+        if '"studios":[]' not in txt.replace(" ", ""):
+            break
+        _time.sleep(1.5)
     try:
         data = json.loads(txt)
     except json.JSONDecodeError:
