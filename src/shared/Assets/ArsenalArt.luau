@@ -16,29 +16,29 @@ return {
 		reload = "rbxassetid://122042094466731",
 		arsenal = "rbxassetid://100350424187718",
 	},
-	--- the shop's item renders (Data/Arsenal item key -> image; the Naruto world's items, drawn as
-	--- SVG by tools/assets/make_arsenal_renders.py):
+	--- the shop's item renders (Data/Arsenal item key -> image; the Naruto world's items: the owner's
+	--- picks among AI candidates, or drawn as SVG; tools/assets/make_arsenal_renders.py):
 	--- { id, w, h }
 	renders = {
-		airfield = { id = "rbxassetid://86067593831435", w = 384, h = 384 },
-		artillery = { id = "rbxassetid://87062044115452", w = 384, h = 384 },
-		mega = { id = "rbxassetid://134427770629576", w = 384, h = 384 },
-		railgun = { id = "rbxassetid://123752263814139", w = 384, h = 384 },
+		airfield = { id = "rbxassetid://92274860755655", w = 384, h = 384 },
+		artillery = { id = "rbxassetid://94294790166940", w = 384, h = 384 },
+		mega = { id = "rbxassetid://121576604923109", w = 384, h = 384 },
+		railgun = { id = "rbxassetid://115431710504519", w = 384, h = 384 },
 		reinforce = { id = "rbxassetid://82291353490980", w = 384, h = 384 },
-		reload2x = { id = "rbxassetid://90414485791632", w = 384, h = 384 },
-		scatter = { id = "rbxassetid://130607524630280", w = 384, h = 384 },
-		stars2x = { id = "rbxassetid://78119720610449", w = 384, h = 384 },
+		reload2x = { id = "rbxassetid://134439736314042", w = 384, h = 384 },
+		scatter = { id = "rbxassetid://133247319231900", w = 384, h = 384 },
+		stars2x = { id = "rbxassetid://120246840559035", w = 384, h = 384 },
 	},
-	--- the same at the list's small tiles' level of detail (a heavier outline, fewer and bigger
-	--- parts): { id, w, h }
+	--- the same at the list's small tiles' size (drawn: a heavier outline, fewer and bigger parts;
+	--- a pick: the same picture, small): { id, w, h }
 	tiles = {
-		airfield = { id = "rbxassetid://77366020062577", w = 128, h = 128 },
-		artillery = { id = "rbxassetid://137448312909177", w = 128, h = 128 },
-		mega = { id = "rbxassetid://70766254625257", w = 128, h = 128 },
-		railgun = { id = "rbxassetid://108187939529599", w = 128, h = 128 },
+		airfield = { id = "rbxassetid://92836974737715", w = 128, h = 128 },
+		artillery = { id = "rbxassetid://81425571885836", w = 128, h = 128 },
+		mega = { id = "rbxassetid://131300034022880", w = 128, h = 128 },
+		railgun = { id = "rbxassetid://100219240831107", w = 128, h = 128 },
 		reinforce = { id = "rbxassetid://118911463280267", w = 128, h = 128 },
-		reload2x = { id = "rbxassetid://83952667328644", w = 128, h = 128 },
-		scatter = { id = "rbxassetid://136550035314028", w = 128, h = 128 },
-		stars2x = { id = "rbxassetid://104037764546549", w = 128, h = 128 },
+		reload2x = { id = "rbxassetid://104780073288196", w = 128, h = 128 },
+		scatter = { id = "rbxassetid://134898659066237", w = 128, h = 128 },
+		stars2x = { id = "rbxassetid://105886244311028", w = 128, h = 128 },
 	},
 }

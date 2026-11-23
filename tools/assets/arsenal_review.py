@@ -65,6 +65,10 @@ def fit(im, w, h=None):
 
 
 def draw(key, lod, px):
+    import make_arsenal_renders as R
+    if R.pick_path(key):
+        # (the owner's pick, as the game shows it: make_arsenal_renders.render)
+        return R.render(key, lod, px)
     K.set_lod(lod)
     try:
         art = A.RENDERS[key]()

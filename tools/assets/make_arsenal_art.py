@@ -11,7 +11,7 @@ kunai behind a shuriken; star and lock are still drawn here.)
                               airstrike, slug, star, lock, reload, arsenal
   assets/arsenal/renders/<key>.png  the shop cards' item renders, and assets/arsenal/tiles/<key>.png the
                               same for the list's small tiles (tools/assets/make_arsenal_renders.py makes
-                              them; this script only uploads them)
+                              them, from the SVG or the owner's picks; this script only uploads them)
 
 --upload sends them through tools/upload.py (content-hash cached) and writes
 src/shared/Assets/ArsenalArt.luau. STUDIO_MATCH picks the Studio window that uploads.
@@ -287,8 +287,8 @@ def upload(names):
     for i, n in enumerate(names):
         L.append(f'\t\t{n} = "{ids[paths[i]]}",')
     L += ["\t},",
-          "\t--- the shop's item renders (Data/Arsenal item key -> image; the Naruto world's items, drawn as",
-          "\t--- SVG by tools/assets/make_arsenal_renders.py):",
+          "\t--- the shop's item renders (Data/Arsenal item key -> image; the Naruto world's items: the owner's",
+          "\t--- picks among AI candidates, or drawn as SVG; tools/assets/make_arsenal_renders.py):",
           "\t--- { id, w, h }",
           "\trenders = {"]
     from PIL import Image as _Image
@@ -296,8 +296,8 @@ def upload(names):
         w, h = _Image.open(rp).size
         L.append(f'\t\t{r} = {{ id = "{ids[rp]}", w = {w}, h = {h} }},')
     L += ["\t},",
-          "\t--- the same at the list's small tiles' level of detail (a heavier outline, fewer and bigger",
-          "\t--- parts): { id, w, h }",
+          "\t--- the same at the list's small tiles' size (drawn: a heavier outline, fewer and bigger parts;",
+          "\t--- a pick: the same picture, small): { id, w, h }",
           "\ttiles = {"]
     for r, tp in zip(tiles, tpaths):
         w, h = _Image.open(tp).size
