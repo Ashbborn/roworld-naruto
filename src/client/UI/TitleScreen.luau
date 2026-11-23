@@ -280,6 +280,57 @@ function GradientText._redraw(self)
 end
 
 -- =============================================================================================
+-- WordImage: the RoNindo wordmark (2026-11-23)
+-- =============================================================================================
+
+--- The title's wordmark as an image (Assets/NarutoUI.wordmark: "RONINDO" in the Ninja Naruto face,
+--- tools/naruto/make_naruto_ui_art.py; Roblox games can't use their own font files). It answers the
+--- calls the title makes on a GradientText (set_px, spacing, shadow, sweep, y0 / span, _redraw), so
+--- the layout code is the same for both; spacing and the shine are GradientText's alone.
+local WordImage = W.class(W.Control)
+TitleScreen.WordImage = WordImage
+--- The image's height per px of the GradientText size it stands in for.
+WordImage.H_EM = 1.4
+
+function WordImage.new(art: any, px: number)
+	local self = setmetatable({}, WordImage.__mt)
+	W.Control._init(self)
+	self:set_mouse_filter(W.MOUSE_IGNORE)
+	self.px = px
+	self.spacing = 0
+	self.shadow = { outline = 0 }
+	self.sweep = -10000.0
+	self.y0, self.span = 0.0, 100.0
+	self._aspect = art.size[1] / math.max(1, art.size[2])
+	local img = Instance.new("ImageLabel")
+	img.Name = "Wordmark"
+	img.BackgroundTransparency = 1
+	img.BorderSizePixel = 0
+	img.ScaleType = Enum.ScaleType.Fit
+	img.Image = art.image
+	img.Size = UDim2.fromScale(1, 1)
+	img.Parent = self.gui
+	self:_part(img, "ImageTransparency", 1.0)
+	return self
+end
+
+function WordImage._get_minimum_size(self): Vector2
+	local h = self.px * WordImage.H_EM
+	return Vector2.new(math.ceil(h * self._aspect), math.ceil(h))
+end
+
+function WordImage.set_px(self, px: number)
+	if px ~= self.px then
+		self.px = px
+		self:update_minimum_size()
+	end
+end
+
+function WordImage.set_colors(_self, _top: Color3, _bottom: Color3) end
+
+function WordImage._redraw(_self) end
+
+-- =============================================================================================
 -- Title screen
 -- =============================================================================================
 
@@ -405,7 +456,7 @@ function TitleScreen.new(c: any)
 		TitleScreen.CREDITS,
 		11,
 		500,
-		UITheme.c(UITheme.TEXT_3, 0.85),
+		UITheme.c(UITheme.ON_MAP_2, 0.85), -- (over the map)
 		1
 	)
 	self._credits:set_alignment(W.ALIGN_CENTER)
@@ -486,6 +537,9 @@ function TitleScreen._build_head(self)
 	self._head:set_alignment(W.ALIGN_CENTER)
 	self:add_child(self._head)
 	self._emblem = UITheme.icon_rect("app_icon", 64.0, Color3.new(1, 1, 1))
+	-- (2026-11-23: the RoNindo wordmark stands alone; RoWorld's app icon stays only with the text fallback)
+	local art = UITheme.naruto_ui()
+	self._no_emblem = art.wordmark ~= nil
 	self._emblem.size_flags_horizontal = W.SHRINK_CENTER
 	self._head:add_child(self._emblem)
 	-- Warm glow behind the wordmark (placed after the shades, before the fade).
@@ -493,10 +547,16 @@ function TitleScreen._build_head(self)
 	self:add_child(self._glow)
 	self:move_child(self._glow, 3)
 
-	local word = GradientText.new(Brand.NAME_UPPER, 120, 900)
-	word.spacing = 14
-	word.shadow = { color = Color3.new(0.0, 0.02, 0.08), alpha = 0.55, offset_y = 6, outline = 14 }
-	word:set_colors(Color3.new(1, 1, 1), Color3.new(1.0, 0.8, 0.52))
+	-- (2026-11-23: the RoNindo wordmark image; letter-spaced text only when the art is missing)
+	local word
+	if art.wordmark ~= nil then
+		word = WordImage.new(art.wordmark, 120)
+	else
+		word = GradientText.new(Brand.NAME_UPPER, 120, 900)
+		word.spacing = 14
+		word.shadow = { color = Color3.new(0.0, 0.02, 0.08), alpha = 0.55, offset_y = 6, outline = 14 }
+		word:set_colors(Color3.new(1, 1, 1), Color3.new(1.0, 0.8, 0.52))
+	end
 	word.size_flags_horizontal = W.SHRINK_CENTER
 	self._word = word
 	self._head:add_child(word)
@@ -537,7 +597,7 @@ function TitleScreen._build_dock(self)
 		self.pick_map:Fire()
 	end)
 	self._map_btn = mb
-	self:set_map_name("World")
+	self:set_map_name(UIMaps.name_of(UIMaps.DEFAULT_ID))
 
 	local dr = UITheme.hbox(8)
 	self._diff_row = dr
@@ -629,6 +689,14 @@ end
 --- The solo map's name on the map button.
 function TitleScreen.set_map_name(self, name: string)
 	self._map_btn:set_text("Map:  " .. name)
+	-- (2026-11-23: with a single map there is nothing to pick, so no map button)
+	self._map_btn:set_visible(not TitleScreen.single_map())
+end
+
+--- Only one map is listed (2026-11-23: the Naruto fork plays the Shinobi World map alone): the public
+--- free-for-all is always on it, so its card names the map, and World's own card would be its twin.
+function TitleScreen.single_map(): boolean
+	return #UIMaps.entries() <= 1
 end
 
 --- One public-match card: map thumbnail, title, status line with a dot, and a JOIN pill.
@@ -724,6 +792,16 @@ function TitleScreen.set_lobbies(self, list: { any }?, kinds: { string }?)
 	self._lobbies_msec = UICtx.msec()
 	if kinds ~= nil then
 		self._kinds = kinds
+	end
+	if self._kinds ~= nil and TitleScreen.single_map() and table.find(self._kinds, "ffa") ~= nil then
+		-- (a free-for-all join takes World's seats too, LobbyRules.takes_from: one card for both)
+		local only = {}
+		for _, k in self._kinds do
+			if k ~= "world" then
+				table.insert(only, k)
+			end
+		end
+		self._kinds = only
 	end
 	if self._joining ~= nil and UICtx.msec() - (self._joining_msec or 0) > 20000 then
 		self._joining = nil -- the teleport never happened (a notice explains why)
@@ -851,7 +929,7 @@ function TitleScreen.apply_layout(self)
 		end
 	end
 	local dx = col_x - vp.X * 0.5
-	local emblem_px = if compact then 0.0 else math.clamp(word_px * 0.56, 44.0, 76.0)
+	local emblem_px = if compact or self._no_emblem then 0.0 else math.clamp(word_px * 0.56, 44.0, 76.0)
 	self._emblem:set_visible(emblem_px > 0.0)
 	self._emblem:set_min_size(Vector2.new(emblem_px, emblem_px))
 	self._tag:set_font_size(if compact then 11 else 15)
@@ -1024,8 +1102,12 @@ function TitleScreen._refresh_greeting(self)
 	local n = self.ctx:username()
 	-- (a RoWorld General is greeted as one: Data/Subscription)
 	local s0 = self.ctx.session
-	local rank = if s0 ~= nil and s0.general == true then "General" else "Commander"
-	local text = if n ~= "Commander" and n ~= "" then ("Welcome, " .. rank .. " " .. n) else ("Welcome, " .. rank)
+	-- (2026-11-23, the Naruto fork: "Welcome back" instead of RoWorld's "Welcome, Commander X";
+	-- "Commander" is still the placeholder name UICtx.username gives a player without one)
+	local general = s0 ~= nil and s0.general == true
+	local named = n ~= "Commander" and n ~= ""
+	local who = if general then (if named then "General " .. n else "General") else (if named then n else "shinobi")
+	local text = "Welcome back, " .. who
 	-- game admins (the server told this client which players are bots): say so, so it's easy to check
 	local s = self.ctx.session
 	if s ~= nil and s.admin_bots ~= nil then
@@ -1286,7 +1368,7 @@ end
 function TitleScreen.set_building(self, on: boolean)
 	self._solo:set_disabled(on)
 	self._start:set_disabled(on)
-	self._start:set_text(if on then "DEPLOYING…" else "START")
+	self._start:set_text(if on then "GATHERING…" else "START")
 	for _, ch in ipairs(self._chips) do
 		ch:set_disabled(on)
 	end
@@ -1405,12 +1487,16 @@ function TitleScreen._refresh_kind_card(self, card: { [string]: any }, kind: str
 		else (if l then l.map else nil)
 	local map_name = if going
 		then pub.info.map_name
-		elseif kind == "world" then "World"
+		elseif kind == "world" then UIMaps.name_of(TitleScreen.WORLD_MAP)
 		else (if l then (l.map_name or l.map) else nil)
 	-- a free-for-all is any map: its card isn't titled with the next one, which a seat may not be in
 	-- (a player, 2026-10-19, kept joining maps they didn't want to play); the status line names it
 	local next_map = nil
-	if kind == "ffa" and not going then
+	if kind == "ffa" and not going and TitleScreen.single_map() then
+		-- (one map: every free-for-all is on it, so the card is titled with it)
+		map = map or UIMaps.DEFAULT_ID
+		map_name = UIMaps.name_of(map)
+	elseif kind == "ffa" and not going then
 		next_map = map_name
 		map, map_name = nil, nil
 	end
@@ -1532,9 +1618,8 @@ function TitleScreen._refresh_mp(self)
 			text = if ctx.compact
 				then string.format("%d online  ·  %s", n, UITheme.fmt_time(el))
 				else string.format(
-					"%d commander%s  ·  in progress %s",
+					"%d shinobi  ·  in progress %s",
 					n,
-					if n == 1 then "" else "s",
 					UITheme.fmt_time(el)
 				)
 		elseif stage == "over" then
@@ -1572,7 +1657,7 @@ function TitleScreen._refresh_mp(self)
 			then "PUBLIC MATCH"
 			elseif type(tm) == "number" then string.format("TEAM GAME  ·  %d TEAMS", tm)
 			else "TEAM GAME  ·  " .. string.upper(tostring(tm))
-		self._q_title:set_text(kind .. "  ·  " .. string.upper(if e then e.name else "World"))
+		self._q_title:set_text(kind .. "  ·  " .. string.upper(if e then e.name else UIMaps.name_of(UIMaps.DEFAULT_ID)))
 		local maxp = tonumber(self._lobby.max) or 0
 		local votes = tonumber(self._lobby.votes) or 0
 		local need = math.max(tonumber(self._lobby.votes_needed) or 1, 1)
@@ -1634,7 +1719,7 @@ function TitleScreen._refresh_mp(self)
 			table.insert(names, tostring(p))
 		end
 		self._q_players:set_text(
-			if n > 0 then ("Commanders: " .. table.concat(names, ", ")) else "You are the first commander here."
+			if n > 0 then ("Shinobi: " .. table.concat(names, ", ")) else "You are the first shinobi here."
 		)
 	end
 end

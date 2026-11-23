@@ -27,7 +27,7 @@ MapPicker.TABS = {
 MapPicker.CARD = Vector2.new(168, 132)
 MapPicker.GRID_SIZE = Vector2.new(740, 420)
 --- (2026-11-23: the World map is made from Narutopedia's Naruto World Map, CC BY-SA 3.0)
-MapPicker.ATTRIBUTION = "World map: Narutopedia (CC BY-SA 3.0) · Other maps: Natural Earth, NOAA ETOPO1 (public domain)"
+MapPicker.ATTRIBUTION = "Shinobi World map: Narutopedia's Naruto World Map (CC BY-SA 3.0)"
 
 function MapPicker.new(c: any)
 	local self = setmetatable({}, MapPicker.__mt)
@@ -94,6 +94,7 @@ function MapPicker.new(c: any)
 		tabs:add_child(chip)
 	end
 	v:add_child(tabs)
+	self._tab_row = tabs
 	-- grid host
 	local host = W.Control.new()
 	host:set_min_size(MapPicker.GRID_SIZE)
@@ -130,13 +131,6 @@ function MapPicker.new(c: any)
 	return self
 end
 
-function MapPicker.set_entries(self, entries: { any })
-	self.entries = entries or {}
-	if self.is_open then
-		self:_rebuild()
-	end
-end
-
 local function in_tab(e: any, set: { [string]: boolean }?): boolean
 	if set == nil then
 		return true
@@ -147,6 +141,27 @@ local function in_tab(e: any, set: { [string]: boolean }?): boolean
 		end
 	end
 	return false
+end
+
+function MapPicker.set_entries(self, entries: { any })
+	self.entries = entries or {}
+	-- (2026-11-23: only the tabs with a map in them; with a single map no tabs at all)
+	local shown = 0
+	for i, t in ipairs(MapPicker.TABS) do
+		local any = false
+		for _, e in self.entries do
+			if in_tab(e, t[2]) then
+				any = true
+				break
+			end
+		end
+		self._tabs[i]:set_visible(any)
+		shown += if any then 1 else 0
+	end
+	self._tab_row:set_visible(#self.entries > 1 and shown > 1)
+	if self.is_open then
+		self:_rebuild()
+	end
 end
 
 function MapPicker._card(self, e: any, order: number): TextButton

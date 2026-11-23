@@ -82,6 +82,34 @@ def terrain_rgb(tb):
 
 LUT = np.array([terrain_rgb(b) for b in range(256)], dtype=np.uint8)
 
+# Map/MapSurface.luau BIOMES (render-only biome codes of a map module's optional `biome` grid: the
+# Naruto world's desert, snow and forest countries), [plains, highland, mountain] per biome.
+BIOMES = {
+    1: [(0xEC, 0xD9, 0xA0), (0xDC, 0xBE, 0x86), (0xCC, 0xA9, 0x80)],
+    2: [(0xE4, 0xEC, 0xF0), (0xD2, 0xDC, 0xE4), (0xF4, 0xF6, 0xF8)],
+    3: [(0xA8, 0xD0, 0x7C), HIGHLAND, MOUNTAIN],
+}
+
+
+def biome_rgb(tb, bio):
+    """RGB of terrain byte `tb` in biome `bio` (MapSurface.terrain_pixel), None where the biome has no say."""
+    land, shore, mag = tb >= 128, (tb & 64) != 0, tb & 31
+    if not land or mag == 31 or (shore and bio != 1):
+        return None
+    c = BIOMES[bio][0 if mag < 10 else 1 if mag < 20 else 2]
+    m = mag % 10
+    return tuple(max(0, v - m) for v in c)
+
+
+BIOME_LUT = {}
+for _bio in BIOMES:
+    _lut = LUT.copy()
+    for _b in range(256):
+        _c = biome_rgb(_b, _bio)
+        if _c is not None:
+            _lut[_b] = _c
+    BIOME_LUT[_bio] = _lut
+
 
 def read_registry():
     """[{id, name, module}] in registry order."""
@@ -111,7 +139,13 @@ def read_terrain(module):
     raw = zstandard.ZstdDecompressor().decompress(base64.b64decode(b64), max_output_size=w * h)
     if len(raw) != w * h:
         raise ValueError("%s: %d tile bytes, expected %d x %d" % (module, len(raw), w, h))
-    return w, h, np.frombuffer(raw, dtype=np.uint8).reshape(h, w)
+    tiles = np.frombuffer(raw, dtype=np.uint8).reshape(h, w)
+    bm = re.search(r'^	biome = "([^"]*)",', src, re.M)
+    biome = None
+    if bm:
+        braw = zstandard.ZstdDecompressor().decompress(base64.b64decode(bm.group(1)), max_output_size=w * h)
+        biome = np.frombuffer(braw, dtype=np.uint8).reshape(h, w)
+    return w, h, tiles, biome
 
 
 def _to_linear(c):
@@ -124,7 +158,7 @@ def _to_srgb(c):
     return np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055) * 255.0
 
 
-def render(tiles):
+def render(tiles, biome=None):
     """RGBA thumbnail of a terrain grid: palette at full resolution, area-averaged in linear light
     to fit MAX_PX (impassable tiles transparent), rounded corners."""
     h, w = tiles.shape
@@ -135,7 +169,12 @@ def render(tiles):
         return np.asarray(Image.fromarray(a, mode="F").resize((tw, th), Image.Resampling.BOX))
 
     cover = (tiles != IMPASSABLE).astype(np.float32)
-    lin = _to_linear(LUT[tiles].astype(np.float32)) * cover[:, :, None]
+    pal = LUT[tiles]
+    if biome is not None:
+        for bio, lut in BIOME_LUT.items():
+            sel = biome == bio
+            pal[sel] = lut[tiles[sel]]
+    lin = _to_linear(pal.astype(np.float32)) * cover[:, :, None]
     alpha = shrink(cover)
     rgb = np.stack([shrink(np.ascontiguousarray(lin[:, :, k])) for k in range(3)], axis=2)
     rgb = _to_srgb(rgb / np.maximum(alpha, 1e-6)[:, :, None])
@@ -206,8 +245,8 @@ def main():
     paths, failed = {}, []
     for r in rows:
         try:
-            w, h, tiles = read_terrain(r["module"])
-            im = render(tiles)
+            w, h, tiles, biome = read_terrain(r["module"])
+            im = render(tiles, biome)
         except Exception as e:  # noqa: BLE001 - report every map that fails, then stop
             failed.append(r["id"])
             print("FAILED %-22s %s" % (r["id"], e))

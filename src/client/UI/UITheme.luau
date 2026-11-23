@@ -143,31 +143,51 @@ function UITheme.equal(a: any, b: any): boolean
 		and math.abs(UITheme.alpha(a) - UITheme.alpha(b)) < 1e-4
 end
 
--- --- colour tokens (same as ui_theme.gd) ------------------------------------------------------
-UITheme.GLASS = UITheme.rgba(0.051, 0.075, 0.149, 0.84) -- #0d1326 @ 84 %
-UITheme.GLASS_SOLID = UITheme.rgba(0.043, 0.062, 0.125, 0.96)
-UITheme.GLASS_RAISED = UITheme.rgba(0.1, 0.13, 0.24, 0.94)
-UITheme.LINE = UITheme.rgba(1.0, 1.0, 1.0, 0.1)
-UITheme.LINE_2 = UITheme.rgba(1.0, 1.0, 1.0, 0.18)
-UITheme.FILL = UITheme.rgba(1.0, 1.0, 1.0, 0.06)
-UITheme.FILL_2 = UITheme.rgba(1.0, 1.0, 1.0, 0.11)
-UITheme.TEXT = Color3.new(0.94, 0.955, 1.0)
-UITheme.TEXT_2 = Color3.new(0.68, 0.73, 0.86)
-UITheme.TEXT_3 = Color3.new(0.48, 0.53, 0.67)
-UITheme.AMBER = Color3.new(1.0, 0.71, 0.278) -- #ffb547 primary actions
-UITheme.AMBER_HI = Color3.new(1.0, 0.8, 0.47)
-UITheme.AMBER_LO = Color3.new(0.8, 0.49, 0.13)
-UITheme.CYAN = Color3.new(0.31, 0.82, 1.0) -- info
-UITheme.GREEN = Color3.new(0.37, 0.89, 0.6)
-UITheme.RED = Color3.new(1.0, 0.33, 0.39)
---- the solid SurrenderButton's fill, hover and lip
-UITheme.SURRENDER_RED = Color3.fromRGB(222, 48, 60)
-UITheme.SURRENDER_RED_HI = Color3.fromRGB(240, 72, 82)
-UITheme.SURRENDER_RED_LO = Color3.fromRGB(140, 20, 32)
-UITheme.ORANGE = Color3.new(1.0, 0.58, 0.36)
-UITheme.VIOLET = Color3.new(0.72, 0.62, 1.0)
-UITheme.GOLD = Color3.new(1.0, 0.84, 0.4)
-UITheme.INK = Color3.new(0.1, 0.066, 0.02) -- text on amber
+-- --- colour tokens ----------------------------------------------------------------------------
+-- 2026-11-23, RoNindo: the interface is drawn on a scroll (the owner's pick, option C of the round 5
+-- sheet): cream canvas with a seigaiha border (GlassPanel, ScrollPanel), black ink text, brown ink
+-- lines, red lacquer (the roller's) for the selected and primary things, metallic gold for Ryo. The
+-- token names are RoWorld's (ui_theme.gd); their values are the scroll's, so every widget that reads
+-- them follows. Text drawn straight over the map (no panel under it) uses ON_MAP / ON_MAP_2.
+UITheme.PAPER = Color3.fromRGB(232, 226, 203) -- the canvas (the owner's reference, measured)
+UITheme.PAPER_DEEP = Color3.fromRGB(214, 200, 160) -- darker paper: wells, tracks, raised fills
+UITheme.LACQUER = Color3.fromRGB(170, 32, 24) -- the roller's red
+UITheme.LACQUER_HI = Color3.fromRGB(204, 62, 46)
+UITheme.LACQUER_LO = Color3.fromRGB(112, 16, 12)
+UITheme.CREAM = Color3.fromRGB(250, 244, 228) -- text on lacquer
+UITheme.BROWN_INK = Color3.fromRGB(96, 64, 34) -- frames and rules
+UITheme.GOLD_HI = Color3.fromRGB(255, 232, 140) -- metallic gold (UITheme.gold_gradient): light,
+UITheme.GOLD_LO = Color3.fromRGB(150, 96, 12) -- dark band
+--- a plain button: a solid light paper chip with a brown rim (it reads in a panel and over the map)
+UITheme.PAPER_BTN = Color3.fromRGB(244, 239, 222)
+UITheme.PAPER_BTN_HI = Color3.fromRGB(228, 218, 188)
+UITheme.ON_MAP = Color3.new(0.97, 0.97, 1.0) -- text with no panel under it (over the map)
+UITheme.ON_MAP_2 = Color3.new(0.78, 0.81, 0.9)
+
+UITheme.GLASS = UITheme.rgba(232 / 255, 226 / 255, 203 / 255, 0.98) -- (GlassPanel draws the canvas over it)
+UITheme.GLASS_SOLID = UITheme.rgba(232 / 255, 226 / 255, 203 / 255, 1.0)
+UITheme.GLASS_RAISED = UITheme.rgba(214 / 255, 200 / 255, 160 / 255, 1.0)
+UITheme.LINE = UITheme.rgba(96 / 255, 64 / 255, 34 / 255, 0.4)
+UITheme.LINE_2 = UITheme.rgba(96 / 255, 64 / 255, 34 / 255, 0.7)
+UITheme.FILL = UITheme.rgba(120 / 255, 84 / 255, 40 / 255, 0.09)
+UITheme.FILL_2 = UITheme.rgba(120 / 255, 84 / 255, 40 / 255, 0.17)
+UITheme.TEXT = Color3.fromRGB(26, 21, 16) -- black ink
+UITheme.TEXT_2 = Color3.fromRGB(66, 56, 44)
+UITheme.TEXT_3 = Color3.fromRGB(110, 96, 78)
+UITheme.AMBER = UITheme.LACQUER -- (RoWorld's amber accent: now the lacquer red)
+UITheme.AMBER_HI = UITheme.LACQUER_HI
+UITheme.AMBER_LO = UITheme.LACQUER_LO
+UITheme.CYAN = Color3.fromRGB(22, 100, 108) -- info: the roller's teal, as ink
+UITheme.GREEN = Color3.fromRGB(44, 108, 40)
+UITheme.RED = Color3.fromRGB(196, 30, 36)
+--- the SurrenderButton's ink and rim (it is outlined, so it does not look like the lacquer primary)
+UITheme.SURRENDER_RED = Color3.fromRGB(176, 22, 30)
+UITheme.SURRENDER_RED_HI = Color3.fromRGB(204, 44, 50)
+UITheme.SURRENDER_RED_LO = Color3.fromRGB(120, 12, 20)
+UITheme.ORANGE = Color3.fromRGB(184, 82, 14)
+UITheme.VIOLET = Color3.fromRGB(96, 62, 150)
+UITheme.GOLD = Color3.fromRGB(176, 122, 20) -- Ryo as flat ink (gold_gradient adds the metal)
+UITheme.INK = UITheme.CREAM -- text on the primary (lacquer) fill
 UITheme.WHITE = Color3.new(1, 1, 1)
 UITheme.BLACK = Color3.new(0, 0, 0)
 UITheme.CLEAR = UITheme.rgba(0, 0, 0, 0)
@@ -1352,6 +1372,26 @@ function UITheme.crate_art(): any
 	return _crate_art
 end
 
+local _naruto_ui: any = nil
+--- RoNindo's own UI art (Assets/NarutoUI, tools/naruto/make_naruto_ui_art.py): the title wordmark and
+--- the scroll pieces (paper canvas, wave bands, seal, kanji, roller). { key = { image, size = { w, h }, slice = { l, t, r, b }? } };
+--- {} when missing.
+function UITheme.naruto_ui(): any
+	if _naruto_ui == nil then
+		_naruto_ui = {}
+		local ok, m = pcall(function()
+			if IS_ROBLOX then
+				return require((game:GetService("ReplicatedStorage"):WaitForChild("Airfront") :: any).Assets.NarutoUI) :: any
+			end
+			return (require :: any)("../../shared/Assets/NarutoUI")
+		end)
+		if ok and type(m) == "table" then
+			_naruto_ui = m
+		end
+	end
+	return _naruto_ui
+end
+
 function UITheme.icon(icon_name: string): string?
 	local builtin = UITheme.BUILTIN_ICONS[icon_name]
 	if builtin ~= nil then
@@ -1607,22 +1647,22 @@ function UITheme.theme(): any
 	button_styles(
 		t,
 		"Button",
-		UITheme.FILL,
-		UITheme.FILL_2,
-		UITheme.rgba(1, 1, 1, 0.03),
-		UITheme.LINE,
+		UITheme.PAPER_BTN,
+		UITheme.PAPER_BTN_HI,
+		UITheme.PAPER_DEEP,
 		UITheme.LINE_2,
+		UITheme.BROWN_INK,
 		UITheme.TEXT,
 		600
 	)
 	button_styles(
 		t,
 		"GlassButton",
-		UITheme.FILL,
-		UITheme.FILL_2,
-		UITheme.rgba(1, 1, 1, 0.03),
-		UITheme.LINE,
+		UITheme.PAPER_BTN,
+		UITheme.PAPER_BTN_HI,
+		UITheme.PAPER_DEEP,
 		UITheme.LINE_2,
+		UITheme.BROWN_INK,
 		UITheme.TEXT,
 		600
 	)
@@ -1641,9 +1681,9 @@ function UITheme.theme(): any
 	local ghost = button_styles(
 		t,
 		"GhostButton",
-		UITheme.rgba(1, 1, 1, 0.0),
+		UITheme.c(UITheme.BROWN_INK, 0),
 		UITheme.FILL,
-		UITheme.rgba(1, 1, 1, 0.03),
+		UITheme.c(UITheme.BROWN_INK, 0.048),
 		UITheme.CLEAR,
 		UITheme.CLEAR,
 		UITheme.TEXT_2,
@@ -1659,13 +1699,13 @@ function UITheme.theme(): any
 		UITheme.c(UITheme.RED, 0.08),
 		UITheme.c(UITheme.RED, 0.45),
 		UITheme.c(UITheme.RED, 0.8),
-		Color3.new(1.0, 0.78, 0.8),
+		UITheme.RED,
 		700
 	)
 	local chip = button_styles(
 		t,
 		"ChipButton",
-		UITheme.rgba(1, 1, 1, 0.04),
+		UITheme.c(UITheme.BROWN_INK, 0.064),
 		UITheme.FILL_2,
 		UITheme.c(UITheme.AMBER, 0.2),
 		UITheme.LINE,
@@ -1681,7 +1721,7 @@ function UITheme.theme(): any
 	chip.colors.font_hover_pressed_color = UITheme.AMBER_HI
 	chip.font_size = 13
 
-	-- Primary: warm amber with a darker lip.
+	-- Primary: red lacquer (the scroll roller's) with a darker lip and cream text.
 	local pn = UITheme.flat(UITheme.AMBER, UITheme.R_MD, UITheme.CLEAR, 0, 22.0, 10.0)
 	pn.bw_bottom = 3
 	pn.border = UITheme.to_rgba(UITheme.AMBER_LO)
@@ -1690,7 +1730,7 @@ function UITheme.theme(): any
 	local pp =
 		UITheme.flat(UITheme.lerp(UITheme.AMBER_LO, UITheme.AMBER, 0.5), UITheme.R_MD, UITheme.CLEAR, 0, 22.0, 10.0)
 	pp.margin = { 22.0, 12.0, 22.0, 8.0 }
-	local pd = UITheme.flat(UITheme.rgba(1, 1, 1, 0.08), UITheme.R_MD, UITheme.LINE, 1, 22.0, 10.0)
+	local pd = UITheme.flat(UITheme.FILL, UITheme.R_MD, UITheme.LINE, 1, 22.0, 10.0)
 	t.PrimaryButton = {
 		styles = { normal = pn, hover = ph, pressed = pp, hover_pressed = pp, disabled = pd },
 		colors = {
@@ -1710,35 +1750,28 @@ function UITheme.theme(): any
 		font_size = 17,
 		h_separation = 10,
 	}
-	-- Surrender: solid red with a darker lip, shaped like Primary (the game menu's SURRENDER, made big and
-	-- red on 2026-10-19). DangerButton is only a red tint.
-	local sn = UITheme.flat(UITheme.SURRENDER_RED, UITheme.R_MD, UITheme.CLEAR, 0, 22.0, 10.0)
+	-- Surrender: big and red (the game menu's SURRENDER, 2026-10-19), shaped like Primary. On the scroll
+	-- (2026-11-23) the primary is the red lacquer, so SURRENDER is outlined: a red rim and red ink on
+	-- a faint red wash, a darker lip. DangerButton is only a red tint.
+	local sn = UITheme.flat(UITheme.c(UITheme.SURRENDER_RED, 0.1), UITheme.R_MD, UITheme.SURRENDER_RED, 2, 22.0, 10.0)
 	sn.bw_bottom = 3
-	sn.border = UITheme.to_rgba(UITheme.SURRENDER_RED_LO)
 	local sh = UITheme.dup(sn)
-	sh.bg = UITheme.to_rgba(UITheme.SURRENDER_RED_HI)
-	local sp = UITheme.flat(
-		UITheme.lerp(UITheme.SURRENDER_RED_LO, UITheme.SURRENDER_RED, 0.5),
-		UITheme.R_MD,
-		UITheme.CLEAR,
-		0,
-		22.0,
-		10.0
-	)
+	sh.bg = UITheme.to_rgba(UITheme.c(UITheme.SURRENDER_RED, 0.2))
+	local sp = UITheme.flat(UITheme.c(UITheme.SURRENDER_RED, 0.26), UITheme.R_MD, UITheme.SURRENDER_RED_LO, 2, 22.0, 10.0)
 	sp.margin = { 22.0, 12.0, 22.0, 8.0 }
-	local white = Color3.new(1, 1, 1)
+	local ink = UITheme.SURRENDER_RED
 	t.SurrenderButton = {
 		styles = { normal = sn, hover = sh, pressed = sp, hover_pressed = sp, disabled = pd },
 		colors = {
-			font_color = white,
-			font_hover_color = white,
-			font_pressed_color = white,
-			font_hover_pressed_color = white,
+			font_color = ink,
+			font_hover_color = ink,
+			font_pressed_color = ink,
+			font_hover_pressed_color = ink,
 			font_disabled_color = UITheme.TEXT_3,
-			icon_normal_color = white,
-			icon_hover_color = white,
-			icon_pressed_color = white,
-			icon_hover_pressed_color = white,
+			icon_normal_color = ink,
+			icon_hover_color = ink,
+			icon_pressed_color = ink,
+			icon_hover_pressed_color = ink,
 			icon_disabled_color = UITheme.TEXT_3,
 		},
 		font_weight = 800,
@@ -1866,7 +1899,7 @@ function UITheme.swatch(c: any, px: number?, radius: number?): any
 	p:set_min_size(Vector2.new(s, s))
 	p.size_flags_vertical = W().SHRINK_CENTER
 	p:set_mouse_filter(W().MOUSE_IGNORE)
-	p:add_theme_stylebox_override("panel", UITheme.flat(c, radius or 3, UITheme.rgba(1, 1, 1, 0.35), 1))
+	p:add_theme_stylebox_override("panel", UITheme.flat(c, radius or 3, UITheme.c(UITheme.BROWN_INK, 0.56), 1))
 	return p
 end
 

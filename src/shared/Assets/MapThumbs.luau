@@ -11,5 +11,5 @@ return {
 	oceania = "rbxassetid://140489038995639",
 	southamerica = "rbxassetid://77554623776890",
 	unitedstates = "rbxassetid://136399319690560",
-	world = "rbxassetid://76456931670439",
+	world = "rbxassetid://125435763329343",
 }

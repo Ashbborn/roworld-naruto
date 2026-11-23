@@ -212,7 +212,7 @@ HelpOverlay.SECTIONS = {
 		icon = "target",
 		color = "amber",
 		title = "Pick your start",
-		text = "Click any unclaimed land to place your capital. Solo games deploy 5 seconds after you choose; until then you can move it.",
+		text = "Click any unclaimed land to place your capital. Solo games begin 5 seconds after you choose; until then you can move it.",
 	},
 	{
 		icon = "attack",
@@ -270,6 +270,8 @@ HelpOverlay.LEGAL = {
 		.. " is free software under the same licence (GNU AGPL v3), with ABSOLUTELY NO WARRANTY.",
 	"World map based on Narutopedia's Naruto World Map (CC BY-SA 3.0).",
 	"Naruto © Masashi Kishimoto / Shueisha. " .. Brand.NAME .. " is an unofficial fan game.",
+	-- (2026-11-23: the title wordmark's typeface, as its licence asks)
+	"Title lettering: Ninja Naruto font by sk89q, © 2004 The Risen Realm and Keiichi Anime Forever, free for personal and commercial use.",
 }
 --- Where the source lives, under the credits: plain text with the GitHub mark, since Roblox games
 --- can't link off-platform (2026-10-25: "Source <github logo> <repo>" at the bottom; the public repo is
@@ -462,7 +464,7 @@ local function card_panel(mh: number, mv: number)
 	card:set_mouse_filter(W.MOUSE_IGNORE)
 	card:add_theme_stylebox_override(
 		"panel",
-		UITheme.flat(UITheme.rgba(1, 1, 1, 0.035), 12, UITheme.rgba(1, 1, 1, 0.07), 1, mh, mv)
+		UITheme.flat(UITheme.c(UITheme.BROWN_INK, 0.056), 12, UITheme.c(UITheme.BROWN_INK, 0.112), 1, mh, mv)
 	)
 	return card
 end
@@ -625,7 +627,7 @@ end
 local function keycap(text: string)
 	local cap = W.Panel.new()
 	cap:set_mouse_filter(W.MOUSE_IGNORE)
-	local sb = UITheme.flat(UITheme.rgba(1, 1, 1, 0.09), 6, UITheme.rgba(1, 1, 1, 0.2), 1, 8.0, 2.0)
+	local sb = UITheme.flat(UITheme.c(UITheme.BROWN_INK, 0.144), 6, UITheme.c(UITheme.BROWN_INK, 0.32), 1, 8.0, 2.0)
 	sb.margin = { 8.0, 2.0, 8.0, 3.0 }
 	cap:add_theme_stylebox_override("panel", sb)
 	cap.size_flags_horizontal = W.SHRINK_BEGIN

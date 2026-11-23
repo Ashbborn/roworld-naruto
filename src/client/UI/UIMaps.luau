@@ -64,7 +64,7 @@ function UIMaps.entries(): { any }
 	if #out == 0 then
 		local e = {
 			id = UIMaps.DEFAULT_ID,
-			name = "World",
+			name = "Shinobi World",
 			categories = { "featured", "world" },
 			featured_rank = 1,
 			thumb = tnorm.world,
@@ -86,7 +86,7 @@ end
 
 function UIMaps.name_of(id: string?): string
 	local e = UIMaps.get(id)
-	return if e then e.name else "World"
+	return if e then e.name else "Shinobi World"
 end
 
 --- A valid map id for `id` (the default when unknown).

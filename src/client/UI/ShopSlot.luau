@@ -42,10 +42,11 @@ ShopSlot.WIGGLE_S = 6.4
 --- The strip at the bottom the word SHOP sits in, logical px.
 ShopSlot.CAPTION_H = 17.0
 
-local GOLD_LIGHT = Color3.fromRGB(255, 226, 122)
-local GOLD_DEEP = Color3.fromRGB(238, 148, 28)
-local INK = Color3.fromRGB(52, 28, 2)
-local RED = Color3.fromRGB(232, 52, 52)
+-- (2026-11-23, the scroll: the roller's red lacquer with cream text, a gold count badge; it was gold)
+local GOLD_LIGHT = UITheme.LACQUER_HI
+local GOLD_DEEP = UITheme.LACQUER_LO
+local INK = UITheme.CREAM
+local RED = UITheme.GOLD_HI
 local FONT_H = Font.fromId(12187365977, Enum.FontWeight.Heavy)
 
 local function new(class: string, props: { [string]: any }, parent: Instance?): any
@@ -172,7 +173,7 @@ function ShopSlot._build(self)
 		BackgroundColor3 = RED,
 		Text = "",
 		FontFace = FONT_H,
-		TextColor3 = Color3.new(1, 1, 1),
+		TextColor3 = UITheme.TEXT,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Visible = false,
 		ZIndex = 7,
@@ -180,7 +181,7 @@ function ShopSlot._build(self)
 	new("UICorner", { CornerRadius = UDim.new(0.5, 0) }, badge)
 	new(
 		"UIStroke",
-		{ Color = Color3.fromRGB(90, 10, 10), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border },
+		{ Color = UITheme.GOLD_LO, Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border },
 		badge
 	)
 	self._badge = badge

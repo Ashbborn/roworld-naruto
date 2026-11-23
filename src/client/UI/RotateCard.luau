@@ -30,16 +30,22 @@ function RotateCard.new(c: any)
 	cc.grow_vertical = W.GROW_BOTH
 	self:add_child(cc)
 	self._icon = UITheme.icon_rect("app_icon", 72.0, Color3.new(1, 1, 1))
+	-- (2026-11-23: the RoNindo wordmark instead of RoWorld's app icon)
+	local art = UITheme.naruto_ui()
+	if art.wordmark ~= nil then
+		self._icon.gui.Image = art.wordmark.image
+		self._icon:set_min_size(Vector2.new(240.0, 240.0 * art.wordmark.size[2] / art.wordmark.size[1]))
+	end
 	self._icon.size_flags_horizontal = W.SHRINK_CENTER
 	cc:add_child(self._icon)
-	local t = UITheme.label("ROTATE YOUR PHONE", 22, 900, UITheme.AMBER, 3)
+	local t = UITheme.label("ROTATE YOUR PHONE", 22, 900, UITheme.GOLD_HI, 3) -- (on its dark card)
 	t:set_alignment(W.ALIGN_CENTER)
 	cc:add_child(t)
 	local s = UITheme.label(
 		Brand.NAME .. " is played in landscape.\nTurn your device sideways to continue.",
 		15,
 		500,
-		UITheme.TEXT_2
+		UITheme.ON_MAP_2
 	)
 	s:set_alignment(W.ALIGN_CENTER)
 	cc:add_child(s)

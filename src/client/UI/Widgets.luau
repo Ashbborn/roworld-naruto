@@ -2148,10 +2148,12 @@ function Label._recolor(self)
 	if self._tl then
 		self._tl.TextColor3 = c3
 		self:_part(self._tl, "TextTransparency", a)
+		self:_metal_inst(self._tl)
 	end
 	for _, g in ipairs(self._glyphs) do
 		g.TextColor3 = c3
 		self:_part(g, "TextTransparency", a)
+		self:_metal_inst(g)
 	end
 end
 
@@ -2248,6 +2250,7 @@ function Label._redraw(self)
 			end
 			g.TextColor3 = c3
 			self:_part(g, "TextTransparency", a)
+			self:_metal_inst(g)
 			g.Visible = true
 		end
 		for i = #chars + 1, #self._glyphs do
@@ -2289,7 +2292,55 @@ function Label._redraw(self)
 	tl.Position = UDim2.fromOffset(0, y0)
 	tl.TextColor3 = c3
 	self:_part(tl, "TextTransparency", a)
+	self:_metal_inst(tl)
 	self:_render_shadows(sh, ts, font)
+end
+
+--- A metal label (2026-11-23, RoNindo: `label.metal = "gold"` for Ryo): the text is drawn white under
+--- a vertical gold UIGradient (light, dark band, light) with a thin dark-gold outline, so it reads on
+--- the paper. Called after every colour change of a text instance.
+local GOLD_SEQ: any = nil -- (built on first use: test runtimes have no ColorSequence at load)
+local function gold_seq(): any
+	if GOLD_SEQ == nil then
+		GOLD_SEQ = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(255, 236, 150)),
+			ColorSequenceKeypoint.new(0.4, Color3.fromRGB(232, 176, 48)),
+			ColorSequenceKeypoint.new(0.58, Color3.fromRGB(168, 110, 16)),
+			ColorSequenceKeypoint.new(0.8, Color3.fromRGB(224, 166, 42)),
+			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(150, 96, 12)),
+		})
+	end
+	return GOLD_SEQ
+end
+function Label._metal_inst(self, inst: TextLabel)
+	local grad = inst:FindFirstChild("Metal")
+	local stroke = inst:FindFirstChild("MetalEdge")
+	if self.metal == "gold" then
+		inst.TextColor3 = Color3.new(1, 1, 1)
+		if grad == nil then
+			grad = Instance.new("UIGradient")
+			grad.Name = "Metal"
+			grad.Rotation = 90
+			grad.Color = gold_seq()
+			grad.Parent = inst
+		end
+		if stroke == nil then
+			stroke = Instance.new("UIStroke")
+			stroke.Name = "MetalEdge"
+			stroke.Color = Color3.fromRGB(74, 44, 6)
+			stroke.Thickness = 1
+			stroke.Parent = inst
+		end
+		self:_part(stroke, "Transparency", 0.55 * UITheme.alpha(self.color))
+	else
+		if grad ~= nil then
+			grad:Destroy()
+		end
+		if stroke ~= nil then
+			self:_drop_part(stroke)
+			stroke:Destroy()
+		end
+	end
 end
 
 function Label._render_shadows(self, sh, ts: number, font)
