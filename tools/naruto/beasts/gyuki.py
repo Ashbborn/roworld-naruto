@@ -101,6 +101,13 @@ def draft_a():
     for k in range(3):
         parts.append(cutline([(154 + k * 12, 304), (158 + k * 12, 320)], 4))
 
+    parts += head_parts()
+    return parts
+
+
+def head_parts(dy=0.0):
+    """The ox head, horns and ears (shared by the drafts)."""
+    parts = []
     # horns, ears, head
     horn = brush([(318, 132), (384, 118), (432, 84), (446, 34), (430, 6)], [52, 46, 36, 24, 0], cap1="point")
     ear = smooth([(330, 168), (372, 158, 0), (396, 172, 0), (372, 186), (334, 190)])
@@ -133,6 +140,53 @@ def draft_a():
     for x0 in (265, 283, 300):
         for f in ((lambda p: p), mirror_x):
             parts.append(solid(f([(x0 - 7, 266), (x0 + 7, 265), (x0 + 6, 274), (x0 - 6, 276)]), "tooth"))
+    if dy:
+        for p in parts:
+            p.pts = move(p.pts, dy=dy)
+    return parts
+
+
+# ---------------------------------------------------------------------------------------------------
+# B: the emblem: a big head and horns on a heavy bust, the eight tentacles coiling up round it
+# ---------------------------------------------------------------------------------------------------
+
+TENTS_B = [  # right side (mirrored): angle, length, turn, width (they curl up, counter-clockwise)
+    (-16, 290, -104, 60),
+    (10, 300, -92, 64),
+    (36, 280, -80, 62),
+    (62, 240, -70, 56),
+]
+
+
+def draft_b():
+    parts = []
+    root = (256, 420)
+    for k in (0, 1, 2, 3):
+        a, L, turn, w = TENTS_B[k]
+        r = math.radians(a)
+        rr = (root[0] + math.cos(r) * 70, root[1] + math.sin(r) * 20)
+        t = tentacle(rr, a, L, turn, w, curl=160)
+        parts.append(solid(t, "tent", sep=GAP))
+        parts.append(solid(mirror_x(t), "tent", sep=GAP))
+        sk = suckers(rr, a, L, turn, w, side=1)
+        parts += sk + [Part(mirror_x(q.pts), "sucker", only="colour") for q in sk]
+    # a heavy bust: traps sloping into huge shoulders
+    bust = smooth(sym([(256, 300), (306, 304), (366, 326), (400, 366), (398, 420), (352, 456), (256, 468)]))
+    parts.append(solid(bust, sep=GAP))
+    for f in ((lambda p: p), mirror_x):
+        delt = smooth([(334, 330), (382, 318), (420, 346), (424, 400), (392, 424), (352, 396)])
+        parts.append(solid(f(delt), sep=6))
+    parts.append(cutline([(256, 370), (256, 430)], 6, only="colour"))
+    for f in ((lambda p: p), mirror_x):
+        parts.append(cutline(f(smooth([(266, 420), (300, 430), (340, 416)], closed=False)), 6, only="colour"))
+    hp = head_parts()
+    for q in hp:
+        q.pts = [(256 + (x - 256) * 1.32, 40 + (y - 40) * 1.32) for x, y in q.pts]
+        if q.line:
+            q.line *= 1.32
+        if q.sep:
+            q.sep *= 1.0
+    parts += hp
     return parts
 
 
@@ -143,4 +197,7 @@ def lerp_brush(t):
     return c[i]
 
 
-DRAFTS = {"A": draft_a}
+DRAFTS = {"A": draft_a, "B": draft_b}
+FINAL = "A"
+#: drafts worth showing the owner: A the full figure, B the emblem (head bigger, reads smaller)
+ALTS = ["A", "B"]

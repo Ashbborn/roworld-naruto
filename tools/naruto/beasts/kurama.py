@@ -12,6 +12,7 @@ GLOW = "#ff5a1a"
 PALETTE = {
     "body": Mat("#f2731d", shadow="#b8401a", light="#ffa24a"),
     "tail": Mat("#f06a1c", shadow="#b33a18", light="#ff9c48"),
+    "back": Mat("#d65a18", shadow="#9a3014", light="#f08a3a"),
     "mark": Mat("#1d1418", shaded=False),
     "eye": Mat("#ffd23a", shaded=False, glow=("#ff3010", 6)),
     "pupil": Mat("#1d1418", shaded=False),
@@ -78,26 +79,29 @@ def head_a():
 
 
 def arm_a():
-    shoulder = smooth([(296, 230), (352, 210), (406, 236), (420, 296), (376, 330), (316, 306)])
-    arm = brush([(378, 270), (412, 340), (424, 410), (430, 450)], [96, 74, 58, 50])
-    hand = smooth([(404, 434), (446, 430), (468, 452), (464, 472), (418, 476), (398, 460)])
+    shoulder = smooth([(290, 226), (352, 204), (414, 230), (434, 298), (386, 336), (312, 306)])
+    arm = brush([(380, 268), (416, 338), (430, 408), (436, 446)], [112, 92, 78, 70])
+    # a tuft of fur at the back of the elbow
+    tuft = brush([(436, 316), (462, 338), (486, 346)], [34, 20, 0], cap1="point")
+    hand = smooth([(400, 432), (448, 426), (474, 450), (470, 474), (418, 480), (394, 462)])
     fingers = []
-    for (bx, by), (tx, ty) in (((408, 462), (396, 500)), ((426, 466), (424, 506)), ((444, 464), (452, 504)),
-                               ((460, 456), (482, 490))):
+    for (bx, by), (tx, ty) in (((404, 464), (390, 504)), ((424, 470), (420, 510)), ((444, 468), (452, 508)),
+                               ((464, 458), (488, 492))):
         mx, my = (bx + tx) / 2 + (2 if tx > bx else -2), (by + ty) / 2
-        fingers.append(brush([(bx, by), (mx, my), (tx, ty)], [22, 17, 0], cap0="round", cap1="point"))
-    return shoulder, arm, hand, fingers
+        fingers.append(brush([(bx, by), (mx, my), (tx, ty)], [26, 20, 0], cap0="round", cap1="point"))
+    return shoulder, arm, hand, fingers, tuft
 
 
 def draft_a():
     parts = []
-    parts += tails(9, (256, 262), 196, 344, [300, 330, 352, 368, 374, 368, 352, 330, 300],
-                   [54, 56, 54, 46, 30, 0], spread=44, turn=118, wave=-16)
-    torso = smooth(sym([(256, 236), (326, 246), (360, 300), (342, 384), (300, 436), (256, 450)]))
-    parts.append(solid(torso))
-    shoulder, arm, hand, fingers = arm_a()
+    parts += tails(9, (256, 262), 196, 344, [300, 334, 350, 372, 374, 366, 354, 326, 302],
+                   [60, 66, 64, 56, 36, 0], spread=46, turn=116, wave=-16)
+    torso = smooth(sym([(256, 228), (330, 238), (372, 290), (356, 360), (316, 402), (256, 412)]))
+    parts.append(solid(torso, "back"))
+    shoulder, arm, hand, fingers, tuft = arm_a()
     for f in ((lambda p: p), mirror_x):
-        parts.append(solid(f(shoulder)))
+        parts.append(solid(f(shoulder), "back"))
+        parts.append(solid(f(tuft), sep=GAP))
         parts.append(solid(f(arm), sep=GAP))
         for fg in fingers:
             parts.append(solid(f(fg), sep=6))
@@ -152,3 +156,6 @@ def draft_b():
 
 
 DRAFTS = {"A": draft_a, "B": draft_b}
+FINAL = "A"
+#: drafts worth showing the owner (the profile B stays parked: it reads as a porcupine)
+ALTS = ["A"]

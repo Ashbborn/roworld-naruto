@@ -390,7 +390,7 @@ def svg_colour_body(parts, pal, ink=INK, sep_k=0.75):
 
 
 def render_colour(parts, pal, px=512, margin=0.12, vb=None, ink=INK, outline=0.012, glow=None,
-                  glow_r=0.035, glow_a=0.85, ss=2):
+                  glow_r=0.035, glow_a=0.85, ss=2, rim=0.006, rim_a=0.55):
     """The full-colour portrait: cel-shaded parts, an ink outline `outline` x side wide round the
     silhouette, and `glow` (a colour) blurred behind it. Fitted like the mask, with more margin."""
     vb = vb or view_box(parts, margin)
@@ -399,6 +399,14 @@ def render_colour(parts, pal, px=512, margin=0.12, vb=None, ink=INK, outline=0.0
     im = np.asarray(svgkit.render(_doc(body, vb, big, defs), big)).astype(np.float64) / 255.0
     a = im[..., 3]
     inside = a > 0.5
+    if glow and rim > 0:
+        # a chakra rim light just inside the silhouette, strongest on the side away from the light
+        din = ndimage.distance_transform_edt(inside)
+        band = np.clip(1 - din / (rim * big), 0, 1) * inside
+        gy, gx = np.gradient(ndimage.gaussian_filter(inside.astype(np.float64), 2.0))
+        facing = np.clip(-(gx * LIGHT[0] + gy * LIGHT[1]) * 8, 0, 1)  # edges facing away from the light
+        k = (band * (0.35 + 0.65 * facing) * rim_a)[..., None]
+        im[..., :3] = im[..., :3] * (1 - k) + np.array(hexrgb(glow)) / 255.0 * k
     dist = ndimage.distance_transform_edt(~inside)
     ol = outline * big
     ol_a = np.clip(ol - dist + 0.5, 0, 1)
