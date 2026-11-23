@@ -959,6 +959,8 @@ function UIRoot._build(self)
 	-- the Akatsuki objective under the top status while it is on the map (UI/AkatsukiPanel)
 	local aka_panel = AkatsukiPanel.new(ctx, self)
 	self.aka_panel = aka_panel
+	-- (the widget says it: the status pill's "Akatsuki: N/9 sealed" line steps aside)
+	self.top.akatsuki_widget = true
 	hud:add_child(self:_host(aka_panel.gui, "AkatsukiPanel"))
 	local radial = RadialMenu.new(ctx)
 	self.radial = radial
@@ -2376,9 +2378,10 @@ function UIRoot._layout(self)
 	self.attacks.tray_open = bar.tray ~= nil and bar.tray.visible
 	self.attacks:apply_layout(attacks_top, (if bar.visible then bar:top_edge() else vp.Y - ctx.insets.w) - 8.0)
 	self.attacks:refresh()
-	self.notices:apply_layout_top(
-		if self._screen ~= "title" then ctx.insets.y + (if ctx.compact then 70.0 else 96.0) else ctx.insets.y + 12.0
-	)
+	local notices_y = if self._screen ~= "title" then ctx.insets.y + (if ctx.compact then 70.0 else 96.0) else ctx.insets.y + 12.0
+	-- (the toasts go under the Akatsuki objective while it is up)
+	local aka_y = if self.aka_panel ~= nil and self._screen ~= "title" then self.aka_panel:bottom_edge() else 0
+	self.notices:apply_layout_top(if aka_y > 0 then math.max(notices_y, aka_y + 6.0) else notices_y)
 	self.coach:apply_layout()
 	self.tutorial:apply_layout()
 	-- the territory notice sits top-left under the top bar, below panels reaching that corner
@@ -2452,6 +2455,11 @@ function UIRoot._layout_alert(self)
 		y = self.top:bottom_edge() + 10.0
 	elseif self.spawn.visible then
 		y = self.spawn:bottom_edge() + 10.0
+	end
+	-- (under the Akatsuki objective while it is up: UI/AkatsukiPanel)
+	local aka = if self.aka_panel ~= nil then self.aka_panel:bottom_edge() else 0
+	if aka > 0 then
+		y = math.max(y, aka + 6.0)
 	end
 	self.alert:apply_layout(y)
 end

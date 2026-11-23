@@ -30,7 +30,8 @@ Akatsuki.TEXT = {
 	-- (toast for everyone when it appears; banner)
 	appeared = "The Akatsuki hunts the Tailed Beasts. If they seal all nine, everyone loses. Destroy the cells to break the barrier on their hideout",
 	appear_banner = "THE AKATSUKI HAS APPEARED",
-	appear_sub = "The Akatsuki hunts the Tailed Beasts. If they seal all nine, everyone loses. Destroy the cells to break the barrier on their hideout.",
+	-- (two lines: the banner's subtitle doesn't wrap)
+	appear_sub = "The Akatsuki hunts the Tailed Beasts. If they seal all nine, everyone loses.\nDestroy the cells to break the barrier on their hideout.",
 	-- (toast for the owner a cell landed next to: the cell's name)
 	cell = "%s landed on your border!",
 	-- (a sealing ritual began: cell, beast title, [holder,] seconds)

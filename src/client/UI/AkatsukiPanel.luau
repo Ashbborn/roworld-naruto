@@ -134,7 +134,33 @@ function AkatsukiPanel.new(c: any, ui: any)
 	self._vp = Vector2.zero
 	self._top = -1
 	self._t = 0.0
+	--- On screen now (UIRoot lays the alert and the toasts out under it: bottom_edge).
+	self.shown = false
 	return self
+end
+
+--- The lowest logical-px y it may cover (its card and the ritual line under it); 0 when hidden.
+function AkatsukiPanel.bottom_edge(self: any): number
+	if not self.shown or self._top < 0 then
+		return 0
+	end
+	local _, h = self:_sizes()
+	return self._top + h + 30
+end
+
+function AkatsukiPanel._set_shown(self: any, on: boolean)
+	if on == self.shown then
+		return
+	end
+	self.shown = on
+	self.gui.Visible = on
+	-- (the alert and the toasts move under it, or back)
+	local ui = self.ui
+	if ui ~= nil and type(ui.relayout) == "function" then
+		pcall(function()
+			ui:relayout()
+		end)
+	end
 end
 
 function AkatsukiPanel._sizes(self: any): (number, number, number)
@@ -266,9 +292,18 @@ function AkatsukiPanel._place(self: any)
 	if y == self._top and ctx.vp == self._vp then
 		return
 	end
+	local moved = y ~= self._top
 	self._top, self._vp = y, ctx.vp
 	ctx:fit_canvas(self.gui)
-	self._card.Position = UDim2.fromOffset(ctx.vp.X * 0.5, y)
+	local w = self:_sizes()
+	-- (desktop: centred under the status pill; phones: under it in the top-right corner)
+	local x = if ctx.compact then ctx.vp.X - 8 - (ctx.insets and ctx.insets.z or 0) - w * 0.5 else ctx.vp.X * 0.5
+	self._card.Position = UDim2.fromOffset(x, y)
+	if moved and self.shown and self.ui ~= nil and type(self.ui.relayout) == "function" then
+		pcall(function()
+			self.ui:relayout()
+		end)
+	end
 end
 
 --- Per frame (UIRoot._process).
@@ -276,16 +311,14 @@ function AkatsukiPanel.update(self: any, delta: number)
 	local ctx = self.ctx
 	local s = if self:_shown() then AkatsukiPanel.summary(ctx.state, ctx:render_tick()) else nil
 	if s == nil then
-		if self.gui.Visible then
-			self.gui.Visible = false
-		end
+		self:_set_shown(false)
 		return
 	end
 	if not self._built then
 		self:_build()
 	end
-	self.gui.Visible = true
 	self:_place()
+	self:_set_shown(true)
 	self._t += delta
 	local red = self._red
 	local T = Akatsuki().TEXT

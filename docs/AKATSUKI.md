@@ -196,7 +196,9 @@ Its name, colours and every player-visible string are in `src/shared/Data/Akatsu
   - `UI/AkatsukiPanel`: the objective widget (`AkatsukiPanel.summary` is the logic)
   - `UnitLayer._beast_rings`: the stir marker, the barrier ring round the hideout, the ritual rings
     with their countdown
-  - `TopStatus._refresh_akatsuki`: the "Akatsuki: N/9 sealed" line
+  - `TopStatus._refresh_akatsuki`: the "Akatsuki: N/9 sealed" line, hidden while the widget is
+    hosted (`top.akatsuki_widget`); the widget sits under the status pill (top-right on phones) and
+    `UIRoot` lays the alert and the toasts out under it (`AkatsukiPanel.bottom_edge`)
   - `GameOver._copy`: the end screen
   - toasts arrive as ordinary Sim messages
 
