@@ -7,6 +7,7 @@
 -- the map (a blast-radius preview on hover; on touch the first tap shows it, a second tap on the
 -- same tile fires); Esc / X / the button again cancel. Self powers go off at once.
 --
+-- Each card's picture is the beast's colour portrait (BeastIcon.portrait).
 -- Drawn on a raw logical-px canvas (UICtx.canvas) that UIRoot hosts in the HUD; its buttons are
 -- Active so the map never takes their clicks. UIInteract forwards hover / click / escape / keys
 -- while it aims (UIInteract.beast_aim = this panel). The decisions (keys, cooldowns, which bomb,
@@ -144,6 +145,26 @@ end
 local BG = Color3.new(0.03, 0.04, 0.08)
 local GOLD = Color3.fromRGB(255, 214, 120)
 local DIM = Color3.fromRGB(150, 156, 176)
+
+--- The beasts the game-over screen shows (GameOver): those held now and those held earlier this
+--- match (`ever`: tails -> true), once each, by tail count.
+function BeastPanel.held_list(current: { number }?, ever: { [number]: boolean }?): { number }
+	local seen, out = {}, {}
+	for _, t in current or {} do
+		seen[t] = true
+	end
+	for t, on in ever or {} do
+		if on then
+			seen[t] = true
+		end
+	end
+	for t = 1, 9 do
+		if seen[t] then
+			table.insert(out, t)
+		end
+	end
+	return out
+end
 
 function BeastPanel.new(c: any, ui: any)
 	local self = setmetatable({}, BeastPanel)
@@ -287,6 +308,15 @@ function BeastPanel._button(self: any, card: Frame, tails: number, what: string,
 	return { btn = btn, stroke = stroke, arc = arc, secs = secs, glyph = glyph, what = what, tails = tails, col = col }
 end
 
+--- A card's picture: the beast's colour portrait, a little larger than the disc behind it so it
+--- stands out (the tinted mask without one; the buttons keep their small masks). `isz`: the disc's
+--- diameter, `h`: the card's height.
+function BeastPanel.card_picture(card: Instance, tails: number, isz: number, h: number, col: Color3): Frame
+	local pic = BeastIcon.portrait(card, tails, isz * 1.12, col, Vector2.new(6 + isz * 0.5, h * 0.5 - isz * 0.04))
+	pic.Name = "Portrait"
+	return pic
+end
+
 function BeastPanel._rebuild(self: any, held: { number })
 	for _, c in self._cards do
 		c.frame:Destroy()
@@ -310,7 +340,7 @@ function BeastPanel._rebuild(self: any, held: { number })
 		local isz = h - 12
 		local disc = UICtx.circle(card, Vector2.new(6 + isz * 0.5, h * 0.5), isz * 0.5, col:Lerp(BG, 0.8), 0)
 		disc.ZIndex = 3
-		local pic = BeastIcon.beast(card, tails, isz * 0.86, col, Vector2.new(6 + isz * 0.5, h * 0.5))
+		local pic = BeastPanel.card_picture(card, tails, isz, h, col)
 		pic.ZIndex = 4
 		for _, g in pic:GetDescendants() do
 			if g:IsA("GuiObject") then
@@ -328,6 +358,7 @@ function BeastPanel._rebuild(self: any, held: { number })
 		local bx = w - 8 - d * 1.5 - 6
 		local entry = {
 			frame = card,
+			pic = pic,
 			tails = tails,
 			bomb = self:_button(card, tails, "bomb", bx, d, h, col, BeastPanel.BOMB_KEY),
 			power = self:_button(card, tails, "power", w - 8 - d * 0.5, d, h, col, BeastPanel.POWER_KEYS[i] or ""),

@@ -3,7 +3,11 @@
 -- real mirror fed by a Sim through the protocol: hidden until it appears, its cells and barrier, the
 -- sealed beasts, a running ritual's countdown, gone after its fall.
 -- Run: .bin/lune run tests/akatsuki_panel.luau
-require("./prelude")
+local roblox = require("./prelude")
+-- (the widget's and the banners' pictures are real instances)
+for _, n in { "Instance", "Enum", "NumberSequence", "NumberSequenceKeypoint", "ColorSequence", "ColorSequenceKeypoint", "Font" } do
+	(getfenv() :: any)[n] = (roblox :: any)[n]
+end
 require("./fixtures/fixture_maps")
 local serde = require("@lune/serde")
 local Defs = require("../src/shared/Core/Defs")
@@ -14,6 +18,10 @@ local GameState = require("../src/shared/Core/GameState")
 local Protocol = require("../src/shared/Net/Protocol")
 local AkatsukiData = require("../src/shared/Data/Akatsuki")
 local AkatsukiPanel = require("../src/client/UI/AkatsukiPanel")
+local BeastIcon = require("../src/client/UI/BeastIcon")
+local BeastSplash = require("../src/client/UI/BeastSplash")
+local BeastsData = require("../src/shared/Data/Beasts")
+local Art = require("../src/shared/Assets/BeastArt")
 
 Protocol.set_codec({
 	compress = function(b: buffer): buffer
@@ -83,6 +91,46 @@ local s = AkatsukiPanel.summary(gs, gs.tick)
 expect(s ~= nil and s.cells_alive == 4 and s.cells_all == 4 and s.barrier_up and s.n_sealed == 0 and s.ritual == nil, "on the map: 4/4 cells, barrier up, nothing sealed")
 expect(AkatsukiPanel.status_text(s) == string.format(AkatsukiData.TEXT.widget_cells, 4, 4) .. "  ·  " .. AkatsukiData.TEXT.widget_barrier_up, "status: " .. AkatsukiPanel.status_text(s))
 
+-- who each Akatsuki owner is (the banners' busts)
+local cells_ok = true
+for i, m in sim.aka_members do
+	local name, who = AkatsukiPanel.cell_who(gs, m.id)
+	local want = AkatsukiData.MEMBERS[i]
+	if name ~= want.name or #who ~= 2 or who[1] ~= want.who[1] or who[2] ~= want.who[2] then
+		cells_ok = false
+	end
+end
+expect(cells_ok, "each cell's name and its two members (Itachi & Kisame: itachi, kisame ...)")
+local hq_name, hq_who = AkatsukiPanel.cell_who(gs, sim.aka_id)
+expect(hq_name == "Pain & Konan" and hq_who[1] == "pain" and hq_who[2] == "konan", "the hideout: Pain & Konan")
+local un_name, un_who = AkatsukiPanel.cell_who(gs, 99999)
+expect(un_name == "A cell" and #un_who == 0, "an unknown owner: no busts")
+local all_art = true
+for _, mem in AkatsukiData.MEMBERS do
+	for _, w in mem.who do
+		if BeastIcon.member_image(w) == "" then
+			all_art = false
+		end
+	end
+end
+expect(all_art, "every member has at least a mask")
+
+-- the widget: its emblem in colour, the nine beasts as small tinted masks
+local panel = AkatsukiPanel.new({ compact = false }, nil)
+panel:_build()
+expect(BeastIcon.is_colour(panel._cloud) and panel._cloud:FindFirstChildOfClass("ImageLabel").Image == Art.akatsuki_color, "the widget's emblem: the colour cloud")
+local masks = true
+for t = 1, 9 do
+	local ic = panel._icons[t]
+	if ic == nil or BeastIcon.is_colour(ic.pic) or ic.pic:FindFirstChildOfClass("ImageLabel").Image ~= Art.beasts[t] then
+		masks = false
+	end
+end
+expect(masks, "its sealed / unsealed slots keep the small masks")
+local phone = AkatsukiPanel.new({ compact = true }, nil)
+local pw = phone:_sizes()
+expect(pw <= 360 - 16, "on a phone the widget fits a 360 px wide screen (" .. pw .. " px)")
+
 -- a wild beast next to a cell: the ritual counts down
 local b = sim.beasts[2]
 b.state = Defs.BEAST_STIRRING
@@ -97,6 +145,27 @@ local m = sim.aka_members[1]
 sim:_akatsuki_move(m)
 sim:_akatsuki_wave(m)
 expect(m.ritual ~= nil, "(a ritual began)")
+-- the ritual banner: "Itachi & Kisame are sealing the Two-Tails!" over the two members' colour busts
+local rname, rwho = AkatsukiPanel.cell_who(gs, m.id)
+local rsub = string.format(AkatsukiData.TEXT.ritual_banner_sub, rname, BeastsData.title(2))
+expect(string.find(rsub, AkatsukiData.MEMBERS[1].name .. " are sealing the Two-Tails!", 1, true) == 1, "the ritual banner: " .. rsub)
+local ctx = { vp = Vector2.new(1280, 720), compact = false, fit_canvas = function() end }
+local rs = BeastSplash.make(ctx, 0, Color3.new(1, 0, 0), "members", { who = rwho })
+local busts_ok = #rs._pics == 2
+for i, b in rs._pics do
+	local l = b:FindFirstChildOfClass("ImageLabel")
+	if l == nil or l.Name ~= "Colour" or l.Image ~= Art.members_color[rwho[i]] then
+		busts_ok = false
+	end
+end
+expect(busts_ok, "with " .. table.concat(rwho, " and ") .. "'s colour busts")
+local x0 = rs._pics[1].Position.X.Offset
+rs:_process(0.05)
+local xa = rs._pics[1].Position.X.Offset
+rs:_process(0.6)
+local xb = rs._pics[1].Position.X.Offset
+expect(xa < xb and rs._pics[2].Position.X.Offset > xb, "the busts slide in from both sides (" .. math.floor(xa) .. " -> " .. math.floor(xb) .. ")")
+local _ = x0
 step(1)
 s = AkatsukiPanel.summary(gs, gs.tick)
 expect(s.ritual ~= nil and s.ritual.tails == 2 and s.ritual.secs >= 4 and s.ritual.secs <= 5, "the widget counts it down (" .. tostring(s.ritual and s.ritual.secs) .. " s)")
@@ -119,6 +188,15 @@ end
 step(2)
 s = AkatsukiPanel.summary(gs, gs.tick)
 expect(s ~= nil and s.cells_alive == 0 and not s.barrier_up, "cells 0/4, barrier down")
+-- a destroyed cell's banner: its busts greyed (Kakuzu has no colour bust yet: his mask, grey)
+local dname, dwho = AkatsukiPanel.cell_who(gs, sim.aka_members[3].id)
+expect(gs.akatsuki.members[sim.aka_members[3].id].alive == false and dname == "Hidan & Kakuzu", "(the third cell is down: Hidan & Kakuzu)")
+local ds = BeastSplash.make({ vp = Vector2.new(640, 360), compact = true, fit_canvas = function() end }, 0, Color3.new(1, 0, 0), "members", { who = dwho, grey = true })
+local h = ds._pics[1]:FindFirstChildOfClass("ImageLabel")
+local k = ds._pics[2]:FindFirstChildOfClass("ImageLabel")
+expect(h.Name == "Colour" and h.ImageColor3 ~= Color3.new(1, 1, 1), "Hidan's colour bust, greyed")
+expect(k.Name == "Art" and k.Image == Art.members.kakuzu and k.ImageColor3 ~= Color3.new(1, 0, 0), "Kakuzu's mask, grey (no colour bust yet)")
+expect(string.format(AkatsukiData.TEXT.member_banner, string.upper(dname)) == "HIDAN & KAKUZU DESTROYED", "titled HIDAN & KAKUZU DESTROYED")
 expect(string.find(AkatsukiPanel.status_text(s), AkatsukiData.TEXT.widget_barrier_down, 1, true) ~= nil, "status: " .. AkatsukiPanel.status_text(s))
 
 -- its fall: hidden

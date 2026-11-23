@@ -20,6 +20,8 @@ local GlassPanel = require("./GlassPanel")
 local UICtx = require("./UICtx")
 local TitleScreen = require("./TitleScreen")
 local UIRules = require("./UIRules") :: any
+local BeastIcon = require("./BeastIcon")
+local BeastPanel = require("./BeastPanel")
 local Signal = UITheme.core("Signal")
 local Defs = UICtx.core("Defs")
 
@@ -117,6 +119,23 @@ function GameOver.new(c: any)
 	self._stats = UITheme.hbox(12)
 	self._stats:set_alignment(W.ALIGN_CENTER)
 	self._center:add_child(self._stats)
+	-- the Tailed Beasts you held this match, as small colour portraits (hidden with none)
+	self._held_ever = {} :: { [number]: boolean }
+	self._beasts_n = 0
+	self._gap_beasts = spacer(14)
+	self._gap_beasts:set_visible(false)
+	self._center:add_child(self._gap_beasts)
+	self._beasts_row = UITheme.vbox(4)
+	self._beasts_row:set_mouse_filter(W.MOUSE_IGNORE)
+	self._beasts_row.size_flags_horizontal = W.SHRINK_CENTER
+	self._beasts_row:set_visible(false)
+	local bcap = UITheme.caption("TAILED BEASTS HELD", 10, UITheme.TEXT_3)
+	bcap:set_alignment(W.ALIGN_CENTER)
+	self._beasts_row:add_child(bcap)
+	self._beasts_icons = UITheme.hbox(8)
+	self._beasts_icons:set_alignment(W.ALIGN_CENTER)
+	self._beasts_row:add_child(self._beasts_icons)
+	self._center:add_child(self._beasts_row)
 	self._gap3 = spacer(28)
 	self._center:add_child(self._gap3)
 
@@ -472,6 +491,66 @@ function GameOver._stat_card(self, icon_name: string, value: string, caption: st
 	return card
 end
 
+--- The portrait size on the game-over screen (logical px).
+function GameOver.beast_size(compact: boolean): number
+	return if compact then 36.0 else 56.0
+end
+
+--- UIRoot: the local player became beast `tails`' holder (nil: a new match, forget them all).
+function GameOver.note_beast(self, tails: number?)
+	if tails == nil then
+		table.clear(self._held_ever)
+	else
+		self._held_ever[tails] = true
+	end
+end
+
+--- Rebuilds the row of held beasts' portraits; returns how many.
+function GameOver._fill_beasts(self): number
+	local ctx = self.ctx
+	local s = ctx.state
+	for _, ch in ipairs(self._beasts_icons:get_children()) do
+		ch:queue_free()
+	end
+	local me = ctx:me()
+	local current = if s ~= nil and me ~= 0 and type(s.beasts_of) == "function" then s:beasts_of(me) else {}
+	local list = BeastPanel.held_list(current, self._held_ever)
+	local size = GameOver.beast_size(ctx.compact == true)
+	local Beasts = UICtx.data("Beasts")
+	for _, tails in list do
+		local b = Beasts.get(tails)
+		local col = if b ~= nil then Color3.fromHex(b.color) else UITheme.GOLD
+		local box = Instance.new("Frame")
+		box.BackgroundTransparency = 1
+		box.BorderSizePixel = 0
+		local cell = W.wrap(box)
+		cell:set_mouse_filter(W.MOUSE_IGNORE)
+		cell:set_min_size(Vector2.new(size, size))
+		local pic = BeastIcon.portrait(box, tails, size, col, Vector2.new(size * 0.5, size * 0.5))
+		-- (it fades with the screen)
+		for _, d in pic:GetDescendants() do
+			if d:IsA("ImageLabel") then
+				cell:_part(d, "ImageTransparency", 1.0)
+			elseif d:IsA("Frame") then
+				cell:_part(d, "BackgroundTransparency", 1.0)
+			end
+		end
+		if ctx.compact then
+			self._beasts_icons:add_child(cell)
+		else
+			local v = UITheme.vbox(2)
+			v:set_mouse_filter(W.MOUSE_IGNORE)
+			v:add_child(cell)
+			local nm = UITheme.caption(string.upper(Beasts.name(tails)), 9, UITheme.lerp(col, UITheme.WHITE, 0.4))
+			nm:set_alignment(W.ALIGN_CENTER)
+			v:add_child(nm)
+			self._beasts_icons:add_child(v)
+		end
+	end
+	self._beasts_n = #list
+	return #list
+end
+
 --- kind: "victory", "defeat", "eliminated" or "result" (the match ended while you were not in it).
 --- reason: Defs.OVER_* (ignored for "eliminated"). stats: {peak_share, max_troops, kills, duration_s}
 function GameOver.open(self, kind: string, winner: number, killer: number, stats: any, reason: number?)
@@ -550,6 +629,7 @@ function GameOver.open(self, kind: string, winner: number, killer: number, stats
 	-- (stats.match_s), not the moment the player fell (review R2-6).
 	local secs = UIRules.result_seconds(kind, stats)
 	self._stats:add_child(slot(self:_stat_card("clock", UITheme.fmt_time(secs), "Match duration", UITheme.VIOLET)))
+	self:_fill_beasts()
 	local solo = ctx:mode() == UICtx.MODE_SOLO
 	local running = s ~= nil and s.phase == Defs.PHASE_PLAYING
 	-- the Stars this match (or this life) paid, if the payout is in already
@@ -584,6 +664,9 @@ function GameOver.open(self, kind: string, winner: number, killer: number, stats
 	t:tween_property(self._winner, "modulate:a", 1.0, 0.5):set_delay(0.75)
 	for i, sl in ipairs(self._stats:get_children()) do
 		UICtx.pop_in(sl.card, 0.9 + 0.09 * (i - 1), 0.9, 0.45)
+	end
+	if self._beasts_row.visible then
+		UICtx.pop_in(self._beasts_row, 1.25, 0.9, 0.45)
 	end
 	self._buttons:set_modulate_a(0.0)
 	t:tween_property(self._buttons, "modulate:a", 1.0, 0.5):set_delay(1.35)
@@ -1041,6 +1124,10 @@ function GameOver.apply_layout(self)
 	-- (the offer takes the stat cards' place)
 	self._stats:set_visible(not take)
 	self._gap3:set_visible(not take)
+	local beasts = self._beasts_n > 0 and not take
+	self._beasts_row:set_visible(beasts)
+	self._gap_beasts:set_visible(beasts)
+	self._gap_beasts:set_min_size(Vector2.new(0, if compact then 8 else 14))
 	self._gap2:set_min_size(Vector2.new(0, if compact then 14 else (if take then 18 else 26)))
 	self._gap3:set_min_size(Vector2.new(0, if compact then 14 else (if take then 18 else 28)))
 	local sz = self._center:get_combined_minimum_size()
@@ -1052,6 +1139,12 @@ function GameOver.apply_layout(self)
 		self._gap2:set_min_size(Vector2.new(0, 8))
 		self._gap3:set_min_size(Vector2.new(0, 8))
 		sz = self._center:get_combined_minimum_size()
+		-- (then the held beasts' row)
+		if sz.Y > area.Height - 8.0 and self._beasts_row.visible then
+			self._beasts_row:set_visible(false)
+			self._gap_beasts:set_visible(false)
+			sz = self._center:get_combined_minimum_size()
+		end
 		-- still too tall with the offers (a phone): the "Current leader" pill gives them its line (the
 		-- leaderboard says who leads; a result's winner stays), then the 2x Stars offer goes, then
 		-- the next unlock too

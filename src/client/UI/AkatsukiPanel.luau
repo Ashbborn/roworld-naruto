@@ -84,6 +84,21 @@ function AkatsukiPanel.status_text(s: any): string
 end
 
 --- The countdown line while a ritual runs.
+--- The name and the members' bust keys (Data/Akatsuki.MEMBERS[idx].who) of Akatsuki owner `id` in
+--- mirror `state`: a cell, or the hideout (Pain & Konan). ("A cell", {}) when unknown.
+function AkatsukiPanel.cell_who(state: any, id: number): (string, { string })
+	local A = Akatsuki()
+	local a = if type(state) == "table" then state.akatsuki else nil
+	if type(a) == "table" and id ~= 0 and id == a.id then
+		return "Pain & Konan", A.HQ_WHO or {}
+	end
+	local m = if type(a) == "table" and type(a.members) == "table" then a.members[id] else nil
+	local mem = if m ~= nil then A.MEMBERS[m.idx] else nil
+	local o = if type(state) == "table" and type(state.owners) == "table" then state.owners[id] else nil
+	local name = if mem ~= nil then mem.name elseif o ~= nil and o.name ~= "" then o.name else "A cell"
+	return name, if mem ~= nil and type(mem.who) == "table" then mem.who else {}
+end
+
 function AkatsukiPanel.ritual_text(s: any): string
 	local r = s.ritual
 	if r == nil then
@@ -193,7 +208,8 @@ function AkatsukiPanel._build(self: any)
 	local ec = Vector2.new(8 + er, h * 0.5)
 	self._disc = UICtx.circle(card, ec, er, red:Lerp(BG, 0.7), 0)
 	self._disc.ZIndex = 3
-	self._cloud = BeastIcon.cloud(card, er * 1.6, red:Lerp(Color3.new(1, 1, 1), 0.15), ec)
+	-- (its emblem in colour; the tinted cloud mask without it)
+	self._cloud = BeastIcon.emblem(card, er * 1.7, red:Lerp(Color3.new(1, 1, 1), 0.15), ec)
 	z_all(self._cloud, 4)
 	self._ring = UICtx.ring(card, ec, er + 2, 2, red, 0.1)
 	self._ring.ZIndex = 4

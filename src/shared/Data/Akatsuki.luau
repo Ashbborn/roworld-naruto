@@ -8,13 +8,15 @@ local Akatsuki = {}
 Akatsuki.NAME = "Akatsuki: Pain & Konan"
 --- Its cells, one owner per member pair, in deploy order (key: Assets/BeastArt.members, the HUD's
 --- pictures).
+--- `who`: the pair's keys in Assets/BeastArt.members / members_color (their busts).
 Akatsuki.MEMBERS = {
-	{ key = "itachi_kisame", name = "Itachi & Kisame" },
-	{ key = "deidara_sasori", name = "Deidara & Sasori" },
-	{ key = "hidan_kakuzu", name = "Hidan & Kakuzu" },
-	{ key = "zetsu_tobi", name = "Zetsu & Tobi" },
+	{ key = "itachi_kisame", name = "Itachi & Kisame", who = { "itachi", "kisame" } },
+	{ key = "deidara_sasori", name = "Deidara & Sasori", who = { "deidara", "sasori" } },
+	{ key = "hidan_kakuzu", name = "Hidan & Kakuzu", who = { "hidan", "kakuzu" } },
+	{ key = "zetsu_tobi", name = "Zetsu & Tobi", who = { "zetsu", "tobi" } },
 }
 Akatsuki.HQ_KEY = "pain_konan"
+Akatsuki.HQ_WHO = { "pain", "konan" }
 --- Its territory colour: a very dark red-black. (Near-black reads badly: the map's border is the
 --- fill's HSL lightness - 0.125, so a black fill would get a black border on a black tint. This one
 --- keeps a visible, darker border.)
@@ -55,8 +57,12 @@ Akatsuki.TEXT = {
 	-- (sealed, of)
 	hud_short = "%d/%d sealed",
 	-- banners: a ritual began (BEAST TITLE; cell), was broken (BEAST TITLE); the barrier dropped
-	ritual_banner = "THE AKATSUKI IS SEALING THE %s",
-	ritual_banner_sub = "%s is performing the ritual. Take their land to break it",
+	ritual_banner = "SEALING THE %s!",
+	-- (cell, beast title)
+	ritual_banner_sub = "%s are sealing the %s! Take their land to break it",
+	-- a cell destroyed (CELL NAME; cells left)
+	member_banner = "%s DESTROYED",
+	member_banner_sub = "Akatsuki cells left: %d",
 	broken_banner = "SEALING OF THE %s BROKEN",
 	barrier_banner = "THE BARRIER IS DOWN",
 	-- (the eliminated beast holder's name) when it is above its land cap and will shed their land

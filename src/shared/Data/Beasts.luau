@@ -30,6 +30,9 @@ Beasts.TEXT = {
 	-- (title, captor)
 	captured = "%s captured the %s!",
 	captured_banner = "YOU CAPTURED THE %s",
+	-- someone else's capture (BEAST TITLE; captor, beast title)
+	captured_other_banner = "THE %s IS CAPTURED",
+	captured_other_sub = "%s is now the jinchuriki of the %s",
 	-- (beast name, power name) the captor's banner line: what it can do now
 	captured_sub = "You are its jinchuriki: Tailed Beast Bomb and %s",
 	-- the beast's identity in toasts and the feed: "Nine-Tails (Kurama, 9 tails)"

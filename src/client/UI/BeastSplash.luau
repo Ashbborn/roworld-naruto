@@ -1,10 +1,17 @@
 --!nonstrict
--- The picture over a Tailed Beast's banner (UIAdvisor._beast_banner, over Banner's title band): its
--- silhouette slams in from large with a flash, shakes as it roars, sends out shock rings, then its
--- tails light up one by one. "capture": a calmer version for its captor (a golden ring, no shake).
--- Also the Akatsuki's cloud (kind "akatsuki"). Animated per frame, input-transparent, frees itself.
+-- The picture over a big moment's banner (UIAdvisor, over Banner's title band), animated per frame,
+-- input-transparent, freeing itself after DURATION:
+--   "awaken"   a Tailed Beast breaks loose: its colour portrait slams in big from below with a
+--              flash, shakes as it roars, sends out shock rings, then its tails light up one by one;
+--   "capture"  a calmer version for a capture (a golden ring, no shake);
+--   "akatsuki" the Akatsuki's colour emblem slams in;
+--   "members"  two Akatsuki members' colour busts slide in from both sides (`opts.who`, e.g.
+--              { "itachi", "kisame" }); `opts.grey`: fallen, greyed and calm.
+-- Missing colour art falls back to the tinted mask (BeastIcon).
 --
--- BeastSplash.make(ctx, tails, color, kind) -> node for a full-rect layer (UIRoot.float_layer).
+-- BeastSplash.make(ctx, tails, color, kind, opts?) -> node for a full-rect layer (UIRoot.float_layer).
+-- BeastSplash.size_for(kind, compact) and BeastSplash.layout(...) are the plain sizes and spots
+-- (tests/beast_panel.luau).
 local UICtx = require("./UICtx") :: any
 local W = require("./Widgets")
 local BeastIcon = require("./BeastIcon")
@@ -12,7 +19,7 @@ local BeastIcon = require("./BeastIcon")
 local BeastSplash = W.class(W.Control)
 
 BeastSplash.DURATION = 3.6
-local SLAM = 0.45 -- the silhouette's fall in
+local SLAM = 0.45 -- the picture's fall in
 local FADE_FROM = 2.9
 
 local function ease_out_back(x: number): number
@@ -20,7 +27,30 @@ local function ease_out_back(x: number): number
 	return 1 + c3 * (x - 1) ^ 3 + c1 * (x - 1) ^ 2
 end
 
-function BeastSplash.make(ctx: any, tails: number, color: Color3, kind: string?)
+local function ease_out_cubic(x: number): number
+	return 1 - (1 - x) ^ 3
+end
+
+--- The picture's size (logical px): portraits big, busts a pair side by side.
+function BeastSplash.size_for(kind: string, compact: boolean): number
+	if kind == "members" then
+		return if compact then 84.0 else 128.0
+	end
+	if kind == "akatsuki" then
+		return if compact then 100.0 else 160.0
+	end
+	return if compact then 124.0 else 210.0
+end
+
+--- The picture's centre for viewport `vp`: above the banner's band (anchored 0.36 .. 0.56 of the
+--- screen), never off its top. With "members", also the two busts' x offsets from it.
+function BeastSplash.layout(kind: string, vp: Vector2, size: number): (Vector2, number)
+	local cy = math.max(vp.Y * 0.36 - size * 0.52, size * 0.5 + 8)
+	local dx = if kind == "members" then math.min(size * 0.56, vp.X * 0.5 - size * 0.5 - 8) else 0
+	return Vector2.new(vp.X * 0.5, cy), dx
+end
+
+function BeastSplash.make(ctx: any, tails: number, color: Color3, kind: string?, opts: any?)
 	local self = setmetatable({}, BeastSplash.__mt)
 	W.Control._init(self)
 	self:set_mouse_filter(W.MOUSE_IGNORE)
@@ -29,31 +59,55 @@ function BeastSplash.make(ctx: any, tails: number, color: Color3, kind: string?)
 	self.kind = kind or "awaken"
 	self.tails = tails
 	self.color = color
+	self.grey = type(opts) == "table" and opts.grey == true
 	self._t = 0.0
 	local canvas = UICtx.canvas(self.gui, "BeastSplash")
 	canvas.ZIndex = 3
 	ctx:fit_canvas(canvas)
 	self.canvas = canvas
 	local vp = ctx.vp
-	local size = if ctx.compact then 92.0 else 148.0
+	local size = BeastSplash.size_for(self.kind, ctx.compact == true)
 	self.size = size
-	-- above the banner's band (anchored 0.36 .. 0.56 of the screen)
-	local cy = math.max(vp.Y * 0.36 - size * 0.52, size * 0.5 + 8)
-	self.center = Vector2.new(vp.X * 0.5, cy)
+	local center, dx = BeastSplash.layout(self.kind, vp, size)
+	self.center = center
+	self._dx = dx
 	local light = color:Lerp(Color3.new(1, 1, 1), 0.55)
 	self._flash = UICtx.circle(canvas, self.center, size * 1.2, light, 1)
 	self._flash.ZIndex = 1
-	self._glow = UICtx.circle(canvas, self.center, size * 0.62, color, 1)
+	self._glow = UICtx.circle(canvas, self.center, size * 0.62, if self.grey then Color3.fromRGB(70, 70, 78) else color, 1)
 	self._glow.ZIndex = 2
 	self._rings = {}
-	for i = 1, 2 do
-		local r = UICtx.ring(canvas, self.center, size * 0.4, 3, if self.kind == "capture" then Color3.fromRGB(255, 214, 120) else light, 1)
-		r.ZIndex = 2
-		self._rings[i] = r
+	if not self.grey then
+		for i = 1, 2 do
+			local r = UICtx.ring(canvas, self.center, size * 0.4, 3, if self.kind == "capture" then Color3.fromRGB(255, 214, 120) else light, 1)
+			r.ZIndex = 2
+			self._rings[i] = r
+		end
 	end
-	local pic = if self.kind == "akatsuki"
-		then BeastIcon.cloud(canvas, size, color, self.center)
-		else BeastIcon.beast(canvas, tails, size, color, self.center)
+	self._pics = {}
+	local pic
+	if self.kind == "members" then
+		pic = UICtx.frame(canvas)
+		pic.Name = "Members"
+		pic.AnchorPoint = Vector2.new(0.5, 0.5)
+		pic.Size = UDim2.fromOffset(size * 2.2, size)
+		local who = if type(opts) == "table" and type(opts.who) == "table" then opts.who else {}
+		for i, w in who do
+			if i > 2 then
+				break
+			end
+			local side = if i == 1 then -1 else 1
+			local b = BeastIcon.bust(pic, w, size, color, Vector2.new(size * 1.1 + side * dx, size * 0.5), self.grey)
+			b:SetAttribute("Side", side)
+			table.insert(self._pics, b)
+		end
+	elseif self.kind == "akatsuki" then
+		pic = BeastIcon.emblem(canvas, size, color, self.center)
+		table.insert(self._pics, pic)
+	else
+		pic = BeastIcon.portrait(canvas, tails, size, color, self.center)
+		table.insert(self._pics, pic)
+	end
 	pic.ZIndex = 4
 	for _, c in pic:GetDescendants() do
 		if c:IsA("GuiObject") then
@@ -62,10 +116,12 @@ function BeastSplash.make(ctx: any, tails: number, color: Color3, kind: string?)
 	end
 	self._pic = pic
 	self._scale = UICtx.make("UIScale", { Scale = 2.2 }, pic)
-	BeastIcon.tint(pic, color, 1)
+	for _, p in self._pics do
+		BeastIcon.tint(p, color, 1)
+	end
 	-- one pip per tail under the picture
 	self._pips = {}
-	if self.kind ~= "akatsuki" then
+	if self.kind == "awaken" or self.kind == "capture" then
 		local n = math.clamp(tails, 1, 9)
 		local pd = if ctx.compact then 7.0 else 10.0
 		local gap = pd * 1.6
@@ -81,6 +137,29 @@ function BeastSplash.make(ctx: any, tails: number, color: Color3, kind: string?)
 	return self
 end
 
+--- The picture's scale, its rise (px below its spot) and the members' slide (0 out .. 1 in) at
+--- time `t` (s) for `kind`.
+function BeastSplash.motion(kind: string, t: number, calm: boolean): (number, number, number)
+	local from = if calm then 1.5 else 2.2
+	local s, rise, slide
+	if t < SLAM then
+		local k = t / SLAM
+		s = from + (1.0 - from) * ease_out_back(k)
+		rise = (1 - ease_out_cubic(k)) * (if kind == "awaken" or kind == "capture" then 0.35 else 0.0)
+		slide = ease_out_cubic(k)
+	else
+		local r = (t - SLAM) / 0.5
+		s = if r < 1 and not calm then 1 + 0.1 * math.sin(r * math.pi) else 1.0
+		rise = 0
+		slide = 1
+	end
+	if kind == "members" then
+		-- (the busts slide in rather than fall)
+		s = 1 + (s - 1) * 0.25
+	end
+	return s, rise, slide
+end
+
 function BeastSplash._process(self, delta: number)
 	if self._freed then
 		return
@@ -93,17 +172,9 @@ function BeastSplash._process(self, delta: number)
 		return
 	end
 	local fade = if t > FADE_FROM then 1 - (t - FADE_FROM) / (BeastSplash.DURATION - FADE_FROM) else 1.0
-	local calm = self.kind == "capture"
+	local calm = self.kind == "capture" or self.grey
 	local size = self.size
-	-- the slam: scale from 2.2 (1.5 calm) down to 1, a roar pulse after it
-	local s
-	if t < SLAM then
-		local k = t / SLAM
-		s = (if calm then 1.5 else 2.2) + ((1.0) - (if calm then 1.5 else 2.2)) * ease_out_back(k)
-	else
-		local r = (t - SLAM) / 0.5
-		s = if r < 1 and not calm then 1 + 0.1 * math.sin(r * math.pi) else 1.0
-	end
+	local s, rise, slide = BeastSplash.motion(self.kind, t, calm)
 	self._scale.Scale = s
 	-- the shake: strong as it lands, dying out over a second
 	local off = Vector2.zero
@@ -111,11 +182,20 @@ function BeastSplash._process(self, delta: number)
 		local amp = 9 * (1 - (t - SLAM * 0.8) / (SLAM * 0.2 + 1.0))
 		off = Vector2.new(math.sin(t * 71) * amp, math.cos(t * 53) * amp * 0.7)
 	end
-	local c = self.center + off
+	local c = self.center + off + Vector2.new(0, rise * size)
 	self._pic.Position = UDim2.fromOffset(c.X, c.Y)
-	BeastIcon.tint(self._pic, self.color, 1 - math.min(t / 0.18, 1) * fade)
+	if self.kind == "members" then
+		for _, b in self._pics do
+			local side = b:GetAttribute("Side") or 0
+			local x = size * 1.1 + side * (self._dx + (1 - slide) * size * 1.4)
+			b.Position = UDim2.fromOffset(x, size * 0.5)
+		end
+	end
+	for _, p in self._pics do
+		BeastIcon.tint(p, self.color, 1 - math.min(t / 0.18, 1) * fade)
+	end
 	-- the flash as it lands
-	local fl = if t >= SLAM * 0.7 then math.clamp(1 - (t - SLAM * 0.7) / 0.45, 0, 1) else 0
+	local fl = if t >= SLAM * 0.7 and not self.grey then math.clamp(1 - (t - SLAM * 0.7) / 0.45, 0, 1) else 0
 	self._flash.BackgroundTransparency = 1 - 0.55 * fl
 	UICtx.set_circle(self._flash, self.center, size * (0.6 + 0.8 * (1 - fl)))
 	-- a soft glow behind it, breathing

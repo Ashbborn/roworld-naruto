@@ -85,7 +85,13 @@ every beast it sealed.
   - Only beasts that exist can be sealed. Beasts that have not emerged still emerge on schedule.
 - **The objective widget** (`UI/AkatsukiPanel`) sits under the top status while it is on the map:
   its cloud, "N/9 sealed", "Cells N/4 · Hideout barrier up" (or "Barrier down: take the hideout"),
-  the nine beasts as silhouettes that fill in red when sealed, and a ritual countdown bar.
+  the nine beasts as silhouettes that fill in red when sealed, and a ritual countdown bar. Its
+  emblem is the colour cloud (`BeastArt.akatsuki_color`); the beast slots keep the small masks.
+- **Pictures in the big moments** (`BeastArt.members_color`, `Data/Akatsuki.MEMBERS[i].who`): the
+  arrival splash is the colour emblem; a ritual's banner ("SEALING THE THREE-TAILS! / Itachi &
+  Kisame are sealing the Three-Tails!") slides in the cell's two colour busts; a destroyed cell's
+  banner and the fall (Pain & Konan) show them greyed. A member without a colour bust (Kakuzu for
+  now) gets his tinted mask.
 - **Win.** It wins once every beast still in the match is sealed: nine, minus any that are `GONE`.
   - This is checked right after the tick's eliminations.
   - The match ends with winner 0 and `Defs.OVER_AKATSUKI`, and everyone loses.

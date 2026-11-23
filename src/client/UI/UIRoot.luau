@@ -1719,6 +1719,9 @@ function UIRoot._bind_state(self, s: any)
 	if not (ctx.session ~= nil and ctx.session.state_is_resync == true) then
 		ctx:reset_ratio()
 		ctx.troop_floor = nil -- (a new player's floor arms again in this match: UIAdvisor.check_floor)
+		if self.over ~= nil then
+			self.over:note_beast(nil) -- (a new match: no beasts held yet)
+		end
 		ctx.alive_from_tick = nil
 		if self.board.expanded then
 			self.board:close_for_match()
@@ -1849,6 +1852,10 @@ function UIRoot._bind_state(self, s: any)
 	end)
 	c("beast_holder", function(tails, holder, from)
 		adv:on_beast_holder(tails, holder, from)
+		-- (the game-over screen shows the beasts you held)
+		if holder ~= 0 and holder == ctx:me() and self.over ~= nil then
+			self.over:note_beast(tails)
+		end
 		self.top:refresh()
 	end)
 	c("akatsuki_appeared", function(id, _tile)
@@ -1868,6 +1875,9 @@ function UIRoot._bind_state(self, s: any)
 	end)
 	c("akatsuki_barrier", function(hq, up)
 		adv:on_akatsuki_barrier(hq, up)
+	end)
+	c("akatsuki_member", function(id, idx, _tile, alive)
+		adv:on_akatsuki_member(id, idx, alive)
 	end)
 	c("owner_spawned", function(id, tile)
 		self:_on_owner_spawned(id, tile)

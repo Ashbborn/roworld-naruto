@@ -36,8 +36,9 @@ the beast's own power.
   - Nukes can't delete it. A blast over a beast leaves its tiles to it, with no fallout on them,
     but its troops take the damage as if the tiles were lost (structures in the blast are
     destroyed as usual). A beast only leaves the map by being conquered.
-  - Everyone sees a banner: "THE ONE-TAIL AWAKENS", under the beast's silhouette slamming in with a
-    flash, a shake, shock rings and its tails lighting up one by one (`UI/BeastSplash`).
+  - Everyone sees a banner: "THE ONE-TAIL AWAKENS", under the beast's colour portrait slamming in big
+    with a flash, a shake, shock rings and its tails lighting up one by one (`UI/BeastSplash`). The
+    stir ring and toast keep the small mask.
 - **Rampage.** It lasts `RAMPAGE_S` (60 s), or less if the beast reaches `RAMPAGE_MAX_GROWTH` (5) x
   the land it emerged on.
   - Every second it attacks every neighbour (players, bots, tribes, other beasts) and the free land
@@ -64,8 +65,9 @@ the beast's own power.
   - the late-join troop median
   - the AI's "nations at war with this human" count
 - **Capture.** Whoever takes its last tile captures it (`o_killer`, not a beast, alive).
-  - Everyone gets "X captured the Nine-Tails (Kurama, 9 tails)!", and the captor gets a banner
-    with the silhouette.
+  - Everyone gets "X captured the Nine-Tails (Kurama, 9 tails)!", the captor gets a banner
+    with the colour portrait, and everyone else a shorter one ("THE NINE-TAILS IS CAPTURED / X is now
+    the jinchuriki of the Nine-Tails") with the portrait too.
   - The captor is its **jinchuriki** (next section).
   - If the killer is 0 or another beast, the beast is gone. Killer 0 shouldn't happen now that
     nukes spare beast land.
@@ -109,11 +111,14 @@ the beast's own power.
   else the strongest hostile neighbour worth it; Sand / Coral when attacked hard, Lava / Steam
   while attacking, Chakra when low, Ink on the top raider, Ghost Fire / Acid on a strong foe,
   Flight onto a wild beast's spawn.
-- **Client:** `UI/BeastPanel` docks one card per held beast above the command bar: silhouette,
+- **Client:** `UI/BeastPanel` docks one card per held beast above the command bar: colour portrait,
   name, tails, a bomb and a power button with a cooldown sweep and seconds. Keys: **F** fires the
   strongest ready bomb, **G V B N T Y U J K** the 1st..9th held beast's power. Aimed ones preview
-  the blast on hover (touch: tap to preview, tap the same tile to fire); Esc / X cancel. Silhouettes
-  come from `Assets/BeastArt` (made apart; a plain drawn shape until it exists, `UI/BeastIcon`).
+  the blast on hover (touch: tap to preview, tap the same tile to fire); Esc / X cancel. Pictures
+  come from `Assets/BeastArt` (`UI/BeastIcon`): colour portraits (`portraits`) for the big moments
+  and the panel's cards, white masks (`beasts`) tinted for small spots (buttons, pips, the Akatsuki
+  widget's slots); a missing portrait falls back to the tinted mask, a missing mask to a drawn
+  shape. The game-over screen shows the beasts you held this match as small colour portraits.
   The bomb's map sprite is the units sheet's column 12 ("bijudama").
 
 ## Tunables
