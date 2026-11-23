@@ -394,7 +394,11 @@ function Arsenal._row(self, it: any, order: number, rh: number, u: number): any
 		ZIndex = 42,
 	}, b)
 	new("UICorner", { CornerRadius = UDim.new(0, 8 * u) }, tile)
-	local shot = if type(Art.renders) == "table" then Art.renders[it.key] else nil
+	-- (the render drawn for this size: a heavier outline, fewer and bigger parts; Assets/ArsenalArt.tiles)
+	local shot = if type(Art.tiles) == "table" and Art.tiles[it.key] ~= nil
+		then Art.tiles[it.key]
+		elseif type(Art.renders) == "table" then Art.renders[it.key]
+		else nil
 	new("ImageLabel", {
 		Name = "Render",
 		BackgroundTransparency = 1,

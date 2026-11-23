@@ -3,6 +3,9 @@
 
     python tools/naruto/upload_oc.py a.png b.png        # prints JSON {path: "rbxassetid://id"}
     (as a module) upload_oc.upload_images([paths]) -> {path: uri}
+    python tools/naruto/upload_oc.py --moderation src/shared/Assets/ArsenalArt.luau [...]
+        # read-only: the moderation state of every rbxassetid in those files (an upload only warns at the
+        # time, and says nothing on a cache hit); exits 1 if any is Rejected
 
 Needs ROBLOX_API_KEY (Assets read+write) and ROBLOX_CREATOR_USER_ID in the repo's .env (gitignored;
 worktrees fall back to the main checkout's C:/Dev2/roworld-naruto/.env). Content-hash cache in
@@ -16,6 +19,7 @@ import os
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -107,5 +111,43 @@ def upload_images(paths):
     return out
 
 
+def moderation(asset_ids, cfg=None):
+    """{asset id: its moderation state ("Approved", "Reviewing", "Rejected"; "HTTP <code>" when it can't be
+    read)}, through Open Cloud's GET assets/v1/assets/<id>. Read-only."""
+    cfg = cfg or _env()
+    out = {}
+    for aid in asset_ids:
+        r = urllib.request.Request(API + "/assets/%s?readMask=moderationResult" % aid,
+                                   headers={"x-api-key": cfg["ROBLOX_API_KEY"]})
+        try:
+            body = json.loads(urllib.request.urlopen(r, timeout=30).read())
+            out[aid] = (body.get("moderationResult") or {}).get("moderationState", "?")
+        except urllib.error.HTTPError as e:
+            out[aid] = "HTTP %d" % e.code
+    return out
+
+
+def _moderation_cli(files):
+    import re
+    seen, rows = set(), []
+    for f in files:
+        for line in open(f, encoding="utf-8"):
+            for aid in re.findall(r"rbxassetid://(\d+)", line):
+                if aid not in seen:
+                    seen.add(aid)
+                    name = line.strip().split("=")[0].strip() if "=" in line else "?"
+                    rows.append((os.path.basename(f), name, aid))
+    states = moderation([aid for _, _, aid in rows])
+    for f, name, aid in rows:
+        print("%-20s %-12s %-16s %s" % (f, name, aid, states[aid]))
+    counts = {}
+    for st in states.values():
+        counts[st] = counts.get(st, 0) + 1
+    print(", ".join("%s %d" % kv for kv in sorted(counts.items())))
+    return 1 if "Rejected" in counts else 0
+
+
 if __name__ == "__main__":
+    if sys.argv[1:2] == ["--moderation"]:
+        sys.exit(_moderation_cli(sys.argv[2:]))
     print(json.dumps(upload_images(sys.argv[1:]), indent=1))
