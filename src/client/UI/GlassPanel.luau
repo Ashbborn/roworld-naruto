@@ -8,11 +8,11 @@
 -- Parts: shadow (9-slice, Assets/UIKit shadows) < tint (UICorner + inner UIStroke border)
 -- < sheen gradient < sheen line / accent stripe < content.
 --
--- RoNindo (2026-11-23, the owner's pick): with the scroll art (Assets/NarutoUI) every panel is paper
--- instead of glass: the cream canvas (tiled) under a brown ink border, the seigaiha wave band inside
--- the top and bottom padding when there is room for it (not on pills or thin cards), and the tan Eight
--- Trigrams seal behind the content of the big panels. A glass tint does not apply to paper, except a
--- light one (alpha under 0.5), which washes over it. No sheen on paper.
+-- RoNindo (2026-11-23): `paper` (GlassPanel.new's 6th argument; only ScrollPanel, the command bar's
+-- jutsu scroll, asks for it; every other panel stays glass): the cream canvas (tiled) under a brown
+-- ink border, the seigaiha wave band inside the top and bottom padding when there is room for it, and
+-- optionally the tan Eight Trigrams seal. A glass tint does not apply to paper, except a light one
+-- (alpha under 0.5), which washes over it. No sheen on paper.
 
 local UITheme = require("./UITheme")
 local W = require("./Widgets")
@@ -49,7 +49,7 @@ local LINE_SEQ = NumberSequence.new({
 })
 
 --- UIGlass.new(pad_h = 16, pad_v = 12, r = R_LG, frost = true, shadow_size = 18)
-function GlassPanel.new(pad_h: number?, pad_v: number?, r: number?, frost: boolean?, shadow_size: number?)
+function GlassPanel.new(pad_h: number?, pad_v: number?, r: number?, frost: boolean?, shadow_size: number?, paper: boolean?)
 	local self = setmetatable({}, GlassPanel.__mt)
 	W.Control._init(self)
 	W.Panel._init_panel(self)
@@ -72,7 +72,7 @@ function GlassPanel.new(pad_h: number?, pad_v: number?, r: number?, frost: boole
 	local g = self.gui
 	local art = UITheme.naruto_ui()
 	self._art = art
-	self.paper = art.paper_canvas ~= nil
+	self.paper = paper == true and art.paper_canvas ~= nil
 	if self.paper then
 		self.tint = UITheme.GLASS_SOLID
 		self.sheen = false

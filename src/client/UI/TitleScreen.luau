@@ -456,7 +456,7 @@ function TitleScreen.new(c: any)
 		TitleScreen.CREDITS,
 		11,
 		500,
-		UITheme.c(UITheme.ON_MAP_2, 0.85), -- (over the map)
+		UITheme.c(UITheme.TEXT_3, 0.85),
 		1
 	)
 	self._credits:set_alignment(W.ALIGN_CENTER)

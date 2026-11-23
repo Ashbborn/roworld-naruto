@@ -115,7 +115,7 @@ function PlaceConfirm.show_for(self, t: number, caption: string, danger: boolean
 	self._ok:set_disabled(not okv)
 	local col = if danger then UITheme.RED else UITheme.AMBER
 	local sb = UITheme.dup(self._ok:get_theme_stylebox("normal"))
-	sb.bg = if okv then UITheme.to_rgba(col) else UITheme.c(UITheme.BROWN_INK, 0.16)
+	sb.bg = if okv then UITheme.to_rgba(col) else UITheme.rgba(1, 1, 1, 0.1)
 	sb.border = UITheme.to_rgba(darkened(col, 0.3))
 	self._ok:add_theme_stylebox_override("normal", sb)
 	self._ok:add_theme_stylebox_override("disabled", sb)

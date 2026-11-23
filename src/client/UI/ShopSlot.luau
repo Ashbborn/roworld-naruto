@@ -13,7 +13,7 @@
 -- A press opens the Arsenal on the item it shows.
 --
 -- Signals: wanted(key: string?, from: string) (from: "match", for the analytics).
-local UITheme = require("./UITheme")
+local UITheme = require("./UITheme").scroll() -- (the bar is the jutsu scroll: its ink palette)
 local W = require("./Widgets")
 local Signal = UITheme.core("Signal")
 

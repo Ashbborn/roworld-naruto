@@ -19,7 +19,7 @@
 -- Per frame: update(dt) (GDScript _process).
 
 local UICtx = require("./UICtx") :: any
-local UITheme = require("./UITheme")
+local UITheme = require("./UITheme").scroll() -- (the bar is the jutsu scroll: its ink palette)
 local W = require("./Widgets")
 local GlassPanel = require("./GlassPanel")
 local ScrollPanel = require("./ScrollPanel")
@@ -138,6 +138,7 @@ function CommandBar._build_sections(self)
 	self._troops_box:add_child(tv)
 	local brow = T.hbox(6)
 	self._troops_bar = FillBar.new(4.0, T.CYAN)
+	self._troops_bar.track_color = T.FILL_2 -- (a brown track on the paper)
 	self._troops_bar:set_min_size(Vector2.new(40, 8))
 	self._troops_bar.size_flags_horizontal = W.EXPAND_FILL
 	self._troops_bar.size_flags_vertical = W.SHRINK_CENTER
@@ -152,15 +153,14 @@ function CommandBar._build_sections(self)
 	-- Gold (same shape as troops: caption row carries the rate, the value sits below)
 	self._gold_box = T.vbox(3)
 	local gr = T.hbox(6)
-	gr:add_child(T.icon_rect("gold", 12.0, T.TEXT_3))
+	gr:add_child(T.icon_rect("gold", 12.0, T.GOLD))
 	gr:add_child(T.caption("Ryo"))
 	gr:add_child(spacer())
 	self._income = T.label("+0/s", 11, 700, T.GREEN)
 	gr:add_child(self._income)
 	self._gold_box:add_child(gr)
 	local gv = T.hbox(6)
-	self._gold = CountLabel.new(20, 800, T.GOLD, T.fmt_num)
-	self._gold.metal = "gold" -- (2026-11-23: metallic gold on the scroll)
+	self._gold = CountLabel.new(20, 700, T.GOLD, T.fmt_num) -- (plain solid gold, like the troop number)
 	gv:add_child(self._gold)
 	self._gold_box:add_child(gv)
 	self._gold_box:set_min_size(Vector2.new(118, 0))
@@ -233,6 +233,7 @@ function CommandBar._build_sections(self)
 	mth:add_child(self._m_growth)
 	mt:add_child(mth)
 	self._m_troops_bar = FillBar.new(3.0, T.CYAN)
+	self._m_troops_bar.track_color = T.FILL_2 -- (a brown track on the paper)
 	self._m_troops_bar.glow = false
 	self._m_troops_bar:set_min_size(Vector2.new(40, 3))
 	mt:add_child(self._m_troops_bar)
@@ -242,8 +243,7 @@ function CommandBar._build_sections(self)
 	local gi = T.icon_rect("gold", 14.0, T.GOLD)
 	gi.size_flags_vertical = W.SHRINK_CENTER
 	mgh:add_child(gi)
-	self._m_gold = CountLabel.new(15, 800, T.GOLD, T.fmt_num)
-	self._m_gold.metal = "gold"
+	self._m_gold = CountLabel.new(15, 700, T.GOLD, T.fmt_num)
 	mgh:add_child(self._m_gold)
 	self._m_stats_box:add_child(mgh)
 	self._m_stats:add_child(self._m_stats_box)
@@ -317,10 +317,10 @@ function CommandBar._build_sections(self)
 	self._place_chip = GlassPanel.new(14.0, 6.0, 999, true, 16)
 	self._place_chip:set_visible(false)
 	local pc = T.hbox(10)
-	local pic = T.icon_rect("target", 16.0, T.AMBER)
+	local pic = T.icon_rect("target", 16.0, T.base.AMBER) -- (glass over the map)
 	pic.size_flags_vertical = W.SHRINK_CENTER
 	pc:add_child(pic)
-	self._place_text = T.label("", 13, 600)
+	self._place_text = T.label("", 13, 600, T.base.TEXT)
 	self._place_text.size_flags_vertical = W.SHRINK_CENTER
 	pc:add_child(self._place_text)
 	local cancel = T.button("Cancel", "GlassButton", "close", 44.0)
@@ -820,7 +820,7 @@ end
 --- Phone details card (the strip shows only numbers): troops, cap, growth, at war, gold, income.
 function CommandBar.stats_spec(self): { [string]: any }
 	local ctx = self.ctx
-	local T = UITheme
+	local T = UITheme.base -- (the details card is glass)
 	local s = ctx.state
 	local o = ctx:my()
 	if s == nil or o == nil then

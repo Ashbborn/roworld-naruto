@@ -38,14 +38,14 @@ function RotateCard.new(c: any)
 	end
 	self._icon.size_flags_horizontal = W.SHRINK_CENTER
 	cc:add_child(self._icon)
-	local t = UITheme.label("ROTATE YOUR PHONE", 22, 900, UITheme.GOLD_HI, 3) -- (on its dark card)
+	local t = UITheme.label("ROTATE YOUR PHONE", 22, 900, UITheme.AMBER, 3)
 	t:set_alignment(W.ALIGN_CENTER)
 	cc:add_child(t)
 	local s = UITheme.label(
 		Brand.NAME .. " is played in landscape.\nTurn your device sideways to continue.",
 		15,
 		500,
-		UITheme.ON_MAP_2
+		UITheme.TEXT_2
 	)
 	s:set_alignment(W.ALIGN_CENTER)
 	cc:add_child(s)

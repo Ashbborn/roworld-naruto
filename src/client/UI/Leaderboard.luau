@@ -224,7 +224,7 @@ function Row._redraw(self)
 	if self.is_me then
 		self._sv:set(T.flat(T.c(T.AMBER, 0.12), 7, T.c(T.AMBER, 0.35), 1))
 	elseif self._hover and not self.ctx.touch then
-		self._sv:set(T.flat(T.c(T.BROWN_INK, 0.112), 7))
+		self._sv:set(T.flat(T.rgba(1, 1, 1, 0.07), 7))
 	elseif self._sv.style ~= nil then
 		self._sv:set(nil)
 	end

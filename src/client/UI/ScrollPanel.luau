@@ -3,14 +3,14 @@
 -- themed, maybe looking like a scroll for jutsus", and his pick of the look, option C of the round 5
 -- sheet): GlassPanel's paper (cream canvas, the seigaiha band inside the top and bottom padding) with a
 -- row of faint brush kanji across it instead of the seal, and a red lacquer roller (teal band, orange
--- stripes, wooden caps) at each end. Lays its children out like GlassPanel and keeps its sizing: the
+-- stripes, wooden caps) at each end. Only the bar is a scroll: GlassPanel.new(..., paper = true). Lays its children out like GlassPanel and keeps its sizing: the
 -- rollers hang over the two short edges and their caps over the long ones, outside the measured rect,
 -- so the bar's width (the wide-flow breakpoint) and its top edge (what docks above it) are the panel's.
 --
 -- Art: Assets/NarutoUI paper_kanji (tiles along x) and scroll_roller (9-slice: only its teal band
 -- stretches), tools/naruto/make_naruto_ui_art.py. Without the art: a plain GlassPanel.
 
-local UITheme = require("./UITheme")
+local UITheme = require("./UITheme").scroll()
 local W = require("./Widgets")
 local GlassPanel = require("./GlassPanel")
 
@@ -30,8 +30,9 @@ ScrollPanel.KANJI_H = 64.0
 
 --- ScrollPanel.new(pad_h = 18, pad_v = 12, shadow_size = 18)
 function ScrollPanel.new(pad_h: number?, pad_v: number?, shadow_size: number?)
-	local self = GlassPanel.new(pad_h or 18.0, pad_v or 12.0, 4, true, if shadow_size == nil then 18 else shadow_size)
+	local self = GlassPanel.new(pad_h or 18.0, pad_v or 12.0, 4, true, if shadow_size == nil then 18 else shadow_size, true)
 	setmetatable(self, ScrollPanel.__mt)
+	self:set_border(UITheme.LINE) -- (brown ink: the scroll palette's line)
 	self.slim = false
 	self.band_max = ScrollPanel.BAND
 	self.seal_shown = false

@@ -15,7 +15,7 @@ function FillBar.new(h: number?, c: any?)
 	self.target = 0.0
 	self.fill_color = c or UITheme.CYAN
 	self.fill_color_2 = UITheme.CLEAR -- optional right-end colour (gradient)
-	self.track_color = UITheme.c(UITheme.BROWN_INK, 0.128)
+	self.track_color = UITheme.rgba(1, 1, 1, 0.08)
 	self.goal = -1.0 -- 0..1 goal line (e.g. 0.8 to win)
 	self.goal_color = UITheme.GOLD
 	--- {{v: number, color: Color3}} thin vertical ticks (e.g. the leader's share).

@@ -8,7 +8,7 @@
 -- Signals: chosen(kind). Methods as GDScript: set_compact(on, touch), refresh(), is_available(),
 -- reason(), deny(), hint_spec(); `active` via set_active(on) (GDScript property setter).
 
-local UITheme = require("./UITheme")
+local UITheme = require("./UITheme").scroll() -- (the bar is the jutsu scroll: its ink palette)
 local W = require("./Widgets")
 local UICtx = require("./UICtx") :: any
 local Signal = UITheme.core("Signal")

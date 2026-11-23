@@ -15,7 +15,7 @@
 local UserInputService = game:GetService("UserInputService")
 
 local UICtx = require("./UICtx") :: any
-local UITheme = require("./UITheme")
+local UITheme = require("./UITheme").scroll() -- (the bar is the jutsu scroll: its ink palette)
 local W = require("./Widgets")
 
 local RatioSlider = W.class(W.Control)
