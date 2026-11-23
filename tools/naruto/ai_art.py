@@ -17,6 +17,7 @@ Usage:
   python tools/naruto/ai_art.py sheets      # the pick sheets
 """
 import argparse
+import json
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -44,37 +45,43 @@ SUBJECTS = {
                 "A hulking tanuki (raccoon dog) monster made of packed sand: sandy beige-tan body covered in dark "
                 "blue-black curse-mark patterns of swirling lines and dots, a huge round belly, short arms, hunched "
                 "forward, one huge thick tail, a wide jagged mouth, fierce golden eyes with black four-pointed star "
-                "pupils", "eyes, mouth, the curse-mark pattern", MAGENTA),
+                "pupils", "eyes, mouth", MAGENTA),
     "matatabi": ("beast", "matatabi", [1], "creature",
                  "A giant two-tailed cat demon made of blue and black flames: a big prowling cat whose fur is "
                  "swirling blue fire with black flame markings, two long flame tails, mismatched eyes (one yellow, "
                  "one green), a snarling mouth with fangs", "eyes, mouth, the flame shapes", MAGENTA),
     "isobu": ("beast", "isobu", [1], "creature",
-              "A giant three-tailed turtle-like beast: a huge grey-green shell covered in sharp coral-like spikes, "
-              "a grey armoured body with spiky plates, a crocodile-like jaw, one large red eye with the other side "
-              "of its face hidden under bony armour, three spiky tails", "the eye, the shell spikes", MAGENTA),
+              "A giant three-tailed turtle-like beast: a huge pale grey shell edged with short sharp spikes, the "
+              "shell's dark red striped underside showing beneath it, a pale grey body covered in bony plates and "
+              "short spikes, a spiky bony crest over its face, one red eye with a dark ring, the other eye hidden "
+              "under bone armour, three thick pale grey spiky tails", "the eye, the shell spikes", MAGENTA),
     "son_goku": ("beast", "son_goku", [1], "creature",
                  "A giant four-tailed ape-gorilla beast: red fur, a pale grey-green belly, chest and face, a crown "
                  "of bone horns on its head, a fierce snarling gorilla face with fangs, huge muscular arms, four "
                  "red tails lined with bony spikes, glowing lava in its mouth, a brutal stance",
                  "eyes, mouth, the horns", GREEN),
     "kokuo": ("beast", "kokuo", [1], "creature",
-              "A giant five-tailed beast that is part horse and part dolphin: a sleek white body, a long horse-like "
-              "head with pointed horns, red-rimmed eyes, four slender legs, five long flowing white tails",
+              "A giant five-tailed beast that is part horse and part dolphin: a sleek white body with pale blue "
+              "markings, a long smooth dolphin-like head, pointed horns with tan tips on its head and back, a blue "
+              "eye rimmed in red, four slender legs, and five long flowing white tails, all five clearly visible, "
+              "fanned out behind it",
               "eye, horns", MAGENTA),
     "saiken": ("beast", "saiken", [1], "creature",
                "A giant six-tailed slug beast: a glossy pale whitish-lavender body, a round head with a small "
                "stalk on top, a gaping mouth, short stubby arms, six thick soft slug tails, a few iridescent "
                "bubbles", "eyes, mouth", MAGENTA),
     "chomei": ("beast", "chomei", [1], "creature",
-               "A giant seven-tailed rhinoceros-beetle beast: a dark blue armoured insect body, a big upward horn "
-               "on its head, orange eyes, six huge translucent insect wings spread wide like a fan of leaves, a "
-               "long segmented tail", "eyes, horn, the wing veins", MAGENTA),
+               "A giant seven-tailed rhinoceros-beetle beast: a dark indigo-blue armoured insect body with a forked "
+               "horn on its head, glowing orange eyes behind a grille-like face plate, six thin spindly legs near "
+               "its head, six huge leaf-shaped translucent amber-orange wings with pale yellow-green edges spread "
+               "wide like a fan, and one single long segmented tail hanging straight down",
+               "eyes, horn, the wing veins", MAGENTA),
     "gyuki": ("beast", "gyuki", [2, 1], "creature",
-              "A giant eight-tailed beast with the head and two big curved horns of an ox on a hugely muscular "
-              "humanoid upper body: brownish-mauve hide with wood-grain striations, a wide roaring mouth with "
-              "square teeth, ringed eyes, sitting with its huge arms forward, and eight thick octopus tentacles "
-              "with sucker rings rising and curling behind and around it", "eyes, horns, mouth, sucker rings",
+              "A giant eight-tailed beast with a hugely muscular humanoid upper body and the head of an ox: two big "
+              "curved ox horns sweeping out from the sides of its head, a dusty greyish-mauve hide (pinkish taupe) "
+              "with wood-grain striations, a wide roaring mouth with square teeth, round eyes with dark rings, "
+              "sitting with its huge arms forward, and eight thick octopus tentacles with white-ringed suckers "
+              "rising and curling behind and around it", "eyes, horns, mouth, sucker rings",
               GREEN),
     "kurama": ("beast", "kurama", [1], "creature",
                "A gigantic nine-tailed fox demon: orange-red fur, long pointed ears with black insides, black "
@@ -111,7 +118,7 @@ SUBJECTS = {
               "A man with slicked-back silver-grey hair, purple-pink eyes, an arrogant sneer, a black cloak with red "
               "clouds worn open on his bare chest, a silver circle pendant with a triangle inside, a large red "
               "three-bladed scythe over his shoulder", "eyes, the scythe blades, the pendant", GREEN),
-    "kakuzu": ("member", "kakuzu", [2, 1], "character",
+    "kakuzu": ("member", "kakuzu", [2], "character",
                "A menacing masked man: a dark hood over his head, a forehead protector with a scratched metal plate "
                "over the hood, a dark cloth mask over his nose and mouth, green irises on red sclera, a black "
                "high-collared cloak with red clouds and a red collar lining",
@@ -140,21 +147,30 @@ BEASTS = ["shukaku", "matatabi", "isobu", "son_goku", "kokuo", "saiken", "chomei
 MEMBER_ROWS = ["akatsuki", "itachi", "kisame", "deidara", "sasori_hiruko", "sasori_face", "hidan", "kakuzu",
                "pain", "konan", "tobi", "zetsu"]
 
-FRAMING = {"beast": ("creature is shown full body", "the whole body"),
-           "member": ("character is shown as a head-and-shoulders bust", "head and shoulders only"),
-           "cloud": ("emblem is shown flat, front on", "the whole emblem")}
+FRAMING = {"beast": ("creature is shown full body, small enough that the whole figure, every tail tip, horn and "
+                     "claw included, sits well inside the frame with a wide empty margin on all four sides",
+                     "the whole body, every limb, tail, wing and tentacle complete to its tip"),
+           "member": ("character is shown as a close head-and-shoulders bust cropped at the chest, the whole head and "
+                      "hair inside the frame with empty space above it", "head and shoulders only"),
+           "cloud": ("emblem is shown flat, front on, whole, with a wide empty margin on all four sides",
+                     "the whole emblem")}
+#: the rim light. Round 1 said only "a dramatic rim light": the model then lit the black cloaks with the key
+#: colour (pink, cyan, yellow rims), so the members name a colour. The beasts and the cloud keep the round-1
+#: wording (their rims came out in their own colours, and four beasts are kept from round 1).
+RIM = {"beast": "a dramatic rim light", "cloud": "a dramatic rim light", "member": "a crisp white rim light"}
+#: canvas per subject (portrait and icon): wide creatures on a wide canvas so nothing is cut by the frame;
+#: the cut-out is padded back to a square
+ASPECT = {"kurama": "16:9", "isobu": "3:2", "kokuo": "3:2", "gyuki": "4:3", "chomei": "4:3"}
 
 #: one style for every portrait (the set must look like one family)
 STYLE = ("Rendered in one consistent game-art style: anime key art, bold clean cel shading with two tones of shadow, a "
-         "thick dark outline around the whole figure, a dramatic rim light, rich saturated colours, crisp sharp edges. "
-         "The {framing}, small enough that the whole figure, every tail tip, horn and hair spike included, sits well "
-         "inside the frame with a wide empty margin on all four sides, alone on a plain flat solid {bg} ({hex}) "
-         "background.")
+         "thick dark outline around the whole figure, {rim}, rich saturated colours, crisp sharp edges. "
+         "The {framing}, alone on a plain flat solid {bg} ({hex}) background.")
 #: one wording for every icon
 ICON = ("A minimalist flat icon of the {noun} in @img1: a single solid white silhouette on a pure black background, "
         "bold simple shapes, only a few negative-space cut-outs for the key features ({features}), {framing}, same "
         "pose and proportions as the reference. Flat pure white on flat pure black, sharp clean edges, the white "
-        "shape alone in the centre, the whole silhouette inside the square with an empty black margin all round.")
+        "shape alone in the centre, the whole silhouette inside the frame with an empty black margin all round.")
 
 
 def refs_of(subject):
@@ -167,11 +183,52 @@ def portrait_prompt(subject):
     tags = " and ".join(f"@img{k + 1}" for k in range(len(idx)))
     kind = "portrait" if group == "member" else "illustration"
     return (f"Redraw the {noun} shown in {tags} as a single {kind}. {desc}. Keep the reference's anatomy, proportions, "
-            f"markings and colours. " + STYLE.format(framing=FRAMING[group][0], bg=bg, hex=hexc))
+            f"markings and colours. " + STYLE.format(rim=RIM[group], framing=FRAMING[group][0], bg=bg, hex=hexc))
 
 
-def icon_prompt(subject):
+#: the icons the owner sent back (11-23: "you cant see wtf is happening or who they are"): the same white
+#: silhouette style, with the composition spelt out so the identity reads at 32-48 px.
+#: subject: (reference files, best first, from the subject's folder; cut-out features; composition; canvas)
+ICON_REDO = {
+    # pass 1 (without "four on each side" and the last sentence) gave busts cut at the waist with 6-7
+    # tentacles; pass 2 added the whole sitting body (6 tentacles); pass 3 adds "four on each side"
+    "gyuki": ([2, 1], "eyes, mouth, a few sucker rings",
+              "Front view: the ox head with its two big curved horns is the largest, clearest part, held high in the "
+              "centre with black space all round the horns; the hugely muscular shoulders and arms below it; the "
+              "eight thick octopus tentacles, four on each side, fan out around and behind the body like a crown, "
+              "each tentacle separate "
+              "with a clear black gap between it and the next, curling at the tips. The whole creature is shown "
+              "sitting, down to its legs and feet, every part complete.", "4:3"),
+    # the first redo text ("the big domed spiky shell ... the head stretched forward") gave spiky lizards
+    "isobu": ([1], "the one big eye, the line of the shell's rim",
+              "Side view of a giant turtle: a big high-domed shell shaped like half a sphere is the dominant shape, "
+              "with a row of short spikes along its ridge and a thin black line marking the shell's lower rim; the "
+              "head with one big round eye pokes out from under the front of the shell on a short neck; four short "
+              "stubby turtle legs stand below the shell; three thick spiky tails trail out behind, each separate.",
+              "3:2"),
+    "hidan": ([1, 2], "eyes, the gaps between the three scythe blades",
+              "Head and shoulders: his hair slicked straight back from the forehead, the cloak's high collar, and "
+              "his huge three-bladed scythe held upright beside him, its three long curved blades fanned out big "
+              "and clear above his shoulder; the scythe is as large and readable as his head.", "1:1"),
+    "kakuzu": ([2], "the eye slit, a few stitch marks",
+               "Head and shoulders of a hooded man: a hood with a softly peaked top, a cloth mask covering his nose "
+               "and mouth as part of the same solid head shape, his eyes showing through one narrow slit between the "
+               "hood and the mask, a clear neck and the cloak's high collar on broad shoulders, and a few thin "
+               "thread tendrils writhing out from his shoulders.", "1:1"),
+}
+ICON_REDO_T = ("A minimalist flat icon of the {noun} in {tags}: a single solid white silhouette on a pure black "
+               "background, bold simple shapes, only a few negative-space cut-outs for the key features ({features}), "
+               "true to the anatomy and proportions of the reference. {composition} Flat pure white on flat pure "
+               "black, sharp clean edges, the white shape alone in the centre, the whole silhouette inside the frame "
+               "with an empty black margin all round, readable at a glance even when tiny.")
+
+
+def icon_prompt(subject, redo=False):
     group, folder, idx, noun, desc, feats, _ = SUBJECTS[subject]
+    if redo:
+        ridx, rfeats, comp, _ = ICON_REDO[subject]
+        tags = " and ".join(f"@img{k + 1}" for k in range(len(ridx)))
+        return ICON_REDO_T.format(noun=noun, tags=tags, features=rfeats, composition=comp)
     return ICON.format(noun=noun, features=feats, framing=FRAMING[group][1])
 
 
@@ -181,13 +238,18 @@ def sdir(subject):
     return d
 
 
-def gen(subjects, kinds, n):
+def gen(subjects, kinds, n, redo=False):
     jobs = []
     for s in subjects:
         refs = refs_of(s)
         for kind in kinds:
+            aspect = ASPECT.get(s, "1:1")
             if kind == "portrait":
                 prompt, rr = portrait_prompt(s), refs
+            elif redo:
+                ridx, _, _, aspect = ICON_REDO[s]
+                prompt = icon_prompt(s, redo=True)
+                rr = [os.path.join(REFS, SUBJECTS[s][1], f"{i}.png") for i in ridx]
             else:
                 prompt, rr = icon_prompt(s), refs[:1]
             d = sdir(s)
@@ -196,14 +258,15 @@ def gen(subjects, kinds, n):
             if not todo:
                 continue
             outs = [os.path.join(d, f"{kind}_{L}.png") for L in todo]
-            jobs.append((f"{s}/{kind} x{len(todo)}", prompt, rr, len(todo), outs))
+            jobs.append((f"{s}/{kind}{' redo' if redo else ''} x{len(todo)} {aspect}", prompt, rr, len(todo), outs,
+                         aspect))
     est = sum(ai.estimate(j[3], "1K", len(j[2])) for j in jobs)
     print(f"{len(jobs)} jobs, estimate {est} credits")
     c0 = ai.credits()
 
     def run(j):
-        name, prompt, rr, k, outs = j
-        done, spent = ai.generate(name, prompt, rr, k, outs)
+        name, prompt, rr, k, outs, aspect = j
+        done, spent = ai.generate(name, prompt, rr, k, outs, aspect=aspect)
         print(f"{name}: {len(done)}/{k} images, {spent} credits", flush=True)
         return spent
 
@@ -226,24 +289,29 @@ def key_out(im, hexc):
                              a[:, -6:].reshape(-1, 3)])
     bg = np.median(border, axis=0)
     key = np.array([int(hexc[i:i + 2], 16) for i in (1, 3, 5)], np.float64)
-    if np.linalg.norm(bg - key) > 120:  # the model drew another flat colour: trust the border
-        key = bg
+    if (np.linalg.norm(border - bg, axis=1) < 30).mean() > 0.6:
+        key = bg  # a flat border: that is the background, whatever shade of the key the model chose
     d = np.linalg.norm(a - key, axis=2)
     alpha = np.clip((d - 60) / 90, 0, 1)
-    # only background connected to the border is keyed; enclosed key-coloured details stay
-    solid_bg = d < 60
-    lab, nlab = ndimage.label(solid_bg)
-    edge_labels = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
-    if nlab:
-        sizes = ndimage.sum(np.ones_like(d), lab, range(1, nlab + 1))
-        edge_labels |= {i + 1 for i, sz in enumerate(sizes) if sz >= 0.0005 * h * w}  # pockets between tails
-    outside = np.isin(lab, list(edge_labels))
+    # every key-coloured region is background, the enclosed pockets too (gaps between tails, holes in sucker
+    # rings): the key colours were chosen to be absent from each subject
+    outside = d < 60
     near = ndimage.binary_dilation(outside, iterations=3)
     alpha = np.where(outside, 0.0, np.where(near, alpha, 1.0))
-    # despill: remove the key colour from semi-transparent edge pixels
+    # unmix: remove the key colour from the semi-transparent edge pixels
     am = np.clip(alpha, 1e-3, 1)[..., None]
     fg = np.clip((a - (1 - am) * key) / am, 0, 255)
     rgb = np.where(alpha[..., None] < 1, fg, a)
+    # spill clamp in a band inside the edge: the model's own glow of the key colour on the outline is up to
+    # ~10 px wide at 1024 (the cloud's dark-green rim)
+    band = ndimage.binary_dilation(outside, iterations=10) & ~outside
+    r_, g_, b_ = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    if key[1] > max(key[0], key[2]):  # green key: green may not exceed the larger of red and blue
+        spill = np.clip(g_ - np.maximum(r_, b_), 0, None) * band
+        rgb = np.dstack([r_, g_ - spill, b_])
+    else:  # magenta key: red and blue may not both exceed green
+        spill = np.clip(np.minimum(r_, b_) - g_, 0, None) * band
+        rgb = np.dstack([r_ - spill, g_, b_ - spill])
     # drop specks
     lab2, n2 = ndimage.label(alpha > 0.5)
     if n2 > 1:
@@ -267,8 +335,9 @@ def fit_square(im, px, margin=0.06):
     return canvas.resize((px, px), Image.LANCZOS)
 
 
-def icon_to_mask(im, px):
-    """White-on-black icon -> white mask (alpha = coverage), specks dropped, pinholes filled."""
+def icon_to_mask(im, px, report=None):
+    """White-on-black icon -> white mask (alpha = coverage), specks dropped, pinholes filled (only holes under
+    ~50 px of a 1024 raw: an eye cut-out of a full-body beast is ~400 px and must survive)."""
     g = np.asarray(im.convert("L")).astype(np.float64)
     border = np.concatenate([g[:6].ravel(), g[-6:].ravel(), g[:, :6].ravel(), g[:, -6:].ravel()])
     if np.median(border) > 128:  # drawn dark on light: invert
@@ -285,13 +354,49 @@ def icon_to_mask(im, px):
     lab, n = ndimage.label(holes)
     if n > 1:
         sizes = ndimage.sum(np.ones_like(alpha), lab, range(1, n + 1))
-        tiny = np.isin(lab, [i + 1 for i, s in enumerate(sizes) if s < 0.0004 * h * w])
-        alpha = np.where(tiny, 1.0, alpha)
+        small = [i + 1 for i, s in enumerate(sizes) if s < 0.00005 * h * w]
+        if report is not None:
+            report.append(f"filled {len(small)} pinhole(s), largest "
+                          f"{int(max([sizes[i - 1] for i in small], default=0))} px")
+        alpha = np.where(np.isin(lab, small), 1.0, alpha)
     out = np.dstack([np.full_like(alpha, 255), np.full_like(alpha, 255), np.full_like(alpha, 255), alpha * 255])
     return fit_square(Image.fromarray(out.round().astype(np.uint8), "RGBA"), px)
 
 
+def _longest_run(v):
+    best = cur = 0
+    for x in v:
+        cur = cur + 1 if x else 0
+        best = max(best, cur)
+    return best
+
+
+def clipped(alpha, group):
+    """The sides where the figure is cut: it runs into the frame of the raw image, or the model drew it cut
+    (a long straight edge on the side of its bounding box, copied from a cropped screenshot). A bust is cut
+    at the chest by design: only its top counts."""
+    m = alpha > 0.5
+    ys, xs = np.nonzero(m)
+    if not len(xs):
+        return []
+    H, W = m.shape
+    x0, x1, y0, y1 = xs.min(), xs.max(), ys.min(), ys.max()
+    bw, bh = x1 - x0 + 1, y1 - y0 + 1
+    touch = {"top": m[:3].sum(), "bottom": m[-3:].sum(), "left": m[:, :3].sum(), "right": m[:, -3:].sum()}
+    edge = {"top": m[y0:y0 + 2, x0:x1 + 1].any(axis=0), "bottom": m[y1 - 1:y1 + 1, x0:x1 + 1].any(axis=0),
+            "left": m[y0:y1 + 1, x0:x0 + 2].any(axis=1), "right": m[y0:y1 + 1, x1 - 1:x1 + 1].any(axis=1)}
+    out = []
+    for side in ("top", "bottom", "left", "right"):
+        if group == "member" and side != "top":
+            continue
+        extent = bw if side in ("top", "bottom") else bh
+        if touch[side] > 6 or _longest_run(edge[side]) > 0.2 * extent:
+            out.append(side)
+    return out
+
+
 def post():
+    flags = {}
     for s, spec in SUBJECTS.items():
         d = os.path.join(OUT, s)
         if not os.path.isdir(d):
@@ -301,11 +406,26 @@ def post():
             p = os.path.join(d, f"portrait_{L}.png")
             if os.path.exists(p):
                 cut = key_out(Image.open(p), hexc)
+                c = clipped(np.asarray(cut)[..., 3] / 255.0, group)
+                if c:
+                    flags[f"{s}/portrait_{L}"] = c
                 fit_square(cut, 512 if group != "member" else 256, 0.04).save(os.path.join(d, f"portrait_{L}_cut.png"))
             p = os.path.join(d, f"icon_{L}.png")
             if os.path.exists(p):
-                icon_to_mask(Image.open(p), 256 if group != "member" else 128).save(os.path.join(d, f"mask_{L}.png"))
+                note = []
+                raw = Image.open(p)
+                g = np.asarray(raw.convert("L")) / 255.0
+                c = clipped((g > 0.5).astype(float), group)
+                if c:
+                    flags[f"{s}/icon_{L}"] = c
+                icon_to_mask(raw, 256 if group != "member" else 128, note).save(os.path.join(d, f"mask_{L}.png"))
+                if note and not note[0].startswith("filled 0"):
+                    print(f"  {s} mask {L}: {note[0]}")
         print("post", s)
+    with open(os.path.join(OUT, "clipped.json"), "w", encoding="utf-8") as fh:
+        json.dump(flags, fh, indent=1)
+    for k, v in flags.items():
+        print("CLIPPED", k, ",".join(v))
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -401,23 +521,199 @@ def sheets():
                "Akatsuki: the cloud and the members (Sasori twice: the Hiruko puppet, and his face)", extra)
 
 
+#: the owner's verdicts on the icons (11-23, from crops of the raw icon tiles, matched to the files by
+#: silhouette overlap): letters picked, or "redo" (new candidates), or absent (not judged yet)
+PICKS = {
+    "shukaku": ("C", "owner's pick (the curse-mark linework)"),
+    "matatabi": ("A", "owner's pick (flame markings)"),
+    "chomei": ("C", "owner's pick"),
+    "kokuo": ("A", "owner liked all three; A has the clearest tail loop at 32 px"),
+    "itachi": ("B", "owner's pick (leaf headband, tear-trough lines)"),
+    "kisame": ("A", "owner liked all three; A is the cleanest"),
+    "deidara": ("AB", "owner liked both: choose one"),
+    "pain": ("C", "owner's pick (piercing dots)"),
+    "sasori_face": ("A", "owner's pick (Sasori = his face, not the Hiruko puppet)"),
+    "akatsuki": ("B", "owner: the minimalist cloud is cool; B has the boldest curls"),
+    "gyuki": ("redo", "new: ox head and horns first, 8 tentacles, 4 a side"),
+    "isobu": ("redo", "new: side view, domed shell, 3 tails"),
+    "hidan": ("redo", "new: the three-bladed scythe as big as his head"),
+    "kakuzu": ("redo", "new: hood, mask, eye slit, thread tendrils"),
+}
+FINAL_ROWS = BEASTS + ["akatsuki", "itachi", "kisame", "deidara", "sasori_face", "hidan", "kakuzu", "pain", "konan",
+                       "tobi", "zetsu"]
+GREEN_OK = (110, 220, 120)
+RED_NOTE = (255, 120, 110)
+CLIP_NOTE = {"top": "touches the top", "bottom": "touches the bottom", "left": "touches the left",
+             "right": "touches the right"}
+
+
+def final_sheet(out=None):
+    """build/ai_pick_final.png: per subject the reference, the icon (the owner's pick, or the redo candidates,
+    or the candidates not judged yet) and the three colour portraits cut out on the game's dark panel."""
+    out = out or os.path.join(BUILD, "ai_pick_final.png")
+    try:
+        with open(os.path.join(OUT, "clipped.json"), encoding="utf-8") as fh:
+            clip = json.load(fh)
+    except OSError:
+        clip = {}
+    RW, MW, PW = 150, 96, 200
+    ICONW = 3 * (MW + 46)
+    W = 20 + 150 + RW + 20 + ICONW + 20 + 3 * (PW + 12)
+    RH = PW + 58
+    H = 96 + len(FINAL_ROWS) * RH
+    sheet = Image.new("RGBA", (W, H), BG + (255,))
+    d = ImageDraw.Draw(sheet)
+    d.text((20, 12), "Final pick: icons (white masks, the game tints them) and colour portraits (cut out, on the game's "
+                     "dark panel)", fill=TEXT, font=font(22))
+    d.text((20, 44), "ICON: PICKED = the owner's choice  |  NEW A B C = redo candidates  |  A B C = not judged yet.   "
+                     "Each mask at 96 px with a 32 px copy.", fill=SUB, font=font(14))
+    d.text((20, 64), "PORTRAIT: candidates A B C (not judged yet). Reference = the official image they were drawn from.",
+           fill=SUB, font=font(14))
+    y = 96
+    x_icon = 20 + 150 + RW + 20
+    x_por = x_icon + ICONW + 20
+    for s in FINAL_ROWS:
+        d.line([(20, y - 6), (W - 20, y - 6)], fill=(60, 60, 70), width=1)
+        name = "sasori" if s == "sasori_face" else s
+        d.text((20, y + 2), name, fill=GOLD, font=font(18))
+        pick, note = PICKS.get(s, (None, "not judged yet"))
+        status = "PICKED" if pick and pick != "redo" else ("REDO" if pick == "redo" else "OPEN")
+        d.text((20, y + 26), status, fill=GREEN_OK if status == "PICKED" else (GOLD if status == "REDO" else SUB),
+               font=font(14))
+        refs = [p for p in refs_of(s) if os.path.exists(p)]
+        if refs:
+            r = Image.open(refs[0]).convert("RGBA")
+            r.thumbnail((RW, PW))
+            sheet.alpha_composite(r, (170, y + 4))
+        # icons
+        sd = os.path.join(OUT, s)
+        letters = pick if pick and pick != "redo" else "ABC"
+        x = x_icon
+        for L in letters:
+            p = os.path.join(sd, f"mask_{L}.png")
+            im = Image.open(p).convert("RGBA") if os.path.exists(p) else None
+            sheet.alpha_composite(tile(DARK, im, MW), (x, y + 4))
+            sheet.alpha_composite(tile(DARK, im, 32), (x + MW + 6, y + 4 + MW - 32))
+            lab = (f"PICKED {L}" if status == "PICKED" else (f"NEW {L}" if status == "REDO" else L))
+            d.text((x, y + MW + 8), lab if im else f"{L}: missing", fill=GREEN_OK if status == "PICKED" else TEXT,
+                   font=font(14))
+            x += MW + 46
+        # the note under the icons, wrapped to the icon column
+        words, line, ly = note.split(), "", y + MW + 30
+        for wd in words:
+            if d.textlength(line + " " + wd, font=font(13)) > ICONW - 10:
+                d.text((x_icon, ly), line.strip(), fill=SUB, font=font(13))
+                line, ly = wd, ly + 17
+            else:
+                line += " " + wd
+        d.text((x_icon, ly), line.strip(), fill=SUB, font=font(13))
+        # portraits
+        x = x_por
+        for L in "ABC":
+            p = os.path.join(sd, f"portrait_{L}_cut.png")
+            im = Image.open(p).convert("RGBA") if os.path.exists(p) else None
+            sheet.alpha_composite(tile(PANEL, im, PW), (x, y + 4))
+            d.text((x + 6, y + 8), L if im else f"{L}: none", fill=TEXT, font=font(16))
+            c = clip.get(f"{s}/portrait_{L}")
+            if c:
+                d.text((x, y + PW + 8), "; ".join(CLIP_NOTE[k] for k in c), fill=RED_NOTE, font=font(13))
+            x += PW + 12
+        y += RH
+    sheet.save(out)
+    print(out, sheet.size)
+    return out
+
+
+#: the game's colours (main: src/shared/Data/Beasts.luau, src/client/UI/AkatsukiPanel.luau)
+BEAST_COL = ["#c9a66b", "#3a6fd8", "#2a9d9a", "#c8312b", "#eceae4", "#9fc79a", "#9be02f", "#7b4fb0", "#f08a1c"]
+GAME_BG = (8, 10, 20)  # Color3.new(0.03, 0.04, 0.08)
+GAME_DIM = (150, 156, 176)
+ACCENT = (224, 48, 60)  # Akatsuki.ACCENT #e0303c
+
+
+def _hex(h):
+    return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def _lerp(a, b, t):
+    return tuple(round(x + (y - x) * t) for x, y in zip(a, b))
+
+
+def _draw_tinted(mask, px, tint, transparency, slot):
+    """The mask drawn as the game does: Fit into px x px, ImageColor3 = tint, ImageTransparency, on a slot."""
+    m = mask.copy()
+    m.thumbnail((px, px), Image.LANCZOS)
+    a = np.asarray(m)[..., 3].astype(np.float64) / 255.0 * (1 - transparency)
+    out = np.empty((px, px, 3))
+    out[:] = slot
+    ox, oy = (px - m.width) // 2, (px - m.height) // 2
+    reg = out[oy:oy + m.height, ox:ox + m.width]
+    reg[:] = reg * (1 - a[..., None]) + np.array(tint) * a[..., None]
+    return Image.fromarray(out.round().astype(np.uint8), "RGB")
+
+
+def tint_check(out=None):
+    """Every beast mask candidate at the sizes and in the tints the game uses: the Akatsuki panel row
+    (17 and 21 px; unsealed = the beast colour toward DIM at 60 % transparency, sealed = ACCENT on a red
+    slot) and a BeastPanel button (24 px, the beast colour). Real pixels, then the same zoomed x4."""
+    out = out or os.path.join(BUILD, "ai_tint_check.png")
+    cells = [("unsealed", 17), ("unsealed", 21), ("sealed", 17), ("sealed", 21), ("button", 24)]
+    cw = sum(px for _, px in cells) + 4 * len(cells)
+    real = Image.new("RGB", (40 + 3 * (cw + 12), 20 + len(BEASTS) * 30), (30, 33, 42))
+    for r, s in enumerate(BEASTS):
+        col = _hex(BEAST_COL[r])
+        for c, L in enumerate("ABC"):
+            p = os.path.join(OUT, s, f"mask_{L}.png")
+            if not os.path.exists(p):
+                continue
+            mask = Image.open(p).convert("RGBA")
+            x = 40 + c * (cw + 12)
+            for kind, px in cells:
+                if kind == "unsealed":
+                    im = _draw_tinted(mask, px, _lerp(col, GAME_DIM, 0.5), 0.6, GAME_BG)
+                elif kind == "sealed":
+                    im = _draw_tinted(mask, px, ACCENT, 0.0, _lerp(ACCENT, GAME_BG, 0.55))
+                else:
+                    im = _draw_tinted(mask, px, col, 0.0, GAME_BG)
+                real.paste(im, (x, 20 + r * 30 + (26 - px) // 2))
+                x += px + 4
+    big = real.resize((real.width * 4, real.height * 4), Image.NEAREST)
+    d = ImageDraw.Draw(big)
+    d.text((8, 8), "masks in the game's tints, real pixels zoomed x4: per candidate A | B | C: Akatsuki panel "
+                   "unsealed 17 / 21 px, sealed 17 / 21 px, BeastPanel button 24 px", fill=TEXT, font=font(26))
+    for c, L in enumerate("ABC"):
+        d.text(((40 + c * (cw + 12)) * 4, 60), f"mask {L}", fill=GOLD, font=font(24))
+    for r, s in enumerate(BEASTS):
+        d.text((6, (20 + r * 30) * 4 + 30), s[:8], fill=GOLD, font=font(18))
+    sheet = Image.new("RGB", (big.width, big.height + real.height + 20), (30, 33, 42))
+    sheet.paste(big, (0, 0))
+    sheet.paste(real, (0, big.height + 10))
+    sheet.save(out)
+    print(out)
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["gen", "post", "sheets", "prompts"])
+    ap.add_argument("cmd", choices=["gen", "post", "sheets", "prompts", "tints", "final"])
     ap.add_argument("--only")
     ap.add_argument("--kinds", default="portrait,icon")
     ap.add_argument("--n", type=int, default=3)
+    ap.add_argument("--redo", action="store_true", help="icons: the owner's redo compositions (ICON_REDO)")
     a = ap.parse_args()
     subjects = a.only.split(",") if a.only else list(SUBJECTS)
     if a.cmd == "gen":
-        gen(subjects, a.kinds.split(","), a.n)
+        gen(subjects, a.kinds.split(","), a.n, a.redo)
     elif a.cmd == "post":
         post()
     elif a.cmd == "sheets":
         sheets()
+    elif a.cmd == "tints":
+        tint_check()
+    elif a.cmd == "final":
+        final_sheet()
     else:
         for s in subjects:
-            print(s, "\n  P:", portrait_prompt(s), "\n  I:", icon_prompt(s))
+            print(s, "\n  P:", portrait_prompt(s), "\n  I:", icon_prompt(s, a.redo and s in ICON_REDO))
 
 
 if __name__ == "__main__":

@@ -7,7 +7,8 @@ images attached, poll the task, download the results.
                           -> {task_id, credits_used}
   GET  /v1/task/{id}      status doing -> done; metadata.result_images[].imageUrl
   GET  /v1/credits        the balance
-  Cost (GET /v3/image/models): 550 / 1200 / 2800 credits a 1K / 2K / 4K image, +200 each reference.
+  Cost (GET /v3/image/models; checked against the charges): 550 / 1200 / 2800 credits a 1K / 2K / 4K
+  image, plus 200 per reference image FOR EACH generated image.
 
 The key is read at runtime from the ManhwaForge keys file (AI33_API_KEY). It is never printed,
 logged or written anywhere. Every task is logged to build/ai33_log.md.
@@ -47,7 +48,8 @@ def _headers(extra=None):
 
 
 def estimate(n, resolution="1K", refs=0):
-    return BASE_CREDITS[resolution] * n + REF_CREDITS * refs
+    """Credits for one task: each generated image costs its resolution's base plus 200 per reference."""
+    return (BASE_CREDITS[resolution] + REF_CREDITS * refs) * n
 
 
 def credits():
@@ -127,14 +129,14 @@ def download(url, dst):
     return dst
 
 
-def generate(job, prompt, refs, n, out_paths, resolution="1K", retries=1, max_s=360):
+def generate(job, prompt, refs, n, out_paths, resolution="1K", retries=1, max_s=360, aspect="1:1"):
     """Submit, poll and download one job; resubmits once when a task fails or hangs. Returns
     (paths written, credits charged). Every attempt is logged."""
     spent = 0
     for attempt in range(retries + 1):
         stamp = datetime.datetime.now().strftime("%H:%M:%S")
         try:
-            tid, used = submit(prompt, refs, n, resolution)
+            tid, used = submit(prompt, refs, n, resolution, aspect)
         except Exception as e:
             log(f"| {stamp} | {job} | (submit failed) | 0 | {str(e)[:120]} |")
             continue
